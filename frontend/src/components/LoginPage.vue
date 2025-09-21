@@ -70,6 +70,11 @@
           </div>
         </div>
         
+        <!-- 错误信息显示 -->
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+        
         <div class="form-options">
           <label class="remember-me">
             <input type="checkbox" v-model="loginForm.rememberMe">
@@ -98,9 +103,14 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import axios from 'axios'
+
+// 定义事件发射器
+const emit = defineEmits(['login-success'])
 
 const showPassword = ref(false)
 const isLoading = ref(false)
+const errorMessage = ref('')
 
 const loginForm = reactive({
   username: '',
@@ -108,24 +118,47 @@ const loginForm = reactive({
   rememberMe: false
 })
 
+/**
+ * 处理登录逻辑
+ */
 const handleLogin = async () => {
   if (!loginForm.username || !loginForm.password) {
-    alert('请填写完整的登录信息')
+    errorMessage.value = '请输入用户名和密码！'
     return
   }
-  
+
   isLoading.value = true
-  
+  errorMessage.value = ''
+
   try {
-    // 模拟登录请求
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // 这里应该调用实际的登录API
-    console.log('登录信息:', loginForm)
-    alert('登录成功！')
+    // 调用登录API
+    const response = await axios.post('http://localhost:8080/api/auth/login', {
+      username: loginForm.username,
+      password: loginForm.password,
+      rememberMe: loginForm.rememberMe
+    })
+
+    if (response.data.success) {
+       // 保存用户信息和token
+       if (response.data.token) {
+         localStorage.setItem('token', response.data.token)
+       }
+       if (response.data.userInfo) {
+         localStorage.setItem('userInfo', JSON.stringify(response.data.userInfo))
+       }
+       
+       // 发射登录成功事件
+       emit('login-success')
+     } else {
+      errorMessage.value = response.data.message || '登录失败'
+    }
   } catch (error) {
-    console.error('登录失败:', error)
-    alert('登录失败，请检查用户名和密码')
+    console.error('登录错误:', error)
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage.value = error.response.data.message
+    } else {
+      errorMessage.value = '网络错误，请稍后重试'
+    }
   } finally {
     isLoading.value = false
   }
@@ -465,5 +498,19 @@ const handleLogin = async () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+
+
+/* 错误信息样式 */
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fcc;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 10px;
 }
 </style>

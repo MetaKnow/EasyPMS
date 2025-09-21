@@ -1,3 +1,10 @@
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\dto\LoginResponse.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\dto\LoginRequest.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\repository\UserRepository.java
 E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\config\DatabaseMigrationManager.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\service\UserService.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\config\SecurityConfig.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\controller\AuthController.java
 E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\PmsApplication.java
 E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\config\DatabasePreInitializer.java
+E:\TraeProjects\MissoftPMS\backend\src\main\java\com\missoft\pms\entity\User.java
