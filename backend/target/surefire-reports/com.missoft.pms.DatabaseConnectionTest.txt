@@ -1,0 +1,22 @@
+-------------------------------------------------------------------------------
+Test set: com.missoft.pms.DatabaseConnectionTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 7.762 s <<< FAILURE! -- in com.missoft.pms.DatabaseConnectionTest
+com.missoft.pms.DatabaseConnectionTest.testDatabaseConnection -- Time elapsed: 1.036 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 数据库连接失败: Unknown database 'pms_db'
+	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at com.missoft.pms.DatabaseConnectionTest.testDatabaseConnection(DatabaseConnectionTest.java:63)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+com.missoft.pms.DatabaseConnectionTest.testBasicQuery -- Time elapsed: 1.009 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: SQL查询测试失败: Unknown database 'pms_db'
+	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:38)
+	at org.junit.jupiter.api.Assertions.fail(Assertions.java:138)
+	at com.missoft.pms.DatabaseConnectionTest.testBasicQuery(DatabaseConnectionTest.java:84)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
