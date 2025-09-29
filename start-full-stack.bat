@@ -52,7 +52,7 @@ echo [OK] Frontend dependencies ready
 REM -------- Start services --------
 echo.
 echo Starting services...
-echo Backend: http://localhost:8080
+echo Backend: http://localhost:8081
 echo Frontend: http://localhost:5173
 echo.
 

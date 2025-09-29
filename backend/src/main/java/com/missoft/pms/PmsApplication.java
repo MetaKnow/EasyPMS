@@ -21,7 +21,7 @@ public class PmsApplication {
         ConfigurableApplicationContext context = SpringApplication.run(PmsApplication.class, args);
         
         System.out.println("🎉 应用启动完成!");
-        System.out.println("🌐 访问地址: http://localhost:8080");
+        System.out.println("🌐 访问地址: http://localhost:8081");
     }
 
 }

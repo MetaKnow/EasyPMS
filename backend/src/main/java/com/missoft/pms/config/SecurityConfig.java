@@ -50,6 +50,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // 允许访问健康检查接口
                 .requestMatchers("/api/health/**").permitAll()
+                // 允许访问客户管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/customers/**").permitAll()
+                // 允许访问机构管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/organs/**").permitAll()
+                // 允许访问用户管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/users/**").permitAll()
+                // 允许访问角色管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/roles/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

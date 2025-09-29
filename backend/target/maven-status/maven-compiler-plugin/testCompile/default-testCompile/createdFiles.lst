@@ -1,1 +1,11 @@
+com\missoft\pms\DatabaseStructureTest.class
+com\missoft\pms\DatabaseAutoCreateTest.class
+com\missoft\pms\DatabasePreInitializerTest.class
+com\missoft\pms\DatabasePreInitializerUrlTest.class
+com\missoft\pms\SimpleUrlTest.class
+com\missoft\pms\MySQLServiceTest.class
+com\missoft\pms\ForeignKeyDebugTest.class
+com\missoft\pms\MigrationTest.class
+com\missoft\pms\DatabaseConnectionDebugTest.class
 com\missoft\pms\DatabaseConnectionTest.class
+com\missoft\pms\DatabaseCreationVerificationTest.class

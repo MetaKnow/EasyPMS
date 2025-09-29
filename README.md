@@ -45,8 +45,8 @@ start-dev.bat
 ## 🌐 访问地址
 
 - **前端界面**: http://localhost:5173
-- **后端API**: http://localhost:8080
-- **API文档**: http://localhost:8080/swagger-ui.html (待开发)
+- **后端API**: http://localhost:8081
+- **API文档**: http://localhost:8081/swagger-ui.html (待开发)
 
 ## 📁 项目结构
 

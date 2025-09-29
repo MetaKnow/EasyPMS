@@ -1,5 +1,0 @@
-# Created at 2025-09-21T13:27:56.962
-Boot Manifest-JAR contains absolute paths in classpath 'E:\TraeProjects\MissoftPMS\backend\target\test-classes'
-Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
-'other' has different root
-

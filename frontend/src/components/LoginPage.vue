@@ -103,7 +103,11 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+
+// 路由实例
+const router = useRouter()
 
 // 定义事件发射器
 const emit = defineEmits(['login-success'])
@@ -132,7 +136,7 @@ const handleLogin = async () => {
 
   try {
     // 调用登录API
-    const response = await axios.post('http://localhost:8080/api/auth/login', {
+    const response = await axios.post('http://localhost:8081/api/auth/login', {
       username: loginForm.username,
       password: loginForm.password,
       rememberMe: loginForm.rememberMe
@@ -149,6 +153,9 @@ const handleLogin = async () => {
        
        // 发射登录成功事件
        emit('login-success')
+       
+       // 跳转到主页
+       router.push('/home/dashboard')
      } else {
       errorMessage.value = response.data.message || '登录失败'
     }

@@ -1,43 +1,13 @@
 <template>
   <div id="app">
-    <!-- 根据登录状态显示不同页面 -->
-    <BlankPage v-if="isLoggedIn" />
-    <LoginPage v-else @login-success="handleLoginSuccess" />
+    <router-view />
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import LoginPage from './components/LoginPage.vue'
-import BlankPage from './components/BlankPage.vue'
-
-const isLoggedIn = ref(false)
-
-/**
- * 处理登录成功事件
- */
-const handleLoginSuccess = () => {
-  isLoggedIn.value = true
+<script>
+export default {
+  name: 'App'
 }
-
-/**
- * 检查用户是否已登录
- */
-const checkLoginStatus = () => {
-  const token = localStorage.getItem('token')
-  const userInfo = localStorage.getItem('userInfo')
-  
-  if (token && userInfo) {
-    isLoggedIn.value = true
-  }
-}
-
-/**
- * 组件挂载时检查登录状态
- */
-onMounted(() => {
-  checkLoginStatus()
-})
 </script>
 
 <style>
@@ -56,5 +26,39 @@ body {
 #app {
   width: 100%;
   min-height: 100vh;
+}
+
+/* 占位组件样式 */
+.module-view {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.placeholder-content {
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.placeholder-content h3 {
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 20px;
+}
+
+.placeholder-content p {
+  color: #666;
+  margin: 0;
+  font-size: 14px;
 }
 </style>
