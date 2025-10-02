@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" v-if="visible" @click="handleOverlayClick">
+  <div class="modal-overlay" v-if="visible">
     <div class="modal-dialog" @click.stop>
       <div class="modal-header">
         <h3>{{ isEdit ? '编辑用户' : '新增用户' }}</h3>
@@ -17,11 +17,14 @@
               class="form-control"
               placeholder="请输入用户名"
               autocomplete="off"
+              @input="onUserNameInput"
+              @blur="onUserNameBlur"
               required
             />
             <div class="form-help">
               用户名创建后不可修改
             </div>
+            <div class="form-error" v-if="errors.userName">{{ errors.userName }}</div>
           </div>
 
           <div class="form-group">
@@ -174,7 +177,12 @@ export default {
         organId: '',
         roleId: '',
         locked: false
-      }
+      },
+      errors: {
+        userName: ''
+      },
+      isCheckingUserName: false,
+      _debounceTimer: null
     }
   },
   computed: {
@@ -207,7 +215,9 @@ export default {
         return this.formData.userName.trim() !== '' &&
                this.formData.password.trim() !== '' &&
                this.formData.confirmPassword.trim() !== '' &&
-               !this.passwordMismatch
+               !this.passwordMismatch &&
+               !this.errors.userName &&
+               !this.isCheckingUserName
       }
     },
 
@@ -318,9 +328,18 @@ export default {
     /**
      * 提交表单
      */
-    submit() {
+    async submit() {
       if (!this.isFormValid) {
         return
+      }
+
+      // 新增模式下，提交前最后一次用户名判重兜底
+      if (!this.isEdit) {
+        const duplicate = await this.checkUserNameDuplicate()
+        if (duplicate) {
+          this.errors.userName = '用户名已存在，请更换后再试'
+          return
+        }
       }
 
       const submitData = {
@@ -360,6 +379,52 @@ export default {
      */
     handleOverlayClick() {
       this.close()
+    },
+
+    /**
+     * 用户名输入事件（防抖触发异步判重）
+     */
+    onUserNameInput() {
+      if (this._debounceTimer) {
+        clearTimeout(this._debounceTimer)
+      }
+      this._debounceTimer = setTimeout(() => {
+        this.onUserNameBlur()
+      }, 300)
+    },
+
+    /**
+     * 用户名失焦事件（立即判重）
+     */
+    async onUserNameBlur() {
+      const name = this.formData.userName.trim()
+      if (!name) {
+        this.errors.userName = '请输入用户名'
+        return
+      }
+      await this.checkUserNameDuplicate()
+    },
+
+    /**
+     * 调用后端接口检查用户名是否重复
+     * @returns {Promise<boolean>} true 表示重复
+     */
+    async checkUserNameDuplicate() {
+      try {
+        this.isCheckingUserName = true
+        // 动态导入，避免在SSR或构建时循环依赖
+        const { checkUserNameExists } = await import('../api/user.js')
+        const exists = await checkUserNameExists(this.formData.userName.trim())
+        this.errors.userName = exists ? '用户名已存在，请更换后再试' : ''
+        return !!exists
+      } catch (e) {
+        // 网络错误不阻断用户流程，仅清空错误
+        console.warn('用户名判重失败：', e)
+        this.errors.userName = ''
+        return false
+      } finally {
+        this.isCheckingUserName = false
+      }
     }
   }
 }

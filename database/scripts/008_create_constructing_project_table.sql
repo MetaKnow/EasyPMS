@@ -2,7 +2,7 @@
 -- 描述: 创建项目表 constructing_project
 -- 创建时间: 2024-01-20
 
-USE missoft_pms;
+USE pms_db;
 
 -- 创建项目表
 CREATE TABLE IF NOT EXISTS constructing_project (

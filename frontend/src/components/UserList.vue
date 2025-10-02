@@ -54,6 +54,7 @@
                   :checked="isAllSelected"
                 />
               </th>
+              <th width="60">序号</th>
               <th>用户名</th>
               <th>姓名</th>
               <th>所属机构</th>
@@ -65,18 +66,18 @@
           </thead>
           <tbody>
             <tr 
-              v-for="user in filteredUsers" 
+              v-for="(user, index) in filteredUsers" 
               :key="user.userId"
               :class="{ selected: selectedUsers.includes(user.userId) }"
-              @click="selectUser(user)"
             >
-              <td>
+              <td @click.stop>
                 <input 
                   type="checkbox" 
                   :value="user.userId"
                   v-model="selectedUsers"
                 />
               </td>
+              <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ user.userName }}</td>
               <td>{{ user.name || '-' }}</td>
               <td>{{ user.organName || '未分配' }}</td>
@@ -144,6 +145,23 @@
         </button>
       </div>
     </div>
+
+    <!-- 批量删除确认对话框 -->
+    <div v-if="showBatchDeleteConfirm" class="modal-overlay">
+      <div class="modal-content" @click.stop>
+        <h3>确认批量删除</h3>
+        <p>确定要删除选中的 {{ selectedUsers.length }} 个用户吗？此操作不可恢复。</p>
+        <div class="batch-delete-list">
+          <div v-for="userId in selectedUsers" :key="userId" class="batch-delete-item">
+            {{ getUserNameById(userId) }}
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" @click="closeBatchDeleteConfirm">取消</button>
+          <button class="btn btn-danger" @click="confirmBatchDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -171,19 +189,21 @@ export default {
       default: false
     }
   },
-  emits: ['edit-user', 'delete-user', 'refresh'],
+  emits: ['edit-user', 'delete-user', 'refresh', 'batch-delete-users', 'selection-change'],
   data() {
     return {
       // 选中用户ID集合
       selectedUsers: [],
       // 分页信息
       currentPage: 1,
-      pageSize: 15,
+      pageSize: 20,
       // 多条件筛选字段
       filterUserName: '',
       filterName: '',
       filterLocked: '', // '' | 'normal' | 'locked'
-      filterRoleId: '' // '' | number
+      filterRoleId: '', // '' | number
+      // 批量删除相关
+      showBatchDeleteConfirm: false
     }
   },
   computed: {
@@ -230,9 +250,16 @@ export default {
     users() {
       this.selectedUsers = []
       this.currentPage = 1
+      this.notifySelectionChange()
     },
     organId() {
       this.resetSearch()
+    },
+    selectedUsers: {
+      handler() {
+        this.notifySelectionChange()
+      },
+      deep: true
     }
   },
   methods: {
@@ -253,19 +280,10 @@ export default {
       this.filterRoleId = ''
       this.selectedUsers = []
       this.currentPage = 1
+      this.notifySelectionChange()
     },
 
-    /**
-     * 选择用户
-     */
-    selectUser(user) {
-      const index = this.selectedUsers.indexOf(user.userId)
-      if (index > -1) {
-        this.selectedUsers.splice(index, 1)
-      } else {
-        this.selectedUsers.push(user.userId)
-      }
-    },
+
 
     /**
      * 全选/取消全选
@@ -344,6 +362,71 @@ export default {
       if (!dateString) return '-'
       const date = new Date(dateString)
       return date.toLocaleDateString('zh-CN')
+    },
+
+    /**
+     * 批量删除用户（函数级注释：触发批量删除事件，由父组件处理）
+     */
+    batchDeleteUsers() {
+      if (this.selectedUsers.length === 0) {
+        return
+      }
+      this.$emit('batch-delete-users', this.selectedUsers)
+    },
+
+    /**
+     * 通知父组件选择变化（函数级注释：当用户选择发生变化时，将选中的用户数据传递给父组件）
+     */
+    notifySelectionChange() {
+      const selectedUserData = this.filteredUsers.filter(user => 
+        this.selectedUsers.includes(user.userId)
+      )
+      this.$emit('selection-change', selectedUserData)
+    },
+
+    /**
+     * 关闭批量删除确认对话框
+     */
+    closeBatchDeleteConfirm() {
+      this.showBatchDeleteConfirm = false
+    },
+
+    /**
+     * 确认批量删除（函数级注释：执行批量删除API调用）
+     */
+    async confirmBatchDelete() {
+      try {
+        const response = await fetch('http://localhost:8081/api/users/batch', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userIds: this.selectedUsers
+          })
+        })
+
+        if (response.ok) {
+          this.selectedUsers = []
+          this.showBatchDeleteConfirm = false
+          this.$emit('refresh')
+          alert('批量删除成功')
+        } else {
+          const errorData = await response.json()
+          alert('批量删除失败: ' + (errorData.message || '未知错误'))
+        }
+      } catch (error) {
+        console.error('批量删除用户失败:', error)
+        alert('批量删除失败: ' + error.message)
+      }
+    },
+
+    /**
+     * 根据用户ID获取用户名（函数级注释：用于批量删除确认对话框中显示用户名）
+     */
+    getUserNameById(userId) {
+      const user = this.users.find(u => u.userId === userId)
+      return user ? user.name || user.userName : '未知用户'
     }
   }
 }
@@ -354,6 +437,7 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* 搜索区域 */
@@ -395,6 +479,7 @@ export default {
 .table-container {
   flex: 1;
   overflow: auto;
+  max-height: calc(100vh - 270px);
 }
 
 .user-table {
@@ -578,9 +663,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 10px 12px;
   border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  background: white;
 }
 
 .page-info {
@@ -595,6 +680,71 @@ export default {
 
 .icon-refresh::before {
   content: '↻';
+}
+
+.icon-delete::before {
+  content: '🗑️';
+}
+
+/* 批量删除对话框 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.modal-content p {
+  margin: 0 0 16px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.batch-delete-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.batch-delete-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+}
+
+.batch-delete-item:last-child {
+  border-bottom: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 /* 响应式设计 */

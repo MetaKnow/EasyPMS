@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ mode === 'add' ? '新增客户' : '修改客户' }}</h3>
@@ -19,6 +19,8 @@
               class="form-input"
               placeholder="请输入客户名称"
               :class="{ error: errors.customerName }"
+              @input="onCustomerNameInput"
+              @blur="onCustomerNameBlur"
               maxlength="100"
             />
             <span v-if="errors.customerName" class="error-message">
@@ -159,6 +161,7 @@
 </template>
 
 <script>
+import { checkCustomerNameAvailable } from '@/api/customer.js'
 export default {
   name: 'CustomerForm',
   props: {
@@ -195,6 +198,11 @@ export default {
       
       // 提交状态
       isSubmitting: false,
+
+      // 客户名称异步校验相关
+      nameCheckTimer: null,
+      nameChecking: false,
+      lastCheckedNameAvailable: true,
       
       // 省份列表
       provinces: [
@@ -262,7 +270,7 @@ export default {
     /**
      * 表单验证
      */
-    validateForm() {
+    async validateForm() {
       const errors = {}
 
       // 客户名称验证
@@ -303,15 +311,88 @@ export default {
         errors.customerRank = '请选择客户等级'
       }
 
+      // 基础校验通过后做异步判重
+      const baseValid = Object.keys(errors).length === 0
+      if (baseValid) {
+        try {
+          this.nameChecking = true
+          const available = await checkCustomerNameAvailable(
+            this.formData.customerName.trim(),
+            this.mode === 'edit' ? this.formData.customerId : null
+          )
+          this.lastCheckedNameAvailable = available
+          if (!available) {
+            errors.customerName = '客户名称已存在，请更换后再保存'
+          }
+        } catch (e) {
+          // 网络异常不阻断提交，但不覆盖已有错误
+        } finally {
+          this.nameChecking = false
+        }
+      }
+
       this.errors = errors
       return Object.keys(errors).length === 0
+    },
+
+    onCustomerNameInput() {
+      // 先做基础长度校验以即时反馈
+      const name = this.formData.customerName || ''
+      if (!name.trim()) {
+        this.errors.customerName = '请输入客户名称'
+      } else if (name.trim().length < 2) {
+        this.errors.customerName = '客户名称至少2个字符'
+      } else if (name.trim().length > 100) {
+        this.errors.customerName = '客户名称不能超过100个字符'
+      } else if (!this.nameChecking && this.errors.customerName && this.errors.customerName.includes('客户名称已存在')) {
+        // 清除之前的重复提示，等待异步校验结果
+        this.errors.customerName = ''
+      }
+
+      // 防抖异步判重
+      if (this.nameCheckTimer) {
+        clearTimeout(this.nameCheckTimer)
+      }
+      this.nameCheckTimer = setTimeout(() => {
+        this.checkCustomerNameDuplicate()
+      }, 300)
+    },
+
+    onCustomerNameBlur() {
+      // 失焦即时判重
+      this.checkCustomerNameDuplicate(true)
+    },
+
+    async checkCustomerNameDuplicate(force = false) {
+      const name = (this.formData.customerName || '').trim()
+      if (!name || name.length < 2 || name.length > 100) {
+        return
+      }
+      try {
+        this.nameChecking = true
+        const available = await checkCustomerNameAvailable(
+          name,
+          this.mode === 'edit' ? this.formData.customerId : null
+        )
+        this.lastCheckedNameAvailable = available
+        if (!available) {
+          this.errors.customerName = '客户名称已存在，请更换后再保存'
+        } else if (force || (this.errors.customerName && this.errors.customerName.includes('客户名称已存在'))) {
+          // 清理重复提示
+          this.errors.customerName = ''
+        }
+      } catch (e) {
+        // 忽略网络错误
+      } finally {
+        this.nameChecking = false
+      }
     },
 
     /**
      * 处理表单提交
      */
     async handleSubmit() {
-      if (!this.validateForm()) {
+      if (!(await this.validateForm())) {
         return
       }
 

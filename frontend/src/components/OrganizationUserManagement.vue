@@ -11,6 +11,14 @@
           <i class="icon-plus"></i>
           新增用户
         </button>
+        <button 
+          class="btn btn-danger" 
+          @click="handleBatchDeleteUsers"
+          :disabled="selectedUserIds.length === 0"
+        >
+          <i class="icon-delete"></i>
+          删除用户 ({{ selectedUserIds.length }})
+        </button>
         <button class="btn btn-secondary" @click="refreshData">
           <i class="icon-refresh"></i>
           刷新
@@ -46,6 +54,8 @@
             @edit-user="handleEditUser"
             @delete-user="handleDeleteUser"
             @refresh="selectedOrgan ? loadUsers : loadAllUsers"
+            @batch-delete-users="handleBatchDeleteUsers"
+            @selection-change="handleSelectionChange"
           />
         </div>
       </div>
@@ -99,7 +109,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 
 // API imports
 import { getOrganTree, createOrgan, updateOrgan, deleteOrgan, checkOrganHasUsers, checkOrganAndChildrenUsersDetail } from '../api/organ.js'
-import { getUsersByOrganId, getUserList, createUser, updateUser, deleteUser } from '../api/user.js'
+import { getUsersByOrganId, getUserList, createUser, updateUser, deleteUser, batchDeleteUsers, checkUserNameExists } from '../api/user.js'
 import { getRoleList } from '../api/role.js'
 
 export default {
@@ -120,6 +130,7 @@ export default {
       
       // 用户相关数据
       users: [],
+      selectedUserIds: [],
       
       // 角色数据
       roles: [],
@@ -468,6 +479,14 @@ export default {
           this.$message?.success('更新用户成功')
         } else {
           // 新增用户
+          // 保存前进行用户名兜底判重，避免并发或网络异常导致重复
+          if (userData && userData.userName) {
+            const exists = await checkUserNameExists(userData.userName)
+            if (exists) {
+              this.$message?.warning('用户名已存在，请更换后再试')
+              return
+            }
+          }
           await createUser(userData)
           this.$message?.success('创建用户成功')
         }
@@ -569,6 +588,62 @@ export default {
         await this.confirmDialog.action()
       }
       this.closeConfirmDialog()
+    },
+
+    /**
+     * 处理选择变化
+     */
+    handleSelectionChange(selectedUsers) {
+      this.selectedUserIds = selectedUsers.map(user => user.userId)
+    },
+
+    /**
+     * 处理批量删除用户
+     */
+    handleBatchDeleteUsers() {
+      // 获取选中的用户数据
+      const selectedUsers = this.users.filter(user => 
+        this.selectedUserIds.includes(user.userId)
+      )
+      
+      if (selectedUsers.length === 0) {
+        this.$message?.warning('请先选择要删除的用户')
+        return
+      }
+      
+      // 显示确认对话框
+      this.confirmDialog = {
+        title: '批量删除用户',
+        message: `确定要删除以下 ${selectedUsers.length} 个用户吗？`,
+        details: selectedUsers.map(user => user.userName).join('、'),
+        confirmText: '删除',
+        action: this.confirmBatchDelete
+      }
+      this.confirmDialogVisible = true
+    },
+
+    /**
+     * 确认批量删除用户
+     */
+    async confirmBatchDelete() {
+      try {
+        await batchDeleteUsers(this.selectedUserIds)
+
+        this.$message?.success(`成功删除 ${this.selectedUserIds.length} 个用户`)
+        
+        // 刷新用户列表
+        if (this.selectedOrgan) {
+          await this.loadUsers()
+        } else {
+          await this.loadAllUsers()
+        }
+        
+        // 清空选中的用户ID
+        this.selectedUserIds = []
+      } catch (error) {
+        console.error('批量删除用户失败:', error)
+        this.$message?.error('批量删除用户失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 }
@@ -578,9 +653,10 @@ export default {
 .organization-user-management {
   padding: 8px;
   background: #f5f5f5;
-  min-height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* 管理页面头部 */

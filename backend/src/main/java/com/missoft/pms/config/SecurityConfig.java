@@ -58,6 +58,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/**").permitAll()
                 // 允许访问角色管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/roles/**").permitAll()
+                // 允许访问产品管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/products/**").permitAll()
+                // 允许访问渠道商管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/channel-distributors/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

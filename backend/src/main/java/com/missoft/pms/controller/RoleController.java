@@ -23,6 +23,7 @@ import java.util.Optional;
  * - POST /api/roles 创建角色
  * - PUT /api/roles/{id} 更新角色
  * - DELETE /api/roles/{id} 删除角色
+ * - GET /api/roles/check-name?roleName= 检查角色名称是否存在（返回 { exists: boolean }）
  * - GET /api/roles/{id}/users/count 获取角色下用户数量（返回 { count: number }）
  * - GET /api/roles/{id}/users 获取角色下用户列表（返回 User[]）
  *
@@ -136,6 +137,18 @@ public class RoleController {
     }
 
     /**
+     * 检查角色名称是否存在（与前端 role.js 的 checkRoleNameExists 对齐）
+     * GET /api/roles/check-name?roleName=
+     */
+    @GetMapping("/check-name")
+    public ResponseEntity<Map<String, Object>> checkRoleNameExists(@RequestParam String roleName) {
+        boolean exists = roleService.existsByRoleName(roleName);
+        Map<String, Object> response = new HashMap<>();
+        response.put("exists", exists);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 获取角色下的用户数量
      * GET /api/roles/{id}/users/count
      * 返回结构：{ count: number }
@@ -190,6 +203,27 @@ public class RoleController {
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "批量取消角色授权失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    /**
+     * 批量删除角色
+     * DELETE /api/roles/batch
+     * 请求体：Long[]
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<Map<String, Object>> batchDeleteRoles(@RequestBody List<Long> roleIds) {
+        try {
+            int deletedCount = roleService.batchDeleteRoles(roleIds);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "批量删除成功");
+            response.put("deletedCount", deletedCount);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "批量删除失败");
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }

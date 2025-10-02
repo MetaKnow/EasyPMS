@@ -7,6 +7,11 @@ import ConstructionProjectManagement from '../components/ConstructionProjectMana
 import MaintenanceProjectManagement from '../components/MaintenanceProjectManagement.vue'
 import OrganizationUserManagement from '../components/OrganizationUserManagement.vue'
 import RoleManagement from '../components/RoleManagement.vue'
+import StandardMilestoneManagement from '../components/StandardMilestoneManagement.vue'
+import StandardStepManagement from '../components/StandardStepManagement.vue'
+import StandardDeliverableManagement from '../components/StandardDeliverableManagement.vue'
+import ProductManagement from '../components/ProductManagement.vue'
+import ChannelDistributorManagement from '../components/ChannelDistributorManagement.vue'
 
 /**
  * 路由配置
@@ -52,16 +57,46 @@ const routes = [
         meta: { title: '运维项目管理' }
       },
       {
-        path: 'organization',
+        path: 'system/organization',
         name: 'OrganizationManagement',
         component: OrganizationUserManagement,
         meta: { title: '机构用户管理' }
       },
       {
-        path: 'roles',
+        path: 'system/roles',
         name: 'RoleManagement',
         component: RoleManagement,
         meta: { title: '角色管理' }
+      },
+      {
+        path: 'system/milestones',
+        name: 'StandardMilestoneManagement',
+        component: StandardMilestoneManagement,
+        meta: { title: '标准里程碑维护' }
+      },
+      {
+        path: 'system/steps',
+        name: 'StandardStepManagement',
+        component: StandardStepManagement,
+        meta: { title: '标准交付步骤维护' }
+      },
+      {
+        path: 'system/deliverables',
+        name: 'StandardDeliverableManagement',
+        component: StandardDeliverableManagement,
+        meta: { title: '标准交付物维护' }
+      },
+      {
+        path: 'system/products',
+        name: 'BaseProductManagement',
+        component: ProductManagement,
+        meta: { title: '基础产品维护' }
+      },
+      {
+        path: 'system/partners',
+        name: 'ChannelDistributorManagement',
+        component: ChannelDistributorManagement,
+        meta: { title: '渠道商维护' }
       }
     ]
   },

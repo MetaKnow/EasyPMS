@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="visible" class="modal-overlay">
     <div 
       class="modal-content" 
       :class="[sizeClass, typeClass]" 

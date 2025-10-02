@@ -8,11 +8,11 @@
           <i class="icon-plus"></i>
           新增角色
         </button>
-        <button class="btn btn-danger" @click="deleteSelected" :disabled="!selectedRole">
+        <button class="btn btn-danger" @click="deleteSelected" :disabled="selectedRoles.length === 0">
           <i class="icon-delete"></i>
           删除角色
         </button>
-        <button class="btn btn-info" @click="viewUsers" :disabled="!selectedRole">
+        <button class="btn btn-info" @click="viewUsers" :disabled="selectedRoles.length !== 1">
           <i class="icon-users"></i>
           查看用户
         </button>
@@ -32,6 +32,7 @@
                   :checked="isAllSelected"
                 />
               </th>
+              <th width="60">序号</th>
               <th>角色名称</th>
               <th>角色描述</th>
               <th>用户数量</th>
@@ -40,18 +41,19 @@
           </thead>
           <tbody>
             <tr 
-              v-for="role in roles" 
+              v-for="(role, index) in roles" 
               :key="role.roleId"
-              :class="{ selected: selectedRole && selectedRole.roleId === role.roleId }"
-              @click="selectRole(role)"
+              :class="{ selected: isSelected(role) }"
+              @click="toggleSelectRole(role)"
             >
               <td>
                 <input 
                   type="checkbox" 
-                  :checked="selectedRole && selectedRole.roleId === role.roleId"
-                  @change="selectRole(role)"
+                  :checked="isSelected(role)"
+                  @change.stop="toggleSelectRole(role)"
                 />
               </td>
+              <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ role.roleName }}</td>
               <td>{{ role.description || '暂无描述' }}</td>
               <td>{{ role.userCount || 0 }}</td>
@@ -63,6 +65,9 @@
                   删除
                 </button>
               </td>
+            </tr>
+            <tr v-if="roles.length === 0">
+              <td colspan="6" class="no-data">暂无数据</td>
             </tr>
           </tbody>
         </table>
@@ -110,7 +115,7 @@
     />
 
     <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click="closeDeleteConfirm">
+    <div v-if="showDeleteConfirm" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <h3>确认删除</h3>
         <p v-if="deletingRole && deletingRole.userCount > 0">
@@ -132,13 +137,31 @@
         </div>
       </div>
     </div>
+
+    <!-- 批量删除确认弹窗 -->
+    <div v-if="showBatchDeleteConfirm" class="modal-overlay">
+      <div class="modal-content" @click.stop>
+        <h3>确认批量删除</h3>
+        <p>确定要删除选中的 {{ deletingRoles.length }} 个角色吗？此操作不可恢复。</p>
+        <div class="batch-delete-list">
+          <div v-for="role in deletingRoles" :key="role.roleId" class="batch-delete-item">
+            {{ role.roleName }}
+            <span v-if="role.userCount > 0" class="warning-text">(被 {{ role.userCount }} 个用户使用)</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" @click="closeBatchDeleteConfirm">取消</button>
+          <button class="btn btn-danger" @click="confirmBatchDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import RoleForm from './RoleForm.vue'
 import RoleUsersDialog from './RoleUsersDialog.vue'
-import { getRoleList, deleteRole, checkRoleInUse } from '../api/role.js'
+import { getRoleList, deleteRole, checkRoleInUse, batchDeleteRoles } from '../api/role.js'
 
 /**
  * 角色管理组件（类级注释：负责角色的增删改查和用户管理）
@@ -153,11 +176,11 @@ export default {
     return {
       // 角色列表数据
       roles: [],
-      selectedRole: null,
+      selectedRoles: [], // 改为数组，支持多选
       
       // 分页相关
       currentPage: 1,
-      pageSize: 15,
+      pageSize: 20,
       totalCount: 0,
       totalPages: 0,
       
@@ -173,6 +196,10 @@ export default {
       showDeleteConfirm: false,
       deletingRole: null,
       
+      // 批量删除确认
+      showBatchDeleteConfirm: false,
+      deletingRoles: [],
+      
       // 加载状态
       loading: false
     }
@@ -182,7 +209,7 @@ export default {
      * 是否全选
      */
     isAllSelected() {
-      return this.roles.length > 0 && this.selectedRole !== null
+      return this.roles.length > 0 && this.selectedRoles.length === this.roles.length
     }
   },
   mounted() {
@@ -219,6 +246,9 @@ export default {
         const endIndex = startIndex + this.pageSize;
         this.roles = allRoles.slice(startIndex, endIndex);
         
+        // 清空选中状态
+        this.selectedRoles = [];
+        
         // 如果当前页超出范围，重置到第一页
         if (this.currentPage > this.totalPages && this.totalPages > 0) {
           this.currentPage = 1;
@@ -238,20 +268,36 @@ export default {
     },
 
     /**
-     * 选择角色（函数级注释：切换角色选中状态）
+     * 判断角色是否被选中
      */
-    selectRole(role) {
-      this.selectedRole = this.selectedRole?.roleId === role.roleId ? null : role
+    isSelected(role) {
+      return this.selectedRoles.some(r => r.roleId === role.roleId);
+    },
+    
+    /**
+     * 切换角色选中状态
+     */
+    toggleSelectRole(role) {
+      const index = this.selectedRoles.findIndex(r => r.roleId === role.roleId);
+      if (index === -1) {
+        // 如果未选中，则添加到选中数组
+        this.selectedRoles.push(role);
+      } else {
+        // 如果已选中，则从选中数组中移除
+        this.selectedRoles.splice(index, 1);
+      }
     },
 
     /**
      * 全选/取消全选（函数级注释：批量选择操作）
      */
     selectAll(event) {
-      if (event.target.checked && this.roles.length > 0) {
-        this.selectedRole = this.roles[0]
+      if (event.target.checked) {
+        // 全选
+        this.selectedRoles = [...this.roles];
       } else {
-        this.selectedRole = null
+        // 取消全选
+        this.selectedRoles = [];
       }
     },
 
@@ -279,8 +325,14 @@ export default {
      * 删除选中的角色（函数级注释：删除当前选中的角色）
      */
     deleteSelected() {
-      if (this.selectedRole) {
-        this.deleteRole(this.selectedRole)
+      if (this.selectedRoles.length > 0) {
+        if (this.selectedRoles.length === 1) {
+          // 单个删除
+          this.deleteRole(this.selectedRoles[0]);
+        } else {
+          // 批量删除
+          this.batchDeleteRoles();
+        }
       }
     },
 
@@ -290,6 +342,15 @@ export default {
     deleteRole(role) {
       this.deletingRole = role
       this.showDeleteConfirm = true
+    },
+
+    /**
+     * 批量删除角色
+     */
+    batchDeleteRoles() {
+      // 过滤有效的选中角色
+      this.deletingRoles = this.selectedRoles.filter(role => role && role.roleId);
+      this.showBatchDeleteConfirm = true;
     },
 
     /**
@@ -303,7 +364,7 @@ export default {
         this.loadRoles();
         
         // 清空选择
-        this.selectedRole = null;
+        this.selectedRoles = [];
         
         this.closeDeleteConfirm();
         this.$message?.success('角色删除成功');
@@ -323,11 +384,52 @@ export default {
     },
 
     /**
+     * 关闭批量删除确认弹窗（函数级注释：关闭批量删除确认对话框）
+     */
+    closeBatchDeleteConfirm() {
+      this.showBatchDeleteConfirm = false
+      this.deletingRoles = []
+    },
+
+    /**
+     * 确认批量删除（函数级注释：执行批量删除操作）
+     */
+    async confirmBatchDelete() {
+      try {
+        // 过滤有效的角色并获取角色ID列表
+        const validRoles = this.deletingRoles.filter(role => role && role.roleId);
+        const roleIds = validRoles.map(role => role.roleId);
+        
+        if (roleIds.length === 0) {
+          this.$message?.warning('没有有效的角色可以删除');
+          return;
+        }
+        
+        // 调用批量删除API
+        await batchDeleteRoles(roleIds);
+        
+        // 重新加载列表
+        this.loadRoles();
+        
+        // 清空选择
+        this.selectedRoles = [];
+        
+        this.closeBatchDeleteConfirm();
+        this.$message?.success('批量删除角色成功');
+        
+      } catch (error) {
+        console.error('批量删除角色失败:', error);
+        this.$message?.error('批量删除角色失败: ' + error.message);
+      }
+    },
+
+    /**
      * 查看用户（函数级注释：显示角色下的用户列表）
      */
     viewUsers() {
-      if (this.selectedRole) {
-        this.showUsersDialog = true
+      if (this.selectedRoles.length === 1) {
+        this.selectedRole = this.selectedRoles[0];
+        this.showUsersDialog = true;
       }
     },
 
@@ -382,7 +484,10 @@ export default {
 .role-management {
   padding: 8px;
   background: #f5f5f5;
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 页面头部 */
@@ -411,6 +516,9 @@ export default {
 
 /* 表格区域 */
 .table-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -418,7 +526,9 @@ export default {
 }
 
 .table-container {
-  overflow-x: auto;
+  overflow: auto;
+  flex: 1;
+  max-height: calc(100vh - 200px);
 }
 
 .role-table {
@@ -453,86 +563,97 @@ export default {
   background: #e6f7ff;
 }
 
+.no-data {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 20px;
+}
+
 /* 按钮样式 */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  border: 1px solid transparent;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
+  background: white;
+  color: #262626;
   font-size: 13px;
-  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
-  text-decoration: none;
+}
+
+.btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .btn-primary {
   background: #1890ff;
-  color: white;
   border-color: #1890ff;
+  color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover {
   background: #40a9ff;
   border-color: #40a9ff;
 }
 
 .btn-warning {
   background: #fa8c16;
-  color: white;
   border-color: #fa8c16;
+  color: white;
 }
 
-.btn-warning:hover:not(:disabled) {
+.btn-warning:hover {
   background: #ffa940;
   border-color: #ffa940;
 }
 
 .btn-danger {
   background: #ff4d4f;
-  color: white;
   border-color: #ff4d4f;
+  color: white;
 }
 
-.btn-danger:hover:not(:disabled) {
+.btn-danger:hover {
   background: #ff7875;
   border-color: #ff7875;
 }
 
 .btn-info {
   background: #13c2c2;
-  color: white;
   border-color: #13c2c2;
+  color: white;
 }
 
-.btn-info:hover:not(:disabled) {
+.btn-info:hover {
   background: #36cfc9;
   border-color: #36cfc9;
 }
 
 .btn-secondary {
   background: #f5f5f5;
-  color: #595959;
   border-color: #d9d9d9;
+  color: #595959;
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: #fafafa;
-  border-color: #40a9ff;
+.btn-secondary:hover {
+  background: #e6f7ff;
+  border-color: #1890ff;
   color: #1890ff;
 }
 
 .btn-small {
-  padding: 4px 8px;
-  font-size: 12px;
-  margin-right: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  margin-right: 3px;
 }
 
 /* 模态框样式 */
@@ -579,6 +700,33 @@ export default {
   justify-content: flex-end;
 }
 
+/* 批量删除弹窗样式 */
+.batch-delete-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 12px 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+}
+
+.batch-delete-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-delete-item:last-child {
+  border-bottom: none;
+}
+
+.warning-text {
+  color: #fa8c16;
+  font-size: 12px;
+}
+
 /* 图标 */
 .icon-plus::before { content: "➕"; }
 .icon-edit::before { content: "✏️"; }
@@ -590,15 +738,14 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 12px;
   background: white;
-  border-top: 1px solid #e8e8e8;
-  margin-top: 0;
+  border-top: 1px solid #f0f0f0;
 }
 
 .page-info {
-  color: #666;
   font-size: 13px;
+  color: #8c8c8c;
 }
 
 /* 响应式设计 */

@@ -8,11 +8,8 @@
           <i class="icon-plus"></i>
           新增客户
         </button>
-        <button class="btn btn-warning" @click="editSelected" :disabled="!selectedCustomer">
-          <i class="icon-edit"></i>
-          修改客户
-        </button>
-        <button class="btn btn-danger" @click="deleteSelected" :disabled="!selectedCustomer">
+
+        <button class="btn btn-danger" @click="deleteSelected" :disabled="selectedCustomers.length === 0">
           <i class="icon-delete"></i>
           删除客户
         </button>
@@ -70,6 +67,7 @@
                   :checked="isAllSelected"
                 />
               </th>
+              <th width="60">序号</th>
               <th>客户名称</th>
               <th>联系人</th>
               <th>联系方式</th>
@@ -81,25 +79,26 @@
           </thead>
           <tbody>
             <tr 
-              v-for="customer in customers" 
+              v-for="(customer, index) in customers" 
               :key="customer.customerId"
-              :class="{ selected: selectedCustomer && selectedCustomer.customerId === customer.customerId }"
-              @click="selectCustomer(customer)"
+              :class="{ selected: isSelected(customer) }"
+              @click="toggleSelectCustomer(customer)"
             >
               <td>
                 <input 
                   type="checkbox" 
-                  :checked="selectedCustomer && selectedCustomer.customerId === customer.customerId"
-                  @change="selectCustomer(customer)"
+                  :checked="isSelected(customer)"
+                  @change.stop="toggleSelectCustomer(customer)"
                 />
               </td>
+              <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ customer.customerName }}</td>
-              <td>{{ customer.contact }}</td>
-              <td>{{ customer.phoneNumber }}</td>
-              <td>{{ customer.province }}</td>
+              <td>{{ customer.contact || '-' }}</td>
+              <td>{{ customer.phoneNumber || '-' }}</td>
+              <td>{{ customer.province || '-' }}</td>
               <td>
                 <span class="rank-badge" :class="getRankClass(customer.customerRank)">
-                  {{ customer.customerRank }}
+                  {{ customer.customerRank || '-' }}
                 </span>
               </td>
               <td>{{ formatDate(customer.createTime) }}</td>
@@ -112,9 +111,15 @@
                 </button>
               </td>
             </tr>
-          </tbody>
-        </table>
-      </div>
+          <!-- 暂无数据 -->
+              <tr v-if="customers.length === 0" class="empty-row">
+                <td colspan="9" class="empty-cell">
+                  暂无数据
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
       <!-- 分页 -->
       <div class="pagination">
@@ -149,7 +154,7 @@
     />
 
     <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click="closeDeleteConfirm">
+    <div v-if="showDeleteConfirm" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <h3>确认删除</h3>
         <p>确定要删除客户 "{{ deletingCustomer?.customerName }}" 吗？此操作不可恢复。</p>
@@ -159,11 +164,29 @@
         </div>
       </div>
     </div>
+
+    <!-- 批量删除确认弹窗 -->
+    <div v-if="showBatchDeleteConfirm" class="modal-overlay">
+      <div class="modal-content" @click.stop>
+        <h3>确认批量删除</h3>
+        <p>确定要删除选中的 {{ deletingCustomers.length }} 个客户吗？此操作不可恢复。</p>
+        <div class="batch-delete-list">
+          <div v-for="customer in deletingCustomers" :key="customer.customerId" class="batch-delete-item">
+            {{ customer.customerName }}
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" @click="closeBatchDeleteConfirm">取消</button>
+          <button class="btn btn-danger" @click="confirmBatchDelete">确认删除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import CustomerForm from './CustomerForm.vue'
+import { getCustomerList, createCustomer, updateCustomer, deleteCustomer, batchDeleteCustomers, checkCustomerNameAvailable } from '../api/customer.js'
 
 export default {
   name: 'CustomerManagement',
@@ -174,7 +197,7 @@ export default {
     return {
       // 客户列表数据
       customers: [],
-      selectedCustomer: null,
+      selectedCustomers: [], // 改为数组，支持多选
       
       // 搜索表单
       searchForm: {
@@ -186,7 +209,7 @@ export default {
       
       // 分页
       currentPage: 1,
-      pageSize: 15,
+      pageSize: 20,
       totalCount: 0,
       totalPages: 0,
       
@@ -201,6 +224,10 @@ export default {
       // 删除确认
       showDeleteConfirm: false,
       deletingCustomer: null,
+      
+      // 批量删除确认
+      showBatchDeleteConfirm: false,
+      deletingCustomers: [],
       
       // 省份列表
       provinces: [
@@ -217,7 +244,7 @@ export default {
      * 是否全选
      */
     isAllSelected() {
-      return this.customers.length > 0 && this.selectedCustomer !== null
+      return this.customers.length > 0 && this.selectedCustomers.length === this.customers.length
     }
   },
   mounted() {
@@ -230,36 +257,32 @@ export default {
     async loadCustomers() {
       this.loading = true;
       try {
-        const params = new URLSearchParams({
-          page: (this.currentPage - 1).toString(),
-          size: this.pageSize.toString(),
-          sortBy: 'customerId',
-          sortDir: 'desc'
-        });
+        const params = {
+          page: this.currentPage - 1,
+          size: this.pageSize
+        };
 
         // 添加搜索条件
         if (this.searchForm.customerName) {
-          params.append('customerName', this.searchForm.customerName);
+          params.customerName = this.searchForm.customerName;
         }
         if (this.searchForm.contact) {
-          params.append('contact', this.searchForm.contact);
+          params.contact = this.searchForm.contact;
         }
         if (this.searchForm.province) {
-          params.append('province', this.searchForm.province);
+          params.province = this.searchForm.province;
         }
         if (this.searchForm.customerRank) {
-          params.append('customerRank', this.searchForm.customerRank);
+          params.customerRank = this.searchForm.customerRank;
         }
 
-        const response = await fetch(`http://localhost:8081/api/customers?${params}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        const data = await getCustomerList(params);
         this.customers = data.customers || [];
         this.totalCount = data.totalItems || 0;
         this.totalPages = data.totalPages || 0;
+        
+        // 清空选中状态
+        this.selectedCustomers = [];
       } catch (error) {
         console.error('加载客户列表失败:', error);
         this.$message?.error('加载客户列表失败: ' + error.message);
@@ -294,20 +317,36 @@ export default {
     },
 
     /**
-     * 选择客户
+     * 判断客户是否被选中
      */
-    selectCustomer(customer) {
-      this.selectedCustomer = this.selectedCustomer?.customerId === customer.customerId ? null : customer
+    isSelected(customer) {
+      return this.selectedCustomers.some(c => c.customerId === customer.customerId);
+    },
+    
+    /**
+     * 切换客户选中状态
+     */
+    toggleSelectCustomer(customer) {
+      const index = this.selectedCustomers.findIndex(c => c.customerId === customer.customerId);
+      if (index === -1) {
+        // 如果未选中，则添加到选中数组
+        this.selectedCustomers.push(customer);
+      } else {
+        // 如果已选中，则从选中数组中移除
+        this.selectedCustomers.splice(index, 1);
+      }
     },
 
     /**
      * 全选/取消全选
      */
     selectAll(event) {
-      if (event.target.checked && this.customers.length > 0) {
-        this.selectedCustomer = this.customers[0]
+      if (this.isAllSelected) {
+        // 如果已全选，则清空选中
+        this.selectedCustomers = [];
       } else {
-        this.selectedCustomer = null
+        // 如果未全选，则选中所有
+        this.selectedCustomers = [...this.customers];
       }
     },
 
@@ -320,14 +359,7 @@ export default {
       this.showForm = true
     },
 
-    /**
-     * 编辑选中的客户
-     */
-    editSelected() {
-      if (this.selectedCustomer) {
-        this.editCustomer(this.selectedCustomer)
-      }
-    },
+
 
     /**
      * 编辑客户
@@ -342,8 +374,15 @@ export default {
      * 删除选中的客户
      */
     deleteSelected() {
-      if (this.selectedCustomer) {
-        this.deleteCustomer(this.selectedCustomer)
+      if (this.selectedCustomers.length > 0) {
+        if (this.selectedCustomers.length === 1) {
+          // 单个删除
+          this.deleteCustomer(this.selectedCustomers[0]);
+        } else {
+          // 批量删除
+          this.deletingCustomers = [...this.selectedCustomers];
+          this.showBatchDeleteConfirm = true;
+        }
       }
     },
 
@@ -360,19 +399,13 @@ export default {
      */
     async confirmDelete() {
       try {
-        const response = await fetch(`http://localhost:8081/api/customers/${this.deletingCustomer.customerId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        await deleteCustomer(this.deletingCustomer.customerId);
         
         // 重新加载列表
         this.loadCustomers();
         
         // 清空选择
-        this.selectedCustomer = null;
+        this.selectedCustomers = [];
         
         this.closeDeleteConfirm();
         this.$message?.success('客户删除成功');
@@ -392,6 +425,40 @@ export default {
     },
 
     /**
+     * 关闭批量删除确认弹窗
+     */
+    closeBatchDeleteConfirm() {
+      this.showBatchDeleteConfirm = false
+      this.deletingCustomers = []
+    },
+
+    /**
+     * 确认批量删除
+     */
+    async confirmBatchDelete() {
+      try {
+        // 获取所有要删除的客户ID
+        const customerIds = this.deletingCustomers.map(customer => customer.customerId);
+        
+        // 调用批量删除API
+        await batchDeleteCustomers(customerIds);
+        
+        // 重新加载列表
+        this.loadCustomers();
+        
+        // 清空选择
+        this.selectedCustomers = [];
+        
+        this.closeBatchDeleteConfirm();
+        this.$message?.success(`成功删除 ${customerIds.length} 个客户`);
+        
+      } catch (error) {
+        console.error('批量删除客户失败:', error);
+        this.$message?.error('批量删除客户失败: ' + error.message);
+      }
+    },
+
+    /**
      * 关闭表单
      */
     closeForm() {
@@ -404,36 +471,21 @@ export default {
      */
     async saveCustomer(customerData) {
       try {
-        let response;
-        
+        // 保存前进行客户名称判重（正常逻辑，不以错误处理）
+        const available = await checkCustomerNameAvailable(
+          customerData.customerName,
+          this.formMode === 'edit' ? customerData.customerId : null
+        )
+        if (!available) {
+          this.$message?.warning('客户名称已存在，请更换后再保存')
+          return
+        }
+
         if (this.formMode === 'add') {
-          response = await fetch('http://localhost:8081/api/customers', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(customerData)
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
+          await createCustomer(customerData);
           this.$message?.success('客户新增成功');
-          
         } else {
-          response = await fetch(`http://localhost:8081/api/customers/${customerData.customerId}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(customerData)
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
+          await updateCustomer(customerData.customerId, customerData);
           this.$message?.success('客户更新成功');
         }
         
@@ -484,7 +536,15 @@ export default {
      */
     formatDate(dateString) {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleString()
+      
+      const date = new Date(dateString)
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 }
@@ -494,7 +554,10 @@ export default {
 .customer-management {
   padding: 8px;
   background: #f5f5f5;
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 页面头部 */
@@ -534,15 +597,15 @@ export default {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .search-input, .search-select {
-  padding: 6px 10px;
+  min-width: 200px;
+  padding: 6px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  font-size: 13px;
-  min-width: 130px;
+  font-size: 14px;
+  transition: all 0.3s;
 }
 
 .search-input:focus, .search-select:focus {
@@ -553,6 +616,9 @@ export default {
 
 /* 表格区域 */
 .table-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -560,7 +626,9 @@ export default {
 }
 
 .table-container {
-  overflow-x: auto;
+  overflow: auto;
+  flex: 1;
+  max-height: calc(100vh - 260px);
 }
 
 .customer-table {
@@ -595,6 +663,12 @@ export default {
   background: #e6f7ff;
 }
 
+.empty-cell {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 20px;
+}
+
 /* 等级徽章 */
 .rank-badge {
   padding: 4px 8px;
@@ -626,8 +700,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border-top: 1px solid #f0f0f0;
+  background: white;
 }
 
 .page-info {
@@ -753,6 +828,30 @@ export default {
   justify-content: flex-end;
 }
 
+/* 批量删除列表 */
+.batch-delete-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 12px 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  padding: 8px;
+  background: #fafafa;
+}
+
+.batch-delete-item {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #595959;
+}
+
+.batch-delete-item:last-child {
+  border-bottom: none;
+}
+
+
+
 /* 图标 */
 .icon-plus::before { content: "➕"; }
 .icon-edit::before { content: "✏️"; }
@@ -787,7 +886,7 @@ export default {
     gap: 6px;
   }
   
-  .search-input, .search-select {
+  .search-input {
     min-width: auto;
   }
   

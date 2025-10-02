@@ -21,11 +21,14 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   color: #333;
+  overflow: hidden;
+  height: 100vh;
 }
 
 #app {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* 占位组件样式 */

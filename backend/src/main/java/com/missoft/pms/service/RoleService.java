@@ -86,6 +86,18 @@ public class RoleService {
     }
 
     /**
+     * 检查角色名称是否存在
+     * @param roleName 角色名称
+     * @return true 表示存在，false 表示不存在
+     */
+    public boolean existsByRoleName(String roleName) {
+        if (roleName == null) {
+            return false;
+        }
+        return roleRepository.existsByRoleName(roleName);
+    }
+
+    /**
      * 删除角色（函数级注释：若该角色已被用户使用则不允许删除）
      * @param roleId 角色ID
      * @return 是否删除成功
@@ -156,5 +168,32 @@ public class RoleService {
             }
         }
         return count;
+    }
+
+    /**
+     * 批量删除角色（函数级注释：检查每个角色是否被用户使用，未被使用的角色才会被删除）
+     * @param roleIds 角色ID列表
+     * @return 成功删除的角色数量
+     */
+    public int batchDeleteRoles(List<Long> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return 0;
+        }
+        
+        int deletedCount = 0;
+        for (Long roleId : roleIds) {
+            try {
+                // 检查角色是否被用户使用
+                long userCount = countUsersByRoleId(roleId);
+                if (userCount == 0) {
+                    roleRepository.deleteById(roleId);
+                    deletedCount++;
+                }
+            } catch (Exception e) {
+                // 记录错误但继续处理其他角色
+                System.err.println("删除角色失败: " + roleId + ", 错误: " + e.getMessage());
+            }
+        }
+        return deletedCount;
     }
 }

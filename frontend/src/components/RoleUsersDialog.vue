@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-content large" @click.stop>
       <div class="modal-header">
         <h3>角色用户管理 - {{ role?.roleName }}</h3>
@@ -103,7 +103,7 @@
     </div>
 
     <!-- 确认取消授权弹窗 -->
-    <div v-if="showConfirm" class="modal-overlay confirm-overlay" @click="closeConfirm">
+    <div v-if="showConfirm" class="modal-overlay confirm-overlay">
       <div class="modal-content confirm-dialog" @click.stop>
         <div class="confirm-header">
           <div class="confirm-icon">

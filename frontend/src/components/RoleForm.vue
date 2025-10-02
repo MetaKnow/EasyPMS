@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ mode === 'add' ? '新增角色' : '修改角色' }}</h3>
@@ -18,6 +18,8 @@
             class="form-input"
             placeholder="请输入角色名称"
             :class="{ error: errors.roleName }"
+            @input="onRoleNameInput"
+            @blur="onRoleNameBlur"
             maxlength="50"
           />
           <span v-if="errors.roleName" class="error-message">
@@ -58,7 +60,7 @@
 </template>
 
 <script>
-import { createRole, updateRole } from '../api/role.js'
+import { createRole, updateRole, checkRoleNameExists } from '../api/role.js'
 
 /**
  * 角色表单组件（类级注释：负责角色的新增和修改表单）
@@ -89,7 +91,9 @@ export default {
         description: ''
       },
       errors: {},
-      loading: false
+      loading: false,
+      isCheckingRoleName: false,
+      _roleNameDebounceTimer: null
     }
   },
   watch: {
@@ -138,7 +142,7 @@ export default {
     /**
      * 表单验证（函数级注释：验证表单数据的有效性）
      */
-    validateForm() {
+    async validateForm() {
       const errors = {}
 
       // 角色名称验证
@@ -155,6 +159,24 @@ export default {
         errors.description = '角色描述不能超过200个字符'
       }
 
+      // 若基础校验通过，进行异步判重（新增模式或编辑时名称发生变化）
+      const trimmedName = this.formData.roleName.trim()
+      const needCheckDuplicate = trimmedName && (this.mode === 'add' || (this.mode === 'edit' && trimmedName !== (this.role?.roleName || '')))
+      if (needCheckDuplicate) {
+        try {
+          this.isCheckingRoleName = true
+          const { exists } = await checkRoleNameExists(trimmedName)
+          if (exists) {
+            errors.roleName = '角色名称已存在，请更换'
+          }
+        } catch (e) {
+          // 网络错误不阻塞，但不覆盖已有错误
+          console.warn('角色名称判重检查失败:', e)
+        } finally {
+          this.isCheckingRoleName = false
+        }
+      }
+
       this.errors = errors
       return Object.keys(errors).length === 0
     },
@@ -163,7 +185,7 @@ export default {
      * 处理表单提交（函数级注释：提交表单数据到后端）
      */
     async handleSubmit() {
-      if (!this.validateForm()) {
+      if (!(await this.validateForm())) {
         return
       }
 
@@ -203,6 +225,86 @@ export default {
      */
     handleOverlayClick() {
       this.close()
+    },
+
+    /**
+     * 角色名称输入时（300ms 防抖 + 异步判重）
+     */
+    onRoleNameInput() {
+      const name = (this.formData.roleName || '').trim()
+      // 基础前端长度校验同步提示
+      if (!name) {
+        this.errors.roleName = '请输入角色名称'
+        this.clearRoleNameDebounce()
+        return
+      }
+      if (name.length < 2) {
+        this.errors.roleName = '角色名称至少2个字符'
+        this.clearRoleNameDebounce()
+        return
+      }
+      if (name.length > 50) {
+        this.errors.roleName = '角色名称不能超过50个字符'
+        this.clearRoleNameDebounce()
+        return
+      }
+
+      // 若与原名称一致（编辑场景），不再判重
+      if (this.mode === 'edit' && name === (this.role?.roleName || '')) {
+        this.errors.roleName = ''
+        this.clearRoleNameDebounce()
+        return
+      }
+
+      // 防抖后异步判重
+      this.errors.roleName = ''
+      this.isCheckingRoleName = true
+      this.clearRoleNameDebounce()
+      this._roleNameDebounceTimer = setTimeout(async () => {
+        try {
+          const { exists } = await checkRoleNameExists(name)
+          if (exists) {
+            this.errors.roleName = '角色名称已存在，请更换'
+          } else {
+            this.errors.roleName = ''
+          }
+        } catch (e) {
+          console.warn('角色名称判重检查失败:', e)
+        } finally {
+          this.isCheckingRoleName = false
+        }
+      }, 300)
+    },
+
+    /**
+     * 角色名称失焦时（立即判重）
+     */
+    async onRoleNameBlur() {
+      const name = (this.formData.roleName || '').trim()
+      this.clearRoleNameDebounce()
+      if (!name) return
+      if (this.mode === 'edit' && name === (this.role?.roleName || '')) return
+      try {
+        this.isCheckingRoleName = true
+        const { exists } = await checkRoleNameExists(name)
+        if (exists) {
+          this.errors.roleName = '角色名称已存在，请更换'
+        }
+      } catch (e) {
+        console.warn('角色名称判重检查失败:', e)
+      } finally {
+        this.isCheckingRoleName = false
+      }
+    },
+
+    /**
+     * 清理角色名称判重防抖定时器
+     */
+    clearRoleNameDebounce() {
+      if (this._roleNameDebounceTimer) {
+        clearTimeout(this._roleNameDebounceTimer)
+        this._roleNameDebounceTimer = null
+      }
     }
   }
 }

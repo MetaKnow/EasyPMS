@@ -2,6 +2,8 @@
  * 用户管理相关API接口
  */
 
+import request from './request'
+
 const API_BASE_URL = 'http://localhost:8081/api'
 
 /**
@@ -306,20 +308,13 @@ export async function toggleUserStatus(userId, locked) {
  */
 export async function batchDeleteUsers(userIds) {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/batch`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userIds })
+    const response = await request({
+      url: '/api/users/batch',
+      method: 'delete',
+      data: { userIds: userIds }
     })
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-    
-    return await response.json()
+    return response.data
   } catch (error) {
     console.error('批量删除用户失败:', error)
     throw error

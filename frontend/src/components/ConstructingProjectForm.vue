@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" v-if="visible" @click="closeModal">
+  <div class="modal-overlay" v-if="visible">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ isEdit ? '编辑在建项目' : '创建在建项目' }}</h3>

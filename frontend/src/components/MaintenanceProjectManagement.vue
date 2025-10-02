@@ -59,6 +59,7 @@
                   :checked="isAllSelected"
                 />
               </th>
+              <th width="60">序号</th>
               <th>项目名称</th>
               <th>档案系统</th>
               <th>负责人</th>
@@ -71,7 +72,7 @@
           </thead>
           <tbody>
             <tr 
-              v-for="project in projectList" 
+              v-for="(project, index) in projectList" 
               :key="project.projectId"
               @click="selectProject(project)"
               :class="{ selected: selectedProject && selectedProject.projectId === project.projectId }"
@@ -83,6 +84,7 @@
                   v-model="selectedProjects"
                 />
               </td>
+              <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ project.projectName }}</td>
               <td>{{ project.arcSystem }}</td>
               <td>{{ project.directorName || '-' }}</td>
@@ -149,7 +151,7 @@ export default {
       },
       // 分页信息
       currentPage: 1,
-      pageSize: 15,
+      pageSize: 20,
       total: 0,
       // 选中的项目
       selectedProjects: [],
@@ -387,7 +389,10 @@ export default {
 .maintenance-management {
   padding: 8px;
   background: #f5f5f5;
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 页面头部 */
@@ -446,6 +451,9 @@ export default {
 
 /* 表格区域 */
 .table-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -453,7 +461,9 @@ export default {
 }
 
 .table-container {
-  overflow-x: auto;
+  overflow: auto;
+  flex: 1;
+  max-height: calc(100vh - 260px);
 }
 
 .maintenance-table {
@@ -623,8 +633,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border-top: 1px solid #f0f0f0;
+  background: white;
 }
 
 .page-info {

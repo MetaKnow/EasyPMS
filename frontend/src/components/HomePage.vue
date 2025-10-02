@@ -16,14 +16,38 @@
       <!-- 左侧功能菜单 -->
       <aside class="sidebar">
         <nav class="menu">
-          <div class="menu-item" 
-               v-for="item in menuItems" 
-               :key="item.id"
-               :class="{ active: $route.path === item.path }"
-               @click="navigateToModule(item.path)">
-            <i :class="item.icon"></i>
-            <span>{{ item.name }}</span>
-          </div>
+          <template v-for="item in menuItems" :key="item.id">
+            <!-- 普通菜单项 -->
+            <div v-if="!item.isGroup" 
+                 class="menu-item" 
+                 :class="{ active: $route.path === item.path }"
+                 @click="navigateToModule(item.path)">
+              <i :class="item.icon"></i>
+              <span>{{ item.name }}</span>
+            </div>
+            
+            <!-- 菜单组 -->
+            <div v-else class="menu-group">
+              <div class="menu-group-header" 
+                   :class="{ expanded: item.expanded }"
+                   @click="toggleMenuGroup(item)">
+                <i :class="item.icon"></i>
+                <span>{{ item.name }}</span>
+                <i class="expand-icon" :class="{ rotated: item.expanded }">▼</i>
+              </div>
+              
+              <div class="menu-group-children" v-show="item.expanded">
+                <div v-for="child in item.children" 
+                     :key="child.id"
+                     class="menu-item child-item" 
+                     :class="{ active: $route.path === child.path }"
+                     @click="navigateToModule(child.path)">
+                  <i :class="child.icon"></i>
+                  <span>{{ child.name }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
         </nav>
       </aside>
 
@@ -75,8 +99,22 @@ export default {
         { id: 'customers', name: '客户管理', icon: 'icon-users', path: '/home/customers' },
         { id: 'construction', name: '在建项目管理', icon: 'icon-building', path: '/home/construction' },
         { id: 'maintenance', name: '运维项目管理', icon: 'icon-tools', path: '/home/maintenance' },
-        { id: 'organization', name: '机构用户管理', icon: 'icon-organization', path: '/home/organization' },
-        { id: 'roles', name: '角色管理', icon: 'icon-shield', path: '/home/roles' }
+        { 
+          id: 'system', 
+          name: '系统维护', 
+          icon: 'icon-settings', 
+          isGroup: true,
+          expanded: false,
+          children: [
+            { id: 'organization', name: '机构用户管理', icon: 'icon-organization', path: '/home/system/organization' },
+            { id: 'roles', name: '角色管理', icon: 'icon-shield', path: '/home/system/roles' },
+            { id: 'milestones', name: '标准里程碑维护', icon: 'icon-milestone', path: '/home/system/milestones' },
+            { id: 'steps', name: '标准交付步骤维护', icon: 'icon-steps', path: '/home/system/steps' },
+            { id: 'deliverables', name: '标准交付物维护', icon: 'icon-deliverable', path: '/home/system/deliverables' },
+            { id: 'products', name: '基础产品维护', icon: 'icon-product', path: '/home/system/products' },
+            { id: 'partners', name: '渠道商维护', icon: 'icon-partner', path: '/home/system/partners' }
+          ]
+        }
       ],
       // 表单显示状态
       constructingProjectFormVisible: false,
@@ -105,6 +143,13 @@ export default {
      */
     navigateToModule(path) {
       this.$router.push(path);
+    },
+
+    /**
+     * 切换菜单组的展开/折叠状态
+     */
+    toggleMenuGroup(item) {
+      item.expanded = !item.expanded;
     },
 
     /**
@@ -275,11 +320,83 @@ export default {
   width: 16px;
 }
 
+/* 菜单组样式 */
+.menu-group {
+  margin: 4px 0;
+}
+
+.menu-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  border-radius: 8px;
+  margin: 4px 0;
+  font-weight: normal;
+  font-size: inherit;
+}
+
+.menu-group-header:hover {
+  background-color: #f0f0f0;
+}
+
+.menu-group-header.expanded {
+  background-color: #f0f0f0;
+}
+
+.menu-group-header .expand-icon {
+  font-size: 12px;
+  transition: transform 0.3s;
+  margin-left: auto;
+}
+
+.menu-group-header .expand-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.menu-group-children {
+  padding-left: 20px;
+  background-color: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+.menu-item.child-item {
+  padding: 10px 20px;
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.menu-item.child-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item.child-item.active {
+  background-color: #1976d2;
+  color: white;
+}
+
+/* 图标样式 */
+.icon-dashboard::before { content: '📊'; }
+.icon-users::before { content: '👥'; }
+.icon-building::before { content: '🏗️'; }
+.icon-tools::before { content: '🔧'; }
+.icon-settings::before { content: '⚙️'; }
+.icon-organization::before { content: '🏢'; }
+.icon-shield::before { content: '🛡️'; }
+.icon-milestone::before { content: '🎯'; }
+.icon-steps::before { content: '📋'; }
+.icon-deliverable::before { content: '📦'; }
+.icon-product::before { content: '📱'; }
+.icon-partner::before { content: '🤝'; }
+
 /* 主内容区域 */
 .main-content {
   flex: 1;
   padding: 8px;
-  overflow-y: auto;
+  overflow: hidden;
+  height: calc(100vh - 60px);
 }
 
 .section-title {

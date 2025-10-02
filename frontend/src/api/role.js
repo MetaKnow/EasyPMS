@@ -1,6 +1,7 @@
 /**
  * 角色管理相关API接口
  */
+import request from './request.js'
 
 const API_BASE_URL = 'http://localhost:8081/api'
 
@@ -184,6 +185,33 @@ export async function getUsersByRoleId(roleId) {
 }
 
 /**
+ * 检查角色名称是否存在
+ * @param {string} roleName 角色名称
+ * @returns {Promise<{exists:boolean}>} 是否存在
+ */
+export async function checkRoleNameExists(roleName) {
+  try {
+    const encoded = encodeURIComponent(roleName || '')
+    const response = await fetch(`${API_BASE_URL}/roles/check-name?roleName=${encoded}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('检查角色名称是否存在失败:', error)
+    // 发生网络错误时，返回 {exists:false} 以不阻塞用户输入，但提交前仍有最终校验
+    return { exists: false }
+  }
+}
+
+/**
  * 批量取消用户的角色授权
  * @param {Array<number>} userIds 用户ID列表
  * @returns {Promise} 操作结果
@@ -205,6 +233,26 @@ export async function batchRemoveRoleFromUsers(userIds) {
     return await response.json()
   } catch (error) {
     console.error('批量取消角色授权失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 批量删除角色
+ * @param {Array<number>} roleIds 角色ID列表
+ * @returns {Promise} 操作结果
+ */
+export async function batchDeleteRoles(roleIds) {
+  try {
+    const response = await request({
+      url: '/api/roles/batch',
+      method: 'DELETE',
+      data: roleIds
+    })
+    
+    return response.data
+  } catch (error) {
+    console.error('批量删除角色失败:', error)
     throw error
   }
 }

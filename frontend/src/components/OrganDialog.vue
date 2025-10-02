@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click="handleOverlayClick">
+  <div v-if="visible" class="modal-overlay">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ isEdit ? '重命名机构' : '新增机构' }}</h3>
