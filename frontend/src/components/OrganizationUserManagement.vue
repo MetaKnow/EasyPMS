@@ -651,9 +651,9 @@ export default {
 
 <style scoped>
 .organization-user-management {
-  padding: 8px;
+  padding: 0px;
   background: #f5f5f5;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -708,7 +708,7 @@ export default {
 .panel-content {
   flex: 1;
   overflow: auto;
-  padding: 6px; /* 原 8px，缩小 */
+  padding: 0px; /* 原 8px，缩小 */
 }
 
 .right-panel {
@@ -741,7 +741,7 @@ export default {
 .panel-content {
   flex: 1;
   overflow: auto;
-  padding: 8px;
+  padding: 6px;
 }
 
 .panel-actions {

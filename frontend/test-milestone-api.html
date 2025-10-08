@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试里程碑API</title>
+</head>
+<body>
+    <h1>测试里程碑API</h1>
+    <button onclick="testMilestoneAPI()">测试加载里程碑</button>
+    <div id="result"></div>
+
+    <script>
+        async function testMilestoneAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '正在加载...';
+            
+            try {
+                console.log('开始调用里程碑API...');
+                const response = await fetch('http://localhost:8081/api/standard-milestones/all', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('API响应状态:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API返回的原始数据:', data);
+                
+                const milestones = data.milestones || [];
+                console.log('里程碑列表:', milestones);
+                console.log('里程碑数量:', milestones.length);
+                
+                resultDiv.innerHTML = `
+                    <h3>API调用成功</h3>
+                    <p>里程碑数量: ${milestones.length}</p>
+                    <ul>
+                        ${milestones.map(m => `<li>${m.milestoneName} (ID: ${m.milestoneId})</li>`).join('')}
+                    </ul>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('API调用失败:', error);
+                resultDiv.innerHTML = `<p style="color: red;">API调用失败: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

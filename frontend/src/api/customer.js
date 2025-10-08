@@ -53,6 +53,25 @@ export async function getCustomerList(params = {}) {
 }
 
 /**
+ * 获取所有客户列表（不分页）
+ * @returns {Promise<Array>} 所有客户数据
+ */
+export async function getAllCustomers() {
+  try {
+    const response = await request({
+      url: '/api/customers/all',
+      method: 'GET'
+    })
+    
+    // 后端返回格式：{success: true, data: [...]}
+    return response.data?.data || []
+  } catch (error) {
+    console.error('获取所有客户列表失败:', error)
+    return []
+  }
+}
+
+/**
  * 检查客户名称是否可用（用于保存前判重）
  * @param {string} customerName 客户名称
  * @param {number} [customerId] 编辑模式下排除的客户ID，可选

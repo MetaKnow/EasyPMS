@@ -53,6 +53,31 @@ export async function getUserList(params = {}) {
 }
 
 /**
+ * 获取所有用户列表（不分页）
+ * @returns {Promise<Array>} 所有用户数据
+ */
+export async function getAllUsers() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/all`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    return result.data || []
+  } catch (error) {
+    console.error('获取所有用户列表失败:', error)
+    return []
+  }
+}
+
+/**
  * 根据机构ID获取用户列表
  * @param {number} organId 机构ID
  * @returns {Promise} 用户列表

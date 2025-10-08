@@ -314,6 +314,27 @@ public class UserController {
     }
 
     /**
+     * 获取所有用户列表（不分页）
+     * GET /api/users/all
+     */
+    @GetMapping("/all")
+    public ResponseEntity<Map<String, Object>> getAllUsers() {
+        try {
+            List<User> users = userService.getAllUsers();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", users);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "获取用户列表失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
      * 检查用户名是否存在（与前端 user.js 的 checkUserNameExists 对齐）
      * GET /api/users/check-username?userName=
      */

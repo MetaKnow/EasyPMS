@@ -1,6 +1,7 @@
 package com.missoft.pms.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 /**
  * 用户实体类
@@ -35,6 +36,12 @@ public class User {
     
     @Column(name = "locked", columnDefinition = "TINYINT DEFAULT 0")
     private Integer locked = 0;
+    
+    @Column(name = "createTime", nullable = false, updatable = false)
+    private LocalDateTime createTime;
+    
+    @Column(name = "updateTime")
+    private LocalDateTime updateTime;
     
     /**
      * 默认构造函数
@@ -177,6 +184,38 @@ public class User {
         return locked != null && locked == 1;
     }
     
+    /**
+     * 获取创建时间
+     * @return 创建时间
+     */
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+    
+    /**
+     * 设置创建时间
+     * @param createTime 创建时间
+     */
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+    
+    /**
+     * 获取更新时间
+     * @return 更新时间
+     */
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+    
+    /**
+     * 设置更新时间
+     * @param updateTime 更新时间
+     */
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
+    
     @Override
     public String toString() {
         return "User{" +
@@ -186,6 +225,8 @@ public class User {
                 ", roleId=" + roleId +
                 ", name='" + name + '\'' +
                 ", locked=" + locked +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
                 '}';
     }
 }

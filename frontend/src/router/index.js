@@ -8,7 +8,7 @@ import MaintenanceProjectManagement from '../components/MaintenanceProjectManage
 import OrganizationUserManagement from '../components/OrganizationUserManagement.vue'
 import RoleManagement from '../components/RoleManagement.vue'
 import StandardMilestoneManagement from '../components/StandardMilestoneManagement.vue'
-import StandardStepManagement from '../components/StandardStepManagement.vue'
+import StandardConstructStepManagement from '../components/StandardConstructStepManagement.vue'
 import StandardDeliverableManagement from '../components/StandardDeliverableManagement.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import ChannelDistributorManagement from '../components/ChannelDistributorManagement.vue'
@@ -72,19 +72,19 @@ const routes = [
         path: 'system/milestones',
         name: 'StandardMilestoneManagement',
         component: StandardMilestoneManagement,
-        meta: { title: '标准里程碑维护' }
+        meta: { title: '标准里程碑' }
       },
       {
         path: 'system/steps',
-        name: 'StandardStepManagement',
-        component: StandardStepManagement,
-        meta: { title: '标准交付步骤维护' }
+        name: 'StandardConstructStepManagement',
+        component: StandardConstructStepManagement,
+        meta: { title: '标准交付步骤' }
       },
       {
         path: 'system/deliverables',
         name: 'StandardDeliverableManagement',
         component: StandardDeliverableManagement,
-        meta: { title: '标准交付物维护' }
+        meta: { title: '标准交付物' }
       },
       {
         path: 'system/products',

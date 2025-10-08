@@ -235,8 +235,18 @@ public class UserService {
                 organName,
                 user.getRoleId(),
                 roleName,
-                user.getLocked()
+                user.getLocked(),
+                user.getCreateTime(),
+                user.getUpdateTime()
         );
+    }
+
+    /**
+     * 获取所有用户列表
+     * @return 所有用户列表
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 
     /**

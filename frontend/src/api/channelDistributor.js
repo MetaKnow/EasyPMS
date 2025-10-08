@@ -161,3 +161,21 @@ export async function checkChannelNameAvailable(channelName, channelId) {
     return true
   }
 }
+
+/**
+ * 获取所有渠道商列表（不分页）
+ * @returns {Promise<Array>} 渠道商列表
+ */
+export async function getAllChannelDistributors() {
+  try {
+    const response = await request({
+      url: '/api/channel-distributors/all',
+      method: 'GET'
+    })
+    
+    return response.data.data || []
+  } catch (error) {
+    console.error('获取所有渠道商列表失败:', error)
+    return []
+  }
+}

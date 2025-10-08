@@ -54,6 +54,7 @@
       <!-- 右侧主内容区域 -->
       <main class="main-content">
         <router-view 
+          :key="routerViewKey"
           @show-constructing-project-form="showConstructingProjectForm"
           @show-afterservice-project-form="showAfterserviceProjectForm"
         />
@@ -81,6 +82,7 @@
 <script>
 import ConstructingProjectForm from './ConstructingProjectForm.vue'
 import AfterserviceProjectForm from './AfterserviceProjectForm.vue'
+import { getConstructingProjectById } from '../api/constructingProject.js'
 
 export default {
   name: 'HomePage',
@@ -108,9 +110,9 @@ export default {
           children: [
             { id: 'organization', name: '机构用户管理', icon: 'icon-organization', path: '/home/system/organization' },
             { id: 'roles', name: '角色管理', icon: 'icon-shield', path: '/home/system/roles' },
-            { id: 'milestones', name: '标准里程碑维护', icon: 'icon-milestone', path: '/home/system/milestones' },
-            { id: 'steps', name: '标准交付步骤维护', icon: 'icon-steps', path: '/home/system/steps' },
-            { id: 'deliverables', name: '标准交付物维护', icon: 'icon-deliverable', path: '/home/system/deliverables' },
+            { id: 'milestones', name: '标准里程碑', icon: 'icon-milestone', path: '/home/system/milestones' },
+            { id: 'steps', name: '标准交付步骤', icon: 'icon-steps', path: '/home/system/steps' },
+            { id: 'deliverables', name: '标准交付物', icon: 'icon-deliverable', path: '/home/system/deliverables' },
             { id: 'products', name: '基础产品维护', icon: 'icon-product', path: '/home/system/products' },
             { id: 'partners', name: '渠道商维护', icon: 'icon-partner', path: '/home/system/partners' }
           ]
@@ -121,7 +123,9 @@ export default {
       afterserviceProjectFormVisible: false,
       // 选中的项目数据
       selectedConstructingProject: null,
-      selectedAfterserviceProject: null
+      selectedAfterserviceProject: null,
+      // 路由视图刷新key
+      routerViewKey: 0
     }
   },
   mounted() {
@@ -164,8 +168,25 @@ export default {
     /**
      * 显示在建项目表单
      */
-    showConstructingProjectForm(projectData = null) {
-      this.selectedConstructingProject = projectData;
+    async showConstructingProjectForm(projectData = null) {
+      if (projectData && projectData.projectId) {
+        // 编辑模式：获取完整的项目详情
+        try {
+          const response = await getConstructingProjectById(projectData.projectId);
+          if (response.data.success) {
+            this.selectedConstructingProject = response.data.data;
+          } else {
+            console.error('获取项目详情失败:', response.data.message);
+            this.selectedConstructingProject = projectData; // 降级使用原数据
+          }
+        } catch (error) {
+          console.error('获取项目详情失败:', error);
+          this.selectedConstructingProject = projectData; // 降级使用原数据
+        }
+      } else {
+        // 新建模式
+        this.selectedConstructingProject = projectData;
+      }
       this.constructingProjectFormVisible = true;
     },
 
@@ -182,8 +203,13 @@ export default {
      */
     onConstructingProjectSuccess() {
       this.closeConstructingProjectForm();
-      // 刷新在建项目列表
-      this.$router.push('/home/construction');
+      // 如果当前不在在建项目页面，则跳转
+      if (this.$route.path !== '/home/construction') {
+        this.$router.push('/home/construction');
+      } else {
+        // 如果已经在在建项目页面，强制刷新组件
+        this.routerViewKey++;
+      }
     },
 
     /**
@@ -207,8 +233,13 @@ export default {
      */
     onAfterserviceProjectSuccess() {
       this.closeAfterserviceProjectForm();
-      // 刷新运维项目列表
-      this.$router.push('/home/maintenance');
+      // 如果当前不在运维项目页面，则跳转
+      if (this.$route.path !== '/home/maintenance') {
+        this.$router.push('/home/maintenance');
+      } else {
+        // 如果已经在运维项目页面，强制刷新组件
+        this.routerViewKey++;
+      }
     }
   }
 }
@@ -285,96 +316,178 @@ export default {
 
 /* 左侧边栏 */
 .sidebar {
-  width: 200px;
-  background: white;
+  width: 240px;
+  background: #ffffff;
   border-right: 1px solid #e8e8e8;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  overflow-y: auto;
 }
 
 .menu {
-  padding: 8px 0;
+  padding: 16px 0;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 20px;
+  margin: 4px 12px;
   cursor: pointer;
-  transition: all 0.3s;
-  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568;
+  position: relative;
 }
 
 .menu-item:hover {
-  background-color: #f0f2f5;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  color: #2d3748;
+  transform: translateX(4px);
 }
 
 .menu-item.active {
-  background-color: #e6f7ff;
-  border-left-color: #1890ff;
-  color: #1890ff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.menu-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 0 2px 2px 0;
 }
 
 .menu-item i {
-  margin-right: 10px;
-  font-size: 16px;
-  width: 16px;
+  margin-right: 12px;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.menu-item.active i {
+  opacity: 1;
 }
 
 /* 菜单组样式 */
 .menu-group {
-  margin: 4px 0;
+  margin: 8px 0;
 }
 
 .menu-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 14px 20px;
+  margin: 4px 12px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
   border-radius: 8px;
-  margin: 4px 0;
-  font-weight: normal;
-  font-size: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: #2d3748;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
 }
 
 .menu-group-header:hover {
-  background-color: #f0f0f0;
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .menu-group-header.expanded {
-  background-color: #f0f0f0;
+  background: #f8f9fa;
+  color: #2d3748;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.menu-group-header i {
+  margin-right: 12px;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
 }
 
 .menu-group-header .expand-icon {
   font-size: 12px;
-  transition: transform 0.3s;
+  transition: transform 0.3s ease;
   margin-left: auto;
+  opacity: 0.7;
 }
 
-.menu-group-header .expand-icon.rotated {
+.menu-group-header.expanded .expand-icon {
   transform: rotate(180deg);
+  opacity: 1;
 }
 
 .menu-group-children {
-  padding-left: 20px;
-  background-color: #fafafa;
-  border-radius: 0 0 8px 8px;
+  padding: 8px 0;
+  margin: 0 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 0 0 12px 12px;
+  border: 1px solid #e9ecef;
+  border-top: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .menu-item.child-item {
-  padding: 10px 20px;
-  margin: 2px 0;
-  font-size: 14px;
+  padding: 10px 24px;
+  margin: 2px 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #6c757d;
+  border-radius: 6px;
+  position: relative;
+}
+
+.menu-item.child-item::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #dee2e6;
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
 .menu-item.child-item:hover {
-  background-color: #f5f5f5;
+  background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+  color: #495057;
+  transform: translateX(6px);
+}
+
+.menu-item.child-item:hover::before {
+  background: #6c757d;
+  transform: translateY(-50%) scale(1.2);
 }
 
 .menu-item.child-item.active {
-  background-color: #1976d2;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3);
+}
+
+.menu-item.child-item.active::before {
+  background: white;
+  transform: translateY(-50%) scale(1.3);
+}
+
+.menu-item.child-item i {
+  margin-right: 10px;
+  font-size: 16px;
+  width: 18px;
 }
 
 /* 图标样式 */

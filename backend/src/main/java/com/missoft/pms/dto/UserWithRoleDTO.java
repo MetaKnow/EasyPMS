@@ -1,5 +1,7 @@
 package com.missoft.pms.dto;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户信息DTO（包含角色名称）
  * 用于前端显示用户列表时包含角色信息
@@ -17,6 +19,8 @@ public class UserWithRoleDTO {
     private Long roleId;
     private String roleName;  // 角色名称
     private Integer locked;
+    private LocalDateTime createTime;  // 创建时间
+    private LocalDateTime updateTime;  // 更新时间
     
     /**
      * 默认构造函数
@@ -34,9 +38,11 @@ public class UserWithRoleDTO {
      * @param roleId 角色ID
      * @param roleName 角色名称
      * @param locked 锁定状态
+     * @param createTime 创建时间
+     * @param updateTime 更新时间
      */
     public UserWithRoleDTO(Long userId, String userName, String name, Long organId, String organName,
-                          Long roleId, String roleName, Integer locked) {
+                          Long roleId, String roleName, Integer locked, LocalDateTime createTime, LocalDateTime updateTime) {
         this.userId = userId;
         this.userName = userName;
         this.name = name;
@@ -45,6 +51,8 @@ public class UserWithRoleDTO {
         this.roleId = roleId;
         this.roleName = roleName;
         this.locked = locked;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
     }
     
     // Getter和Setter方法
@@ -177,6 +185,38 @@ public class UserWithRoleDTO {
         this.locked = locked;
     }
     
+    /**
+     * 获取创建时间
+     * @return 创建时间
+     */
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+    
+    /**
+     * 设置创建时间
+     * @param createTime 创建时间
+     */
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+    
+    /**
+     * 获取更新时间
+     * @return 更新时间
+     */
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+    
+    /**
+     * 设置更新时间
+     * @param updateTime 更新时间
+     */
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
+    
     @Override
     public String toString() {
         return "UserWithRoleDTO{" +
@@ -188,6 +228,8 @@ public class UserWithRoleDTO {
                 ", roleId=" + roleId +
                 ", roleName='" + roleName + '\'' +
                 ", locked=" + locked +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
                 '}';
     }
 }

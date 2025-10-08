@@ -271,4 +271,25 @@ public class ArchieveSoftController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
+    /**
+     * 获取所有去重的产品名称
+     *
+     * @return 去重的产品名称列表
+     */
+    @GetMapping("/distinct-names")
+    public ResponseEntity<Map<String, Object>> getDistinctSoftNames() {
+        try {
+            List<String> distinctNames = archieveSoftService.getDistinctSoftNames();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("productNames", distinctNames);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "获取产品名称列表失败");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
 }

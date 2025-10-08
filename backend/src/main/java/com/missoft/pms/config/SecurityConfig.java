@@ -62,6 +62,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/products/**").permitAll()
                 // 允许访问渠道商管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/channel-distributors/**").permitAll()
+                // 允许访问标准里程碑管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/standard-milestones/**").permitAll()
+                // 允许访问标准交付步骤管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/standard-construct-steps/**").permitAll()
+                // 允许访问标准交付物管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/standard-deliverables/**").permitAll()
+                // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/constructing-projects/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

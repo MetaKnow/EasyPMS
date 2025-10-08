@@ -93,4 +93,12 @@ public interface ArchieveSoftRepository extends JpaRepository<ArchieveSoft, Long
      * @return 是否存在
      */
     boolean existsBySoftNameIgnoreCaseAndSoftVersionIgnoreCaseAndSoftIdNot(String softName, String softVersion, Long excludeId);
+
+    /**
+     * 获取所有去重的产品名称
+     *
+     * @return 去重的产品名称列表
+     */
+    @Query("SELECT DISTINCT a.softName FROM ArchieveSoft a ORDER BY a.softName ASC")
+    List<String> findDistinctSoftNames();
 }

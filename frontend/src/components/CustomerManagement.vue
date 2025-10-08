@@ -552,7 +552,7 @@ export default {
 
 <style scoped>
 .customer-management {
-  padding: 8px;
+  padding: 0px;
   background: #f5f5f5;
   height: 100%;
   display: flex;

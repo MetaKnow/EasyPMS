@@ -204,4 +204,14 @@ public class ArchieveSoftService {
         }
         return archieveSoftRepository.existsBySoftNameIgnoreCaseAndSoftVersionIgnoreCaseAndSoftIdNot(softName.trim(), softVersion.trim(), excludeId);
     }
+
+    /**
+     * 获取所有去重的产品名称
+     *
+     * @return 去重的产品名称列表
+     */
+    @Transactional(readOnly = true)
+    public List<String> getDistinctSoftNames() {
+        return archieveSoftRepository.findDistinctSoftNames();
+    }
 }

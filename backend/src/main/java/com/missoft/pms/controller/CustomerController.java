@@ -298,6 +298,28 @@ public class CustomerController {
     }
 
     /**
+     * 获取所有客户列表（不分页）
+     *
+     * @return 客户列表
+     */
+    @GetMapping("/all")
+    public ResponseEntity<Map<String, Object>> getAllCustomers() {
+        try {
+            List<Customer> customers = customerService.getAllCustomers();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", customers);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "获取客户列表失败");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * 获取客户统计信息
      *
      * @return 统计信息

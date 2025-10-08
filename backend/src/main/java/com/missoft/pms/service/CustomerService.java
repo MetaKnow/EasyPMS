@@ -200,6 +200,16 @@ public class CustomerService {
     }
 
     /**
+     * 获取所有客户列表
+     *
+     * @return 客户列表
+     */
+    @Transactional(readOnly = true)
+    public List<Customer> getAllCustomers() {
+        return customerRepository.findAll();
+    }
+
+    /**
      * 获取所有省份列表
      *
      * @return 省份列表

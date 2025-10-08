@@ -5,6 +5,32 @@
 const API_BASE_URL = 'http://localhost:8081/api'
 
 /**
+ * 获取所有产品列表（不分页）
+ * @returns {Promise<Array>} 产品列表
+ */
+export async function getAllProducts() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/all`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    // 后端返回格式：{products: [...]}
+    return result.products || []
+  } catch (error) {
+    console.error('获取产品列表失败:', error)
+    return []
+  }
+}
+
+/**
  * 检查产品名称+版本是否存在（支持编辑场景排除当前ID）
  * @param {string} softName 产品名称
  * @param {string} softVersion 产品版本

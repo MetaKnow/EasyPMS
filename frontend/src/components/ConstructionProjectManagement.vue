@@ -8,10 +8,6 @@
           <i class="icon-plus"></i>
           新建项目
         </button>
-        <button class="btn btn-warning" @click="editSelected" :disabled="selectedProjects.length !== 1">
-          <i class="icon-edit"></i>
-          修改项目
-        </button>
         <button class="btn btn-danger" @click="batchDelete" :disabled="selectedProjects.length === 0">
           <i class="icon-delete"></i>
           删除项目
@@ -63,22 +59,19 @@
         <table class="construction-table">
           <thead>
             <tr>
-              <th width="50">
+              <th width="40">
                 <input 
                   type="checkbox" 
-                  @change="selectAll" 
+                  @change="selectAll"
                   :checked="isAllSelected"
                 />
               </th>
               <th width="60">序号</th>
-              <th>项目编号</th>
-              <th>项目名称</th>
-              <th>项目类型</th>
-              <th>项目状态</th>
-              <th>项目负责人</th>
-              <th>开始日期</th>
-              <th>计划结束日期</th>
-              <th>项目金额</th>
+              <th width="120">项目编号</th>
+              <th width="100">项目状态</th>
+              <th width="200">项目名称</th>
+              <th width="180">客户</th>
+              <th width="100">项目负责人</th>
               <th width="120">操作</th>
             </tr>
           </thead>
@@ -86,29 +79,26 @@
             <tr 
               v-for="(project, index) in projectList" 
               :key="project.projectId"
-              :class="{ selected: selectedProject && selectedProject.projectId === project.projectId }"
+              :class="{ selected: selectedProjects.includes(project.projectId) }"
               @click="selectProject(project)"
             >
               <td>
                 <input 
                   type="checkbox" 
-                  :checked="selectedProject && selectedProject.projectId === project.projectId"
-                  @change="selectProject(project)"
+                  :checked="selectedProjects.includes(project.projectId)"
+                  @change="toggleProjectSelection(project.projectId)"
                 />
               </td>
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ project.projectNum }}</td>
-              <td>{{ project.projectName }}</td>
-              <td>{{ project.projectType }}</td>
               <td>
                 <span class="status-badge" :class="getStatusClass(project.projectState)">
                   {{ project.projectState }}
                 </span>
               </td>
-              <td>{{ project.projectLeaderName || '-' }}</td>
-              <td>{{ formatDate(project.startDate) }}</td>
-              <td>{{ formatDate(project.planEndDate) }}</td>
-              <td>{{ formatMoney(project.value) }}</td>
+              <td>{{ project.projectName }}</td>
+              <td>{{ project.customerName || '未知客户' }}</td>
+              <td>{{ project.projectLeaderName || project.projectLeader }}</td>
               <td>
                 <button class="btn-small btn-primary" @click.stop="editProject(project)">
                   编辑
@@ -144,6 +134,13 @@
       </div>
     </div>
   </div>
+
+  <!-- 新建项目表单 -->
+  <ProjectCreateForm 
+    :visible="createFormVisible"
+    @close="closeCreateForm"
+    @success="onCreateSuccess"
+  />
 </template>
 
 <script>
@@ -152,9 +149,13 @@ import {
   deleteConstructingProject, 
   batchDeleteConstructingProjects 
 } from '../api/constructingProject'
+import ProjectCreateForm from './ProjectCreateForm.vue'
 
 export default {
   name: 'ConstructionProjectManagement',
+  components: {
+    ProjectCreateForm
+  },
   data() {
     return {
       // 项目列表
@@ -176,7 +177,9 @@ export default {
       // 加载状态
       loading: false,
       // 年度选项
-      yearOptions: []
+      yearOptions: [],
+      // 表单显示状态
+      createFormVisible: false
     }
   },
   computed: {
@@ -216,15 +219,23 @@ export default {
       try {
         this.loading = true
         const params = {
-          page: this.currentPage,
+          // 后端分页从0开始，前端从1开始，这里转换索引
+          page: this.currentPage - 1,
           size: this.pageSize,
           ...this.searchForm
         }
         
+        console.log('正在加载项目列表，参数:', params)
         const response = await getConstructingProjects(params)
+        console.log('API响应:', response.data)
+        
         if (response.data.success) {
           this.projectList = response.data.data.list || []
           this.total = response.data.data.total || 0
+          console.log('项目列表数据:', this.projectList)
+          console.log('总数:', this.total)
+        } else {
+          console.error('API返回失败:', response.data.message)
         }
       } catch (error) {
         console.error('加载项目列表失败:', error)
@@ -259,12 +270,18 @@ export default {
      * 选择项目
      */
     selectProject(project) {
-      if (this.selectedProject && this.selectedProject.projectId === project.projectId) {
-        this.selectedProject = null
-        this.selectedProjects = []
+      this.selectedProject = project
+    },
+
+    /**
+     * 切换项目选择状态
+     */
+    toggleProjectSelection(projectId) {
+      const index = this.selectedProjects.indexOf(projectId)
+      if (index > -1) {
+        this.selectedProjects.splice(index, 1)
       } else {
-        this.selectedProject = project
-        this.selectedProjects = [project.projectId]
+        this.selectedProjects.push(projectId)
       }
     },
 
@@ -308,7 +325,22 @@ export default {
      * 显示创建表单
      */
     showCreateForm() {
-      this.$emit('show-constructing-project-form')
+      this.createFormVisible = true
+    },
+
+    /**
+     * 关闭创建表单
+     */
+    closeCreateForm() {
+      this.createFormVisible = false
+    },
+
+    /**
+     * 创建成功回调
+     */
+    onCreateSuccess() {
+      this.createFormVisible = false
+      this.loadProjects()
     },
 
     /**
@@ -431,7 +463,7 @@ export default {
 
 <style scoped>
 .construction-management {
-  padding: 8px;
+  padding: 0px;
   background: #f5f5f5;
   height: 100%;
   display: flex;
@@ -621,6 +653,13 @@ export default {
 .btn-sm {
   padding: 3px 6px;
   font-size: 11px;
+}
+
+/* 与客户管理模块一致的行内小按钮样式 */
+.btn-small {
+  padding: 3px 6px;
+  font-size: 11px;
+  margin-right: 3px;
 }
 
 .btn:disabled {

@@ -1,241 +1,310 @@
 <template>
   <div class="modal-overlay" v-if="visible">
     <div class="modal-content" @click.stop>
+      <!-- 固定标题区域 -->
       <div class="modal-header">
-        <h3>{{ isEdit ? '编辑在建项目' : '创建在建项目' }}</h3>
+        <h3>{{ isEdit ? '编辑在建项目' : '新建在建项目' }}</h3>
         <button class="close-btn" @click="closeModal">&times;</button>
       </div>
       
-      <form @submit.prevent="submitForm" class="project-form">
-        <div class="form-grid">
-          <!-- 基本信息 -->
-          <div class="form-group">
-            <label for="projectNum">项目编号 <span class="required">*</span></label>
-            <input 
-              type="text" 
-              id="projectNum" 
-              v-model="form.projectNum" 
-              required 
-              placeholder="请输入项目编号"
-            />
-          </div>
+      <!-- 可滚动内容区域 -->
+      <div class="modal-body">
+        <form @submit.prevent="submitForm" class="project-form">
+        <!-- 项目基本信息分组 -->
+        <div class="form-section">
+          <h4 class="section-title">项目基本信息</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="projectNum">项目编号 <span class="required">*</span></label>
+              <input 
+                type="text" 
+                id="projectNum" 
+                v-model="form.projectNum" 
+                required 
+                :readonly="isEdit"
+                placeholder="自动生成"
+                :class="{ 'readonly-field': isEdit }"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="year">年度 <span class="required">*</span></label>
-            <input 
-              type="number" 
-              id="year" 
-              v-model="form.year" 
-              required 
-              :min="2020" 
-              :max="2030"
-              placeholder="请输入年度"
-            />
-          </div>
+            <div class="form-group">
+              <label for="year">年度 <span class="required">*</span></label>
+              <input 
+                type="number" 
+                id="year" 
+                v-model="form.year" 
+                required 
+                :min="2020" 
+                :max="2030"
+                placeholder="请输入年度"
+              />
+            </div>
 
-          <div class="form-group full-width">
-            <label for="projectName">项目名称 <span class="required">*</span></label>
-            <input 
-              type="text" 
-              id="projectName" 
-              v-model="form.projectName" 
-              required 
-              placeholder="请输入项目名称"
-            />
-          </div>
+            <div class="form-group full-width">
+              <label for="projectName">项目名称 <span class="required">*</span></label>
+              <input 
+                type="text" 
+                id="projectName" 
+                v-model="form.projectName" 
+                required 
+                placeholder="请输入项目名称"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="projectType">项目类型 <span class="required">*</span></label>
-            <select id="projectType" v-model="form.projectType" required>
-              <option value="">请选择项目类型</option>
-              <option value="软件开发">软件开发</option>
-              <option value="系统集成">系统集成</option>
-              <option value="技术咨询">技术咨询</option>
-              <option value="运维服务">运维服务</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="projectType">项目类型 <span class="required">*</span></label>
+              <select id="projectType" v-model="form.projectType" required>
+                <option value="">请选择项目类型</option>
+                <option value="软件开发">软件开发</option>
+                <option value="系统集成">系统集成</option>
+                <option value="技术咨询">技术咨询</option>
+                <option value="运维服务">运维服务</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="projectState">项目状态</label>
-            <select id="projectState" v-model="form.projectState">
-              <option value="待开始">待开始</option>
-              <option value="进行中">进行中</option>
-              <option value="已完成">已完成</option>
-              <option value="已暂停">已暂停</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="projectState">项目状态</label>
+              <select id="projectState" v-model="form.projectState">
+                <option value="待开始">待开始</option>
+                <option value="进行中">进行中</option>
+                <option value="已完成">已完成</option>
+                <option value="已暂停">已暂停</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="customerId">客户</label>
-            <select id="customerId" v-model="form.customerId">
-              <option value="">请选择客户</option>
-              <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
-                {{ customer.customerName }}
-              </option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="softId">档案系统 <span class="required">*</span></label>
+              <select id="softId" v-model="form.softId" required>
+                <option value="">请选择档案系统</option>
+                <option v-for="product in products" :key="product.softId" :value="product.softId">
+                  {{ product.softName }} {{ product.softVersion ? `(${product.softVersion})` : '' }}
+                </option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="projectLeader">项目负责人</label>
-            <select id="projectLeader" v-model="form.projectLeader">
-              <option value="">请选择项目负责人</option>
-              <option v-for="user in users" :key="user.userId" :value="user.userId">
-                {{ user.username }}
-              </option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="customerId">客户 <span class="required">*</span></label>
+              <select id="customerId" v-model="form.customerId" required>
+                <option value="">请选择客户</option>
+                <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
+                  {{ customer.customerName }}
+                </option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="saleLeader">商务负责人</label>
-            <select id="saleLeader" v-model="form.saleLeader">
-              <option value="">请选择商务负责人</option>
-              <option v-for="user in users" :key="user.userId" :value="user.userId">
-                {{ user.username }}
-              </option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="projectLeader">项目负责人 <span class="required">*</span></label>
+              <select id="projectLeader" v-model="form.projectLeader" required>
+                <option value="">请选择项目负责人</option>
+                <option v-for="user in users" :key="user.userId" :value="user.userId">
+                  {{ user.name || user.userName }}
+                </option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="arcSystem">档案系统</label>
-            <input 
-              type="text" 
-              id="arcSystem" 
-              v-model="form.arcSystem" 
-              placeholder="请输入档案系统"
-            />
-          </div>
+            <div class="form-group">
+              <label for="saleLeader">商务负责人 <span class="required">*</span></label>
+              <select id="saleLeader" v-model="form.saleLeader" required>
+                <option value="">请选择商务负责人</option>
+                <option v-for="user in users" :key="user.userId" :value="user.userId">
+                  {{ user.name || user.userName }}
+                </option>
+              </select>
+            </div>
 
-          <!-- 日期信息 -->
-          <div class="form-group">
-            <label for="startDate">开始日期</label>
-            <input 
-              type="date" 
-              id="startDate" 
-              v-model="form.startDate"
-            />
-          </div>
+            <div class="form-group">
+              <label for="startDate">开始日期 <span class="required">*</span></label>
+              <input 
+                type="date" 
+                id="startDate" 
+                v-model="form.startDate"
+                required
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="planEndDate">计划结束日期</label>
-            <input 
-              type="date" 
-              id="planEndDate" 
-              v-model="form.planEndDate"
-            />
-          </div>
+            <div class="form-group">
+              <label for="planEndDate">计划结束日期 <span class="required">*</span></label>
+              <input 
+                type="date" 
+                id="planEndDate" 
+                v-model="form.planEndDate"
+                required
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="actualEndDate">实际结束日期</label>
-            <input 
-              type="date" 
-              id="actualEndDate" 
-              v-model="form.actualEndDate"
-            />
-          </div>
+            <div class="form-group">
+              <label for="actualEndDate">实际结束日期</label>
+              <input 
+                type="date" 
+                id="actualEndDate" 
+                v-model="form.actualEndDate"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="acceptanceDate">项目验收日期</label>
-            <input 
-              type="date" 
-              id="acceptanceDate" 
-              v-model="form.acceptanceDate"
-            />
-          </div>
+            <div class="form-group">
+              <label for="acceptanceDate">项目验收日期</label>
+              <input 
+                type="date" 
+                id="acceptanceDate" 
+                v-model="form.acceptanceDate"
+              />
+            </div>
 
-          <!-- 工期信息 -->
-          <div class="form-group">
-            <label for="planPeriod">项目预计工期（天）</label>
-            <input 
-              type="number" 
-              id="planPeriod" 
-              v-model="form.planPeriod" 
-              min="1"
-              placeholder="请输入预计工期"
-            />
-          </div>
+            <div class="form-group">
+              <label for="planPeriod">项目预计工期（天）</label>
+              <input 
+                type="number" 
+                id="planPeriod" 
+                v-model="form.planPeriod" 
+                min="1"
+                placeholder="自动计算"
+                readonly
+                class="readonly-field"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="actualPeriod">项目实际工期（天）</label>
-            <input 
-              type="number" 
-              id="actualPeriod" 
-              v-model="form.actualPeriod" 
-              min="1"
-              placeholder="请输入实际工期"
-            />
-          </div>
+            <div class="form-group">
+              <label for="actualPeriod">项目实际工期（天）</label>
+              <input 
+                type="number" 
+                id="actualPeriod" 
+                v-model="form.actualPeriod" 
+                min="1"
+                placeholder="自动计算"
+                readonly
+                class="readonly-field"
+              />
+            </div>
 
-          <!-- 渠道信息 -->
-          <div class="form-group">
-            <label for="isAgent">是否渠道项目</label>
-            <select id="isAgent" v-model="form.isAgent">
-              <option :value="0">否</option>
-              <option :value="1">是</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="value">项目金额</label>
+              <input 
+                type="number" 
+                id="value" 
+                v-model="form.value" 
+                step="0.01"
+                min="0"
+                placeholder="请输入项目金额"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="agentName">渠道名称</label>
-            <input 
-              type="text" 
-              id="agentName" 
-              v-model="form.agentName" 
-              placeholder="请输入渠道名称"
-              :disabled="form.isAgent === 0"
-            />
-          </div>
+            <div class="form-group">
+              <label for="receivedMoney">已回款金额</label>
+              <input 
+                type="number" 
+                id="receivedMoney" 
+                v-model="form.receivedMoney" 
+                step="0.01"
+                min="0"
+                placeholder="请输入已回款金额"
+              />
+            </div>
 
-          <!-- 金额信息 -->
-          <div class="form-group">
-            <label for="value">项目金额</label>
-            <input 
-              type="number" 
-              id="value" 
-              v-model="form.value" 
-              step="0.01"
-              min="0"
-              placeholder="请输入项目金额"
-            />
-          </div>
+            <div class="form-group">
+              <label for="unreceiveMoney">未回款金额</label>
+              <input 
+                type="number" 
+                id="unreceiveMoney" 
+                v-model="form.unreceiveMoney" 
+                step="0.01"
+                min="0"
+                placeholder="自动计算"
+                readonly
+                class="readonly-field"
+              />
+            </div>
 
-          <div class="form-group">
-            <label for="receivedMoney">已回款金额</label>
-            <input 
-              type="number" 
-              id="receivedMoney" 
-              v-model="form.receivedMoney" 
-              step="0.01"
-              min="0"
-              placeholder="请输入已回款金额"
-            />
-          </div>
+            <div class="form-group">
+              <label for="isAgent">是否渠道项目</label>
+              <select id="isAgent" v-model="form.isAgent">
+                <option :value="0">否</option>
+                <option :value="1">是</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="unreceiveMoney">未回款金额</label>
-            <input 
-              type="number" 
-              id="unreceiveMoney" 
-              v-model="form.unreceiveMoney" 
-              step="0.01"
-              min="0"
-              placeholder="请输入未回款金额"
-            />
+            <div class="form-group" v-if="form.isAgent === 1">
+              <label for="channelId">渠道名称 <span class="required">*</span></label>
+              <select 
+                id="channelId" 
+                v-model="form.channelId" 
+                required
+              >
+                <option value="">请选择渠道名称</option>
+                <option v-for="channel in channels" :key="channel.channelId" :value="channel.channelId">
+                  {{ channel.channelName }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 
+        <!-- 项目建设内容分组 -->
+        <div class="form-section">
+          <h4 class="section-title">项目建设内容</h4>
+          <div class="construction-content">
+            <p class="section-description">请选择项目主要建设内容：</p>
+            <div class="checkbox-grid">
+              <div class="checkbox-item">
+                <input 
+                  type="checkbox" 
+                  id="standardProduct" 
+                  v-model="constructionContent.standardProduct"
+                />
+                <label for="standardProduct">标准产品</label>
+              </div>
+              
+              <div class="checkbox-item">
+                <input 
+                  type="checkbox" 
+                  id="interfaceDevelopment" 
+                  v-model="constructionContent.interfaceDevelopment"
+                />
+                <label for="interfaceDevelopment">接口开发</label>
+              </div>
+              
+              <div class="checkbox-item">
+                <input 
+                  type="checkbox" 
+                  id="dataMigration" 
+                  v-model="constructionContent.dataMigration"
+                />
+                <label for="dataMigration">数据迁移</label>
+              </div>
+              
+              <div class="checkbox-item">
+                <input 
+                  type="checkbox" 
+                  id="customDevelopment" 
+                  v-model="constructionContent.customDevelopment"
+                />
+                <label for="customDevelopment">个性化功能开发</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        </form>
+      </div>
+      
+      <!-- 固定按钮区域 -->
+      <div class="modal-footer">
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
-          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-            {{ isSubmitting ? '保存中...' : '保存' }}
+          <button type="submit" class="btn btn-primary" :disabled="isSubmitting" @click="submitForm">
+            {{ isSubmitting ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存' : '创建项目') }}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import { getAllCustomers } from '../api/customer.js'
+import { getAllUsers } from '../api/user.js'
+import { getAllProducts } from '../api/product.js'
+import { getAllChannelDistributors } from '../api/channelDistributor.js'
 
 export default {
   name: 'ConstructingProjectForm',
@@ -254,6 +323,8 @@ export default {
       isSubmitting: false,
       customers: [],
       users: [],
+      products: [],
+      channels: [],
       form: {
         projectNum: '',
         year: new Date().getFullYear(),
@@ -262,7 +333,7 @@ export default {
         projectLeader: '',
         saleLeader: '',
         projectState: '待开始',
-        arcSystem: '',
+        softId: '',
         startDate: '',
         planEndDate: '',
         actualEndDate: '',
@@ -270,11 +341,17 @@ export default {
         actualPeriod: '',
         customerId: '',
         isAgent: 0,
-        agentName: '',
+        channelId: '',
         value: '',
         receivedMoney: 0,
         unreceiveMoney: 0,
         acceptanceDate: ''
+      },
+      constructionContent: {
+        standardProduct: false,
+        interfaceDevelopment: false,
+        dataMigration: false,
+        customDevelopment: false
       }
     }
   },
@@ -292,15 +369,41 @@ export default {
         this.loadFormData()
         this.loadCustomers()
         this.loadUsers()
+        this.loadProducts()
+        this.loadChannels()
       }
     },
     projectData: {
       handler(newVal) {
-        if (newVal) {
+        if (newVal && this.visible) {
           this.loadFormData()
         }
       },
       deep: true
+    },
+    // 监听日期变化，自动计算工期
+    'form.startDate'() {
+      this.calculatePlanPeriod()
+      this.calculateActualPeriod()
+    },
+    'form.planEndDate'() {
+      this.calculatePlanPeriod()
+    },
+    'form.actualEndDate'() {
+      this.calculateActualPeriod()
+    },
+    // 监听金额变化，自动计算未回款金额
+    'form.value'() {
+      this.calculateUnreceiveMoney()
+    },
+    'form.receivedMoney'() {
+      this.calculateUnreceiveMoney()
+    },
+    // 监听渠道项目状态变化，当改为否时清空渠道名称
+    'form.isAgent'(newVal) {
+      if (newVal === 0) {
+        this.form.channelId = ''
+      }
     }
   },
   methods: {
@@ -308,12 +411,50 @@ export default {
      * 加载表单数据
      */
     loadFormData() {
-      if (this.projectData) {
-        Object.keys(this.form).forEach(key => {
-          if (this.projectData[key] !== undefined) {
-            this.form[key] = this.projectData[key]
+      if (this.isEdit && this.projectData) {
+        // 回显所有字段数据
+        this.form = {
+          projectNum: this.projectData.projectNum || '',
+          year: this.projectData.year || new Date().getFullYear(),
+          projectName: this.projectData.projectName || '',
+          projectType: this.projectData.projectType || '',
+          projectLeader: this.projectData.projectLeader ? parseInt(this.projectData.projectLeader) : '',
+          saleLeader: this.projectData.saleLeader ? parseInt(this.projectData.saleLeader) : '',
+          projectState: this.projectData.projectState || '待开始',
+          softId: this.projectData.softId || '',
+          startDate: this.projectData.startDate || '',
+          planEndDate: this.projectData.planEndDate || '',
+          actualEndDate: this.projectData.actualEndDate || '',
+          planPeriod: this.projectData.planPeriod || '',
+          actualPeriod: this.projectData.actualPeriod || '',
+          customerId: this.projectData.customerId ? parseInt(this.projectData.customerId) : '',
+          isAgent: parseInt(this.projectData.isAgent) || 0,
+          channelId: this.projectData.channelId || '',
+          value: this.projectData.value || '',
+          receivedMoney: this.projectData.receivedMoney || 0,
+          unreceiveMoney: this.projectData.unreceiveMoney || 0,
+          acceptanceDate: this.projectData.acceptanceDate || ''
+        }
+        
+        // 回显建设内容
+        if (this.projectData.constructContent) {
+          // constructContent 是字符串，需要解析为勾选状态
+          const contentString = this.projectData.constructContent || '';
+          this.constructionContent = {
+            standardProduct: contentString.includes('标准产品'),
+            interfaceDevelopment: contentString.includes('接口开发'),
+            dataMigration: contentString.includes('数据迁移'),
+            customDevelopment: contentString.includes('个性化功能开发')
           }
-        })
+        } else {
+          // 如果没有建设内容，重置为默认状态
+          this.constructionContent = {
+            standardProduct: false,
+            interfaceDevelopment: false,
+            dataMigration: false,
+            customDevelopment: false
+          }
+        }
       } else {
         this.resetForm()
       }
@@ -331,7 +472,7 @@ export default {
         projectLeader: '',
         saleLeader: '',
         projectState: '待开始',
-        arcSystem: '',
+        softId: '',
         startDate: '',
         planEndDate: '',
         actualEndDate: '',
@@ -339,11 +480,18 @@ export default {
         actualPeriod: '',
         customerId: '',
         isAgent: 0,
-        agentName: '',
+        channelId: '',
         value: '',
         receivedMoney: 0,
         unreceiveMoney: 0,
         acceptanceDate: ''
+      }
+      
+      this.constructionContent = {
+        standardProduct: false,
+        interfaceDevelopment: false,
+        dataMigration: false,
+        customDevelopment: false
       }
     },
 
@@ -352,12 +500,10 @@ export default {
      */
     async loadCustomers() {
       try {
-        const response = await axios.get('http://localhost:8081/api/customers')
-        if (response.data.success) {
-          this.customers = response.data.data
-        }
+        this.customers = await getAllCustomers()
       } catch (error) {
         console.error('加载客户列表失败:', error)
+        this.customers = []
       }
     },
 
@@ -366,38 +512,207 @@ export default {
      */
     async loadUsers() {
       try {
-        const response = await axios.get('http://localhost:8081/api/users')
-        if (response.data.success) {
-          this.users = response.data.data
-        }
+        this.users = await getAllUsers()
       } catch (error) {
         console.error('加载用户列表失败:', error)
+        this.users = []
       }
+    },
+
+    /**
+     * 加载产品列表
+     */
+    async loadProducts() {
+      try {
+        this.products = await getAllProducts()
+      } catch (error) {
+        console.error('加载产品列表失败:', error)
+        // 如果API不存在，使用默认数据
+        this.products = [
+          { softId: 1, softName: 'ERP系统', softVersion: 'v1.0' },
+          { softId: 2, softName: 'CRM系统', softVersion: 'v2.0' },
+          { softId: 3, softName: 'OA系统', softVersion: 'v1.5' },
+          { softId: 4, softName: '财务系统', softVersion: 'v3.0' },
+          { softId: 5, softName: '其他', softVersion: '' }
+        ]
+      }
+    },
+
+    /**
+     * 加载渠道列表
+     */
+    async loadChannels() {
+      try {
+        this.channels = await getAllChannelDistributors()
+      } catch (error) {
+        console.error('加载渠道列表失败:', error)
+        // 如果API不存在，使用默认数据
+        this.channels = [
+          { channelId: 1, channelName: '直销' },
+          { channelId: 2, channelName: '代理商A' },
+          { channelId: 3, channelName: '代理商B' },
+          { channelId: 4, channelName: '合作伙伴' }
+        ]
+      }
+    },
+
+    /**
+     * 计算项目预计工期
+     */
+    calculatePlanPeriod() {
+      if (this.form.startDate && this.form.planEndDate) {
+        const startDate = new Date(this.form.startDate)
+        const endDate = new Date(this.form.planEndDate)
+        
+        if (endDate >= startDate) {
+          const timeDiff = endDate.getTime() - startDate.getTime()
+          const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24))
+          this.form.planPeriod = daysDiff
+        }
+      }
+    },
+
+    /**
+     * 计算项目实际工期
+     */
+    calculateActualPeriod() {
+      if (this.form.startDate && this.form.actualEndDate) {
+        const startDate = new Date(this.form.startDate)
+        const endDate = new Date(this.form.actualEndDate)
+        
+        if (endDate >= startDate) {
+          const timeDiff = endDate.getTime() - startDate.getTime()
+          const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24))
+          this.form.actualPeriod = daysDiff
+        }
+      }
+    },
+
+    /**
+     * 计算未回款金额
+     */
+    calculateUnreceiveMoney() {
+      const totalValue = parseFloat(this.form.value) || 0
+      const receivedMoney = parseFloat(this.form.receivedMoney) || 0
+      this.form.unreceiveMoney = Math.max(0, totalValue - receivedMoney)
+    },
+
+    /**
+     * 表单验证
+     */
+    validateForm() {
+      const errors = []
+      
+      if (!this.form.projectNum) {
+        errors.push('项目编号不能为空')
+      }
+      
+      if (!this.form.projectName) {
+        errors.push('项目名称不能为空')
+      }
+      
+      if (!this.form.projectType) {
+        errors.push('项目类型不能为空')
+      }
+      
+      if (!this.form.softId) {
+        errors.push('档案产品不能为空')
+      }
+      
+      if (!this.form.customerId) {
+        errors.push('客户名称不能为空')
+      }
+      
+      if (!this.form.projectLeader) {
+        errors.push('项目负责人不能为空')
+      }
+      
+      if (!this.form.saleLeader) {
+        errors.push('商务负责人不能为空')
+      }
+      
+      if (!this.form.startDate) {
+        errors.push('开始日期不能为空')
+      }
+      
+      if (!this.form.planEndDate) {
+        errors.push('计划结束日期不能为空')
+      }
+      
+      // 项目金额为非必填字段，但如果填写了则必须大于0
+      if (this.form.value && this.form.value <= 0) {
+        errors.push('项目金额必须大于0')
+      }
+      
+      // 渠道项目条件验证
+      if (this.form.isAgent === 1 && !this.form.channelId) {
+        errors.push('渠道项目必须选择渠道名称')
+      }
+      
+      // 日期逻辑验证
+      if (this.form.startDate && this.form.planEndDate) {
+        const startDate = new Date(this.form.startDate)
+        const planEndDate = new Date(this.form.planEndDate)
+        if (startDate >= planEndDate) {
+          errors.push('计划结束日期必须晚于开始日期')
+        }
+      }
+      
+      if (this.form.startDate && this.form.actualEndDate) {
+        const startDate = new Date(this.form.startDate)
+        const actualEndDate = new Date(this.form.actualEndDate)
+        if (startDate >= actualEndDate) {
+          errors.push('实际结束日期必须晚于开始日期')
+        }
+      }
+      
+      return errors
     },
 
     /**
      * 提交表单
      */
     async submitForm() {
+      // 表单验证
+      const errors = this.validateForm()
+      if (errors.length > 0) {
+        alert('请修正以下错误：\n' + errors.join('\n'))
+        return
+      }
+      
       this.isSubmitting = true
       try {
+        // 将建设内容对象转换为字符串格式
+        const selectedContents = []
+        if (this.constructionContent.standardProduct) selectedContents.push('标准产品')
+        if (this.constructionContent.interfaceDevelopment) selectedContents.push('接口开发')
+        if (this.constructionContent.dataMigration) selectedContents.push('数据迁移')
+        if (this.constructionContent.customDevelopment) selectedContents.push('个性化功能开发')
+        
+        // 合并基本信息和建设内容
+        const projectData = {
+          ...this.form,
+          constructContent: selectedContents.join('/')
+        }
+        
         const url = this.isEdit 
           ? `http://localhost:8081/api/constructing-projects/${this.projectData.projectId}`
           : 'http://localhost:8081/api/constructing-projects'
         
         const method = this.isEdit ? 'put' : 'post'
         
-        const response = await axios[method](url, this.form)
+        const response = await axios[method](url, projectData)
         
         if (response.data.success) {
           this.$emit('success', response.data.data)
           this.closeModal()
+          alert(this.isEdit ? '项目保存成功！' : '项目创建成功！')
         } else {
-          alert(response.data.message || '保存失败')
+          alert(response.data.message || (this.isEdit ? '保存失败' : '创建失败'))
         }
       } catch (error) {
-        console.error('保存项目失败:', error)
-        alert('保存失败，请稍后重试')
+        console.error(this.isEdit ? '保存项目失败:' : '创建项目失败:', error)
+        alert(this.isEdit ? '保存失败，请稍后重试' : '创建失败，请稍后重试')
       } finally {
         this.isSubmitting = false
       }
@@ -410,95 +725,123 @@ export default {
       this.$emit('close')
       this.resetForm()
     }
+  },
+  mounted() {
+    this.loadCustomers()
+    this.loadUsers()
+    this.loadProducts()
+    this.loadChannels()
   }
 }
 </script>
 
 <style scoped>
-/* 模态框覆盖层 */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 
-/* 模态框内容 */
 .modal-content {
   background: white;
-  border-radius: 6px;
+  border-radius: 12px;
   width: 90%;
-  max-width: 800px;
+  max-width: 900px;
   max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-/* 模态框头部 */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e8e8;
   background: #fafafa;
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #262626;
 }
 
-/* 关闭按钮 */
 .close-btn {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
-  color: #8c8c8c;
-  padding: 4px;
-  width: 28px;
-  height: 28px;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .close-btn:hover {
-  background: #f5f5f5;
-  color: #262626;
+  background: #f0f0f0;
+  color: #666;
 }
 
-/* 表单样式 */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+}
+
 .project-form {
   padding: 24px;
-  overflow-y: auto;
-  flex: 1;
+}
+
+.form-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #1890ff;
+  display: inline-block;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-bottom: 20px;
+  align-items: start;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
 .form-group.full-width {
@@ -506,28 +849,23 @@ export default {
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 6px;
   font-weight: 500;
+  margin-bottom: 6px;
   color: #262626;
   font-size: 14px;
 }
 
-.form-group label.required::after {
-  content: " *";
+.required {
   color: #ff4d4f;
 }
 
-/* 输入框样式 */
 .form-group input,
 .form-group select {
-  width: 100%;
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
-  transition: all 0.3s;
-  box-sizing: border-box;
+  transition: border-color 0.2s;
 }
 
 .form-group input:focus,
@@ -537,73 +875,98 @@ export default {
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
-.form-group input.error,
-.form-group select.error {
-  border-color: #ff4d4f;
-}
-
 .form-group input:disabled {
-  background: #f5f5f5;
-  color: #8c8c8c;
+  background-color: #f5f5f5;
+  color: #999;
   cursor: not-allowed;
 }
 
-/* 表单操作按钮 */
+.readonly-field {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  border-color: #e9ecef !important;
+  cursor: not-allowed !important;
+}
+
+.readonly-field:focus {
+  border-color: #e9ecef !important;
+  box-shadow: none !important;
+}
+
+.construction-content {
+  background: #fafafa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.section-description {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  cursor: pointer;
+  font-size: 14px;
+  color: #262626;
+  margin: 0;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 20px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
 }
 
-/* 按钮样式 */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   padding: 8px 16px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: white;
-  color: #262626;
+  border: none;
+  border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s;
-  text-decoration: none;
-}
-
-.btn:hover {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  transition: all 0.2s;
+  min-width: 80px;
 }
 
 .btn-primary {
   background: #1890ff;
-  border-color: #1890ff;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: #40a9ff;
-  border-color: #40a9ff;
 }
 
 .btn-primary:disabled {
   background: #d9d9d9;
-  border-color: #d9d9d9;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
   background: #f5f5f5;
-  border-color: #d9d9d9;
-  color: #595959;
+  color: #666;
+  border: 1px solid #d9d9d9;
 }
 
 .btn-secondary:hover {
@@ -615,45 +978,16 @@ export default {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .modal-content {
-    max-height: 95vh;
-  }
-  
-  .modal-header {
-    padding: 16px 20px;
-  }
-  
-  .project-form {
-    padding: 20px;
+    width: 95%;
+    margin: 20px;
   }
   
   .form-grid {
     grid-template-columns: 1fr;
-    gap: 0;
   }
   
-  .form-group {
-    margin-bottom: 16px;
-  }
-  
-  .form-actions {
-    flex-direction: column-reverse;
-    gap: 8px;
-  }
-  
-  .btn {
-    width: 100%;
-  }
-}
-
-/* 小屏幕优化 */
-@media (max-width: 480px) {
-  .modal-header h3 {
-    font-size: 16px;
-  }
-  
-  .form-group input,
-  .form-group select {
-    font-size: 16px; /* 防止iOS缩放 */
+  .checkbox-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
