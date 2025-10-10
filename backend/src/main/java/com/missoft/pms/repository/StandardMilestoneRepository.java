@@ -57,9 +57,9 @@ public interface StandardMilestoneRepository extends JpaRepository<StandardMiles
     boolean existsByMilestoneNameIgnoreCaseAndMilestoneIdNot(String milestoneName, Long excludeId);
 
     /**
-     * 获取所有里程碑列表（按名称排序）
+     * 获取所有里程碑列表（按创建时间排序）
      *
      * @return 里程碑列表
      */
-    List<StandardMilestone> findAllByOrderByMilestoneNameAsc();
+    List<StandardMilestone> findAllByOrderByCreateTimeAsc();
 }

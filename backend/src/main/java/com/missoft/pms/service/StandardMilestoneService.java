@@ -146,7 +146,7 @@ public class StandardMilestoneService {
      */
     @Transactional(readOnly = true)
     public List<StandardMilestone> getAllStandardMilestones() {
-        return standardMilestoneRepository.findAllByOrderByMilestoneNameAsc();
+        return standardMilestoneRepository.findAllByOrderByCreateTimeAsc();
     }
 
     /**

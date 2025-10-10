@@ -31,8 +31,8 @@ public class StandardMilestoneController {
      * @param page          页码（从0开始，默认0）
      * @param size          每页大小（默认10）
      * @param milestoneName 里程碑名称（可选）
-     * @param sortBy        排序字段（默认milestoneId）
-     * @param sortDir       排序方向（默认desc）
+     * @param sortBy        排序字段（默认createTime）
+     * @param sortDir       排序方向（默认asc）
      * @return 里程碑分页数据
      */
     @GetMapping
@@ -40,8 +40,8 @@ public class StandardMilestoneController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String milestoneName,
-            @RequestParam(defaultValue = "milestoneId") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "createTime") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
 
         try {
             Page<StandardMilestone> milestonePage = standardMilestoneService.getStandardMilestones(

@@ -232,8 +232,8 @@ export default {
         const params = {
           page: this.currentPage - 1, // 后端分页从0开始
           size: this.pageSize,
-          sortBy: 'milestoneId',
-          sortDir: 'desc'
+          sortBy: 'createTime',
+          sortDir: 'asc'
         }
         
         // 添加搜索条件

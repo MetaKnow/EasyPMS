@@ -20,8 +20,8 @@ export async function getStandardMilestoneList(params = {}) {
       page = 0,
       size = 10,
       milestoneName = '',
-      sortBy = 'milestoneId',
-      sortDir = 'desc'
+      sortBy = 'createTime',
+      sortDir = 'asc'
     } = params
 
     const urlParams = new URLSearchParams({
