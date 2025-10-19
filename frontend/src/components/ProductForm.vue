@@ -14,8 +14,7 @@
               id="softName"
               v-model="formData.softName"
               type="text"
-              class="form-control"
-              :class="{ 'is-invalid': errors.softName }"
+              :class="['form-control', errors.softName ? 'is-invalid' : '']"
               placeholder="请输入产品名称"
               maxlength="200"
               @input="onSoftNameInput"
@@ -32,8 +31,7 @@
               id="softVersion"
               v-model="formData.softVersion"
               type="text"
-              class="form-control"
-              :class="{ 'is-invalid': errors.softVersion }"
+              :class="['form-control', errors.softVersion ? 'is-invalid' : '']"
               placeholder="请输入产品版本"
               maxlength="50"
               @input="onSoftVersionInput"
@@ -41,6 +39,22 @@
             />
             <div v-if="errors.softVersion" class="invalid-feedback">
               {{ errors.softVersion }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="softType">产品类型 <span class="required">*</span></label>
+            <select
+              id="softType"
+              v-model="formData.softType"
+              :class="['form-control', errors.softType ? 'is-invalid' : '']"
+            >
+              <option value="">请选择产品类型</option>
+              <option value="标准产品">标准产品</option>
+              <option value="综合档案馆产品体系">综合档案馆产品体系</option>
+            </select>
+            <div v-if="errors.softType" class="invalid-feedback">
+              {{ errors.softType }}
             </div>
           </div>
           
@@ -96,7 +110,8 @@ export default {
       formData: {
         softId: null,
         softName: '',
-        softVersion: ''
+        softVersion: '',
+        softType: ''
       },
       
       /**
@@ -104,7 +119,8 @@ export default {
        */
       errors: {
         softName: '',
-        softVersion: ''
+        softVersion: '',
+        softType: ''
       },
       
       /**
@@ -153,7 +169,8 @@ export default {
         this.formData = {
           softId: product.softId || null,
           softName: product.softName || '',
-          softVersion: product.softVersion || ''
+          softVersion: product.softVersion || '',
+          softType: product.softType || ''
         }
       } else {
         // 新增模式：重置表单
@@ -167,7 +184,8 @@ export default {
     clearErrors() {
       this.errors = {
         softName: '',
-        softVersion: ''
+        softVersion: '',
+        softType: ''
       }
     },
     
@@ -178,7 +196,8 @@ export default {
       this.formData = {
         softId: null,
         softName: '',
-        softVersion: ''
+        softVersion: '',
+        softType: ''
       }
       this.clearErrors()
     },
@@ -192,7 +211,8 @@ export default {
       // 重置错误信息
       this.errors = {
         softName: '',
-        softVersion: ''
+        softVersion: '',
+        softType: ''
       }
       
       // 验证产品名称
@@ -231,6 +251,16 @@ export default {
         this.errors.softVersion = '产品版本不能超过50个字符'
         isValid = false
       }
+
+      // 验证产品类型
+      const allowedTypes = ['标准产品', '综合档案馆产品体系']
+      if (!this.formData.softType) {
+        this.errors.softType = '产品类型不能为空'
+        isValid = false
+      } else if (!allowedTypes.includes(this.formData.softType)) {
+        this.errors.softType = '产品类型不合法'
+        isValid = false
+      }
       
       return isValid
     },
@@ -250,7 +280,8 @@ export default {
         // 准备提交数据
         const submitData = {
           softName: this.formData.softName,
-          softVersion: this.formData.softVersion
+          softVersion: this.formData.softVersion,
+          softType: this.formData.softType
         }
         
         // 如果是编辑模式，添加ID

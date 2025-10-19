@@ -42,6 +42,14 @@ public class ArchieveSoft {
     private String softVersion;
 
     /**
+     * 产品类型
+     */
+    @NotBlank(message = "产品类型不能为空")
+    @Size(max = 50, message = "产品类型长度不能超过50个字符")
+    @Column(name = "softType", nullable = false, length = 50)
+    private String softType;
+
+    /**
      * 创建时间
      */
     @CreationTimestamp
@@ -96,6 +104,14 @@ public class ArchieveSoft {
 
     public void setSoftVersion(String softVersion) {
         this.softVersion = softVersion;
+    }
+
+    public String getSoftType() {
+        return softType;
+    }
+
+    public void setSoftType(String softType) {
+        this.softType = softType;
     }
 
     public LocalDateTime getCreateTime() {

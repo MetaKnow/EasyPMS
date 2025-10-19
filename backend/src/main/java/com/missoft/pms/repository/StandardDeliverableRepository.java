@@ -189,7 +189,14 @@ public interface StandardDeliverableRepository extends JpaRepository<StandardDel
            "(:systemName IS NULL OR LOWER(d.systemName) LIKE LOWER(CONCAT('%', :systemName, '%'))) AND " +
            "(:deliverableType IS NULL OR d.deliverableType = :deliverableType) AND " +
            "(:sstepId IS NULL OR d.sstepId = :sstepId) AND " +
-           "(:milestoneId IS NULL OR d.milestoneId = :milestoneId)")
+           "(:milestoneId IS NULL OR d.milestoneId = :milestoneId) " +
+           "ORDER BY " +
+           "CASE WHEN d.deliverableType = '步骤交付物' THEN COALESCE(sm.milestoneName, '') " +
+           "     WHEN d.deliverableType = '里程碑交付物' THEN COALESCE(m.milestoneName, '') " +
+           "     ELSE '' END ASC, " +
+           "CASE WHEN d.deliverableType = '里程碑交付物' THEN 1 ELSE 0 END ASC, " +
+           "CASE WHEN d.deliverableType = '步骤交付物' THEN COALESCE(s.sstepName, '') ELSE '' END ASC, " +
+           "CASE WHEN d.deliverableType = '里程碑交付物' THEN COALESCE(d.deliverableName, '') ELSE '' END ASC")
     Page<StandardDeliverableWithNamesDTO> findStandardDeliverablesWithNames(
             @Param("deliverableName") String deliverableName,
             @Param("systemName") String systemName,

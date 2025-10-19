@@ -146,7 +146,8 @@ public class StandardMilestoneService {
      */
     @Transactional(readOnly = true)
     public List<StandardMilestone> getAllStandardMilestones() {
-        return standardMilestoneRepository.findAllByOrderByCreateTimeAsc();
+        // 与前端维护模块一致：按里程碑名称正序返回
+        return standardMilestoneRepository.findAll(Sort.by(Sort.Direction.ASC, "milestoneName"));
     }
 
     /**

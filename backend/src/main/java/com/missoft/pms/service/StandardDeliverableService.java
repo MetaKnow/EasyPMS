@@ -77,16 +77,15 @@ public class StandardDeliverableService {
                                                                                  String systemName, String deliverableType,
                                                                                  Long sstepId, Long milestoneId,
                                                                                  String sortBy, String sortDir) {
-        // 创建排序对象
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        // 创建分页对象，不使用排序参数，因为排序已在SQL中固定实现
+        Pageable pageable = PageRequest.of(page, size);
 
         // 处理空字符串为null
         deliverableName = StringUtils.hasText(deliverableName) ? deliverableName.trim() : null;
         systemName = StringUtils.hasText(systemName) ? systemName.trim() : null;
         deliverableType = StringUtils.hasText(deliverableType) ? deliverableType.trim() : null;
 
-        // 使用JOIN查询获取名称
+        // 使用JOIN查询获取名称，排序已在SQL中实现：先按里程碑创建时间，再按步骤名称
         return standardDeliverableRepository.findStandardDeliverablesWithNames(
                 deliverableName, systemName, deliverableType, sstepId, milestoneId, pageable);
     }
@@ -110,11 +109,6 @@ public class StandardDeliverableService {
      * @return 创建后的交付物
      */
     public StandardDeliverable createStandardDeliverable(StandardDeliverable standardDeliverable) {
-        // 验证交付物名称是否已存在
-        if (standardDeliverableRepository.existsByDeliverableNameIgnoreCase(standardDeliverable.getDeliverableName())) {
-            throw new RuntimeException("交付物名称已存在: " + standardDeliverable.getDeliverableName());
-        }
-
         // 验证交付物类型
         validateDeliverableType(standardDeliverable.getDeliverableType());
 
@@ -135,12 +129,6 @@ public class StandardDeliverableService {
     public StandardDeliverable updateStandardDeliverable(Long deliverableId, StandardDeliverable standardDeliverable) {
         // 检查交付物是否存在
         StandardDeliverable existingDeliverable = getStandardDeliverableById(deliverableId);
-
-        // 验证交付物名称是否已存在（排除当前记录）
-        if (standardDeliverableRepository.existsByDeliverableNameIgnoreCaseAndDeliverableIdNot(
-                standardDeliverable.getDeliverableName(), deliverableId)) {
-            throw new RuntimeException("交付物名称已存在: " + standardDeliverable.getDeliverableName());
-        }
 
         // 验证交付物类型
         validateDeliverableType(standardDeliverable.getDeliverableType());
@@ -281,18 +269,19 @@ public class StandardDeliverableService {
     }
 
     /**
-     * 检查交付物名称是否存在
+     * 更新交付物的模板文件相对路径
      *
-     * @param deliverableName 交付物名称
-     * @return 是否存在
+     * @param deliverableId 交付物ID
+     * @param relativePath  相对路径，如 deliveryTemplete/<systemName>/ 或其子文件
+     * @return 更新后的交付物
      */
-    @Transactional(readOnly = true)
-    public boolean checkDeliverableNameExists(String deliverableName) {
-        if (!StringUtils.hasText(deliverableName)) {
-            return false;
-        }
-        return standardDeliverableRepository.existsByDeliverableNameIgnoreCase(deliverableName.trim());
+    public StandardDeliverable updateDeliverableTemplatePath(Long deliverableId, String relativePath) {
+        StandardDeliverable deliverable = getStandardDeliverableById(deliverableId);
+        deliverable.setDeliveryTempletePath(relativePath);
+        return standardDeliverableRepository.save(deliverable);
     }
+
+
 
     /**
      * 验证交付物类型

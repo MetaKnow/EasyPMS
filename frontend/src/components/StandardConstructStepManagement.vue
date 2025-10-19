@@ -12,6 +12,21 @@
           <i class="icon-delete"></i>
           删除步骤
         </button>
+        <button class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input 
+          ref="fileInput" 
+          type="file" 
+          accept=".csv" 
+          style="display: none" 
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -91,7 +106,7 @@
                 <option value="updateTime">按更新时间排序</option>
                 <option value="sstepName">按步骤名称排序</option>
               </select>
-              <select v-model="sortDir" class="search-select" @change="onSortChange">
+              <select v-model="sortDir" class="search-select sort-dir-select" @change="onSortChange">
                 <option value="desc">倒序</option>
                 <option value="asc">正序</option>
               </select>
@@ -100,7 +115,7 @@
 
           <!-- 步骤列表 -->
           <div class="table-section">
-            <div class="table-container">
+            <div class="table-container" @scroll="onTableScroll">
               <table class="step-table">
                 <thead>
                   <tr>
@@ -120,7 +135,7 @@
                     <th>操作</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody @mouseover="onTableMouseOver" @mousemove="onTableMouseMove" @mouseout="onTableMouseOut">
                   <tr 
                     v-for="(step, index) in steps" 
                     :key="step.sstepId"
@@ -134,7 +149,7 @@
                         @change.stop="toggleSelect(step)"
                       />
                     </td>
-                    <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+                    <td>{{ index + 1 }}</td>
                     <td>{{ step.sstepName }}</td>
                     <td>{{ step.type }}</td>
                     <td>{{ getMilestoneName(step.smilestoneId) }}</td>
@@ -155,27 +170,8 @@
                 </tbody>
               </table>
             </div>
-
-            <!-- 分页 -->
-            <div class="pagination">
-              <button 
-                class="btn btn-secondary" 
-                @click="prevPage" 
-                :disabled="currentPage <= 1"
-              >
-                上一页
-              </button>
-              <span class="page-info">
-                第 {{ currentPage }} 页，共 {{ totalPages }} 页，总计 {{ totalCount }} 条记录
-              </span>
-              <button 
-                class="btn btn-secondary" 
-                @click="nextPage" 
-                :disabled="currentPage >= totalPages"
-              >
-                下一页
-              </button>
-            </div>
+            <div v-if="tooltipVisible" ref="cellTooltip" class="cell-tooltip" :style="tooltipStyle">{{ tooltipText }}</div>
+            
           </div>
         </div>
       </div>
@@ -291,11 +287,17 @@ export default {
       totalPages: 0,
       
       // 排序参数
-      sortBy: 'sstepId',
-      sortDir: 'desc',
+      sortBy: 'sstepName',
+      sortDir: 'asc',
       
       // 加载状态
-      loading: false
+      loading: false,
+      
+      // 单元格悬浮提示
+      tooltipVisible: false,
+      tooltipText: '',
+      tooltipStyle: { top: '0px', left: '0px' },
+      tooltipCell: null,
     }
   },
   computed: {
@@ -365,8 +367,8 @@ export default {
       this.loading = true
       try {
         const params = {
-          page: this.currentPage - 1, // 后端分页从0开始
-          size: this.pageSize,
+          page: 0, // 加载全部数据时固定为第一页
+          size: 100000, // 加载全量数据
           sortBy: this.sortBy,
           sortDir: this.sortDir,
           systemName: this.selectedProduct // 按产品名称过滤
@@ -605,25 +607,7 @@ export default {
       }
     },
     
-    /**
-     * 上一页
-     */
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.loadSteps()
-      }
-    },
     
-    /**
-     * 下一页
-     */
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.loadSteps()
-      }
-    },
     
     /**
      * 根据里程碑ID获取里程碑名称
@@ -648,6 +632,384 @@ export default {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
+      })
+    },
+
+    /**
+     * 导出表格（仅导出：序号、步骤名称、步骤类型、所属里程碑）
+     */
+    exportTable() {
+      if (!this.selectedProduct) {
+        this.$message?.warning('请先选择产品')
+        return
+      }
+
+      if (this.steps.length === 0) {
+        this.$message?.warning('当前没有数据可导出')
+        return
+      }
+
+      try {
+        // 准备导出数据（仅四列）
+        const exportData = this.steps.map((step, index) => ({
+          '序号': index + 1,
+          '步骤名称': step.sstepName || '',
+          '步骤类型': step.type || '',
+          '所属里程碑': this.getMilestoneName(step.smilestoneId)
+        }))
+
+        // 转换为CSV格式
+        const headers = Object.keys(exportData[0])
+        const csvContent = [
+          headers.join(','),
+          ...exportData.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+        ].join('\n')
+
+        // 创建下载链接
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `标准交付步骤_${this.selectedProduct}_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        this.$message?.success('表格导出成功')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        this.$message?.error('导出表格失败: ' + error.message)
+      }
+    },
+
+    /**
+     * 触发文件导入
+     */
+    triggerImport() {
+      if (!this.selectedProduct) {
+        this.$message?.warning('请先选择产品')
+        return
+      }
+      this.$refs.fileInput.click()
+    },
+
+    /**
+     * 解析CSV内容（更宽容：允许行列数不一致，按可用列映射）
+     */
+    parseCSV(text) {
+      const lines = text.split(/\r?\n/).filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      // 自动检测分隔符（逗号/分号/Tab/中文逗号）
+      const delimiter = lines[0].includes(',')
+        ? ','
+        : lines[0].includes(';')
+          ? ';'
+          : lines[0].includes('\t')
+            ? '\t'
+            : lines[0].includes('，')
+              ? '，'
+              : ','
+
+      // 解析并标准化表头
+      const rawHeaders = this.parseCSVLine(lines[0], delimiter)
+      const headers = rawHeaders.map(h => this.normalizeHeader(h))
+
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = this.parseCSVLine(lines[i], delimiter)
+        const row = {}
+        headers.forEach((header, index) => {
+          const v = values[index]
+          row[header] = v !== undefined ? v.trim().replace(/^\ufeff/, '') : ''
+        })
+        data.push(row)
+      }
+
+      return data
+    },
+
+    /** 标准化列名，去除BOM/引号/特殊空格，并映射常见别名 */
+    normalizeHeader(h) {
+      const clean = (h || '')
+        .replace(/^\ufeff/, '')
+        .replace(/["“”]/g, '')
+        .replace(/\u00A0/g, ' ')
+        .trim()
+        .replace(/\s+/g, '')
+
+      switch (clean) {
+        case '步骤名称':
+        case '步骤名':
+        case '名称':
+          return '步骤名称'
+        case '步骤类型':
+        case '类型':
+          return '步骤类型'
+        case '所属里程碑':
+        case '里程碑':
+        case '标准里程碑':
+          return '所属里程碑'
+        default:
+          return (h || '').trim().replace(/^\ufeff/, '').replace(/["“”]/g, '')
+      }
+    },
+
+    /**
+     * 解析CSV行，支持引号与指定分隔符
+     */
+    parseCSVLine(line, delimiter = ',') {
+      const result = []
+      let current = ''
+      let inQuotes = false
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i]
+
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current.trim())
+          current = ''
+        } else {
+          current += char
+        }
+      }
+
+      result.push(current.trim())
+      return result
+    },
+
+    /**
+     * 处理文件导入
+     */
+    async handleFileImport(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      try {
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+        
+        if (importData.length === 0) {
+          this.$message?.warning('文件中没有有效数据') || alert('文件中没有有效数据')
+          return
+        }
+
+        // 校验必须的表头
+        const headers = Object.keys(importData[0] || {})
+        console.log('解析到的表头:', headers)
+        const requiredHeaders = ['步骤名称', '步骤类型']
+        const missing = requiredHeaders.filter(h => !headers.includes(h))
+        if (missing.length > 0) {
+          this.$message?.error(`文件缺少必须的列: ${missing.join(', ')}`) || alert(`文件缺少必须的列: ${missing.join(', ')}`)
+          return
+        }
+
+        // 验证导入数据格式
+        const validData = this.validateImportData(importData)
+        if (validData.length === 0) {
+          this.$message?.error('文件格式不正确或数据无效') || alert('文件格式不正确或数据无效')
+          return
+        }
+
+        // 确认导入
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importSteps(validData)
+        }
+
+      } catch (error) {
+        console.error('导入文件失败:', error)
+        this.$message?.error('导入文件失败: ' + error.message) || alert('导入文件失败: ' + error.message)
+      } finally {
+        // 清空文件输入
+        event.target.value = ''
+      }
+    },
+
+    /**
+     * 读取文件内容（支持中文编码：UTF-8 / GBK / GB18030 自动回退）
+     */
+    async readFileAsText(file) {
+      try {
+        const buffer = await this.readFileAsArrayBuffer(file)
+        // 尝试UTF-8
+        let utf8 = ''
+        try {
+          utf8 = new TextDecoder('utf-8').decode(buffer)
+        } catch (_) {}
+        if (this.isLikelyChineseCSV(utf8)) {
+          console.log('检测到CSV编码: UTF-8')
+          return utf8
+        }
+        // 尝试GB18030（GBK超集）
+        try {
+          const gb18030 = new TextDecoder('gb18030').decode(buffer)
+          if (this.isLikelyChineseCSV(gb18030)) {
+            console.log('检测到CSV编码: GB18030')
+            return gb18030
+          }
+        } catch (_) {}
+        // 尝试GBK
+        try {
+          const gbk = new TextDecoder('gbk').decode(buffer)
+          if (this.isLikelyChineseCSV(gbk)) {
+            console.log('检测到CSV编码: GBK')
+            return gbk
+          }
+        } catch (_) {}
+        console.warn('无法可靠判断编码，默认使用UTF-8')
+        return utf8 || await this.readAsTextLegacy(file, 'utf-8')
+      } catch (e) {
+        console.warn('TextDecoder不可用，回退到FileReader', e)
+        const tryUtf8 = await this.readAsTextLegacy(file, 'utf-8')
+        if (this.isLikelyChineseCSV(tryUtf8)) return tryUtf8
+        const tryGbk = await this.readAsTextLegacy(file, 'gbk')
+        if (this.isLikelyChineseCSV(tryGbk)) return tryGbk
+        const tryGb18030 = await this.readAsTextLegacy(file, 'gb18030').catch(() => '')
+        if (tryGb18030 && this.isLikelyChineseCSV(tryGb18030)) return tryGb18030
+        return tryUtf8
+      }
+    },
+
+    /** 读取为ArrayBuffer */
+    readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
+    },
+
+    /** 使用FileReader按指定编码读取（兼容旧环境） */
+    readAsTextLegacy(file, encoding) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, encoding)
+      })
+    },
+
+    /** 粗略判断文本是否为有效的中文CSV（用于编码选择） */
+    isLikelyChineseCSV(text) {
+      if (!text || typeof text !== 'string') return false
+      const firstLine = (text.split(/\r?\n/).find(line => line.trim().length > 0) || '')
+      const delimiter = firstLine.includes(',') ? ',' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : firstLine.includes('，') ? '，' : ','
+      const tokens = this.parseCSVLine(firstLine, delimiter).map(h => this.normalizeHeader(h))
+      const replacementCount = (text.match(/\uFFFD/g) || []).length
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text)
+      const headerOk = tokens.includes('步骤名称') || tokens.includes('步骤类型') || tokens.includes('所属里程碑')
+      return (headerOk && replacementCount === 0) || (hasChinese && replacementCount < 5)
+    },
+
+    /**
+     * 验证导入数据
+     */
+    validateImportData(data) {
+      const validData = []
+      
+      for (const row of data) {
+        // 检查必填字段
+        if (row['步骤名称'] && row['步骤类型']) {
+          // 查找对应的里程碑ID
+          let milestoneId = null
+          if (row['所属里程碑']) {
+            const milestone = this.milestones.find(m => m.milestoneName === row['所属里程碑'])
+            if (milestone) {
+              milestoneId = milestone.milestoneId
+            }
+          }
+
+          validData.push({
+            sstepName: row['步骤名称'],
+            type: row['步骤类型'],
+            systemName: this.selectedProduct,
+            smilestoneId: milestoneId
+          })
+        }
+      }
+
+      return validData
+    },
+
+    /**
+     * 导入步骤数据
+     */
+    async importSteps(data) {
+      let successCount = 0
+      let errorCount = 0
+
+      for (const stepData of data) {
+        try {
+          await createStandardConstructStep(stepData)
+          successCount++
+        } catch (error) {
+          console.error('导入步骤失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        this.$message?.success(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`)
+        this.loadSteps() // 重新加载列表
+      } else {
+        this.$message?.error('导入失败，请检查数据格式')
+      }
+    },
+
+    // 悬浮提示事件与定位
+    onTableMouseOver(e) {
+      const cell = e.target.closest('td')
+      if (!cell) return
+      if (cell.querySelector('button')) return
+      if (!this.isOverflowed(cell)) return
+      this.tooltipText = cell.textContent.trim()
+      this.tooltipVisible = true
+      this.tooltipCell = cell
+      this.positionTooltip(cell, e)
+    },
+    onTableMouseMove(e) {
+      if (!this.tooltipVisible || !this.tooltipCell) return
+      this.positionTooltip(this.tooltipCell, e)
+    },
+    onTableMouseOut(e) {
+      const toEl = e.relatedTarget
+      if (toEl && this.tooltipCell && this.tooltipCell.contains(toEl)) return
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    onTableScroll() {
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    isOverflowed(el) {
+      if (!el) return false
+      const style = getComputedStyle(el)
+      if (style.whiteSpace !== 'nowrap') return false
+      return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight
+    },
+    positionTooltip(cell, e) {
+      const rect = cell.getBoundingClientRect()
+      this.tooltipStyle = { top: '0px', left: '0px' }
+      this.$nextTick(() => {
+        const tip = this.$refs.cellTooltip
+        const tipRect = tip ? tip.getBoundingClientRect() : { width: 300, height: 80 }
+        const margin = 8
+        const showAbove = rect.bottom + tipRect.height + margin > window.innerHeight
+        const top = showAbove ? rect.top - tipRect.height - margin : rect.bottom + margin
+        let left = e.clientX + 12
+        const maxLeft = window.innerWidth - tipRect.width - margin
+        if (left > maxLeft) left = maxLeft
+        if (left < margin) left = margin
+        this.tooltipStyle = { top: `${top}px`, left: `${left}px` }
       })
     }
   }
@@ -894,6 +1256,7 @@ export default {
 .step-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .step-table th,
@@ -902,14 +1265,60 @@ export default {
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .step-table th {
   background: #fafafa;
   font-weight: 600;
   color: #262626;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
+/* 固定列宽与平均分配 */
+.step-table th:nth-child(1),
+.step-table td:nth-child(1) { width: 40px; }
+
+.step-table th:nth-child(2),
+.step-table td:nth-child(2) { width: 60px; }
+
+.step-table th:nth-child(8),
+.step-table td:nth-child(8) { width: 140px; }
+
+.step-table th:nth-child(3),
+.step-table th:nth-child(4),
+.step-table th:nth-child(5),
+.step-table th:nth-child(6),
+.step-table th:nth-child(7),
+.step-table td:nth-child(3),
+.step-table td:nth-child(4),
+.step-table td:nth-child(5),
+.step-table td:nth-child(6),
+.step-table td:nth-child(7) {
+  width: calc((100% - (40px + 60px + 140px)) / 5);
+}
+
+/* 悬浮提示样式 */
+.cell-tooltip {
+  position: fixed;
+  z-index: 2000;
+  background: rgba(0,0,0,0.88);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  max-width: 600px;
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
+}
 .step-table tbody tr {
   cursor: pointer;
   transition: background-color 0.3s;
@@ -1012,6 +1421,42 @@ export default {
   color: white;
 }
 
+.btn-success {
+  background: #52c41a;
+  border-color: #52c41a;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #73d13d;
+  border-color: #73d13d;
+  color: white;
+}
+
+.btn-info {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  color: white;
+}
+
+.btn-warning {
+  background: #fa8c16;
+  border-color: #fa8c16;
+  color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #ffa940;
+  border-color: #ffa940;
+  color: white;
+}
+
 .btn-small {
   padding: 4px 8px;
   font-size: 12px;
@@ -1067,6 +1512,8 @@ export default {
 .icon-search::before { content: "🔍"; }
 .icon-refresh::before { content: "🔄"; }
 .icon-info::before { content: "ℹ️"; }
+.icon-download::before { content: "⬇️"; }
+.icon-upload::before { content: "⬆️"; }
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
@@ -1128,4 +1575,66 @@ export default {
     padding: 8px 12px;
   }
 }
+  /* 排序选择框：遵循通用select样式，避免与其他模块不一致 */
+  .sort-dir-select {
+    width: auto;
+    min-width: auto;
+    padding: 4px 8px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 </style>
+
+// ... 悬浮提示：表格单元格 =====
+onTableMouseOver(e) {
+  const td = e.target.closest('td')
+  if (!td) return
+  const idx = td.cellIndex
+  if (idx <= 1 || idx === 7) {
+    this.tooltipVisible = false
+    return
+  }
+  if (!this.isOverflowed(td)) {
+    this.tooltipVisible = false
+    return
+  }
+  this.tooltipText = (td.innerText || '').trim()
+  this.tooltipVisible = true
+  this.positionTooltip(td)
+},
+onTableMouseMove(e) {
+  if (!this.tooltipVisible) return
+  const td = e.target.closest('td')
+  if (!td) return
+  this.positionTooltip(td)
+},
+onTableMouseOut(e) {
+  const related = e.relatedTarget
+  const leavingTd = e.target.closest('td')
+  if (related && (related.closest?.('td') === leavingTd || related.classList?.contains('cell-tooltip'))) {
+    return
+  }
+  this.tooltipVisible = false
+},
+onTableScroll() {
+  this.tooltipVisible = false
+},
+isOverflowed(el) {
+  return el && el.scrollWidth > el.clientWidth
+},
+positionTooltip(td) {
+  const rect = td.getBoundingClientRect()
+  let top = rect.bottom + 8
+  let left = rect.left + 8
+  this.$nextTick(() => {
+    const tip = this.$el.querySelector('.cell-tooltip')
+    const tipH = tip?.offsetHeight || 0
+    const tipW = tip?.offsetWidth || 0
+    if (window.innerHeight - rect.bottom < tipH + 12) {
+      top = rect.top - tipH - 8
+    }
+    left = Math.min(left, window.innerWidth - tipW - 8)
+    left = Math.max(8, left)
+    this.tooltipStyle = { top: `${top}px`, left: `${left}px` }
+  })
+},

@@ -340,36 +340,7 @@ export async function getDistinctSystemNames() {
   }
 }
 
-/**
- * 检查交付物名称是否存在
- * @param {string} deliverableName 交付物名称
- * @param {number} excludeId 排除的交付物ID（用于更新时检查）
- * @returns {Promise<boolean>} 是否存在
- */
-export async function checkDeliverableNameExists(deliverableName, excludeId = null) {
-  try {
-    const queryParams = new URLSearchParams()
-    queryParams.append('deliverableName', deliverableName)
-    if (excludeId) queryParams.append('excludeId', excludeId)
 
-    const response = await fetch(`${API_BASE_URL}/standard-deliverables/check-name-exists?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.exists || false
-  } catch (error) {
-    console.error('检查交付物名称是否存在失败:', error)
-    throw error
-  }
-}
 
 /**
  * 获取标准交付物统计信息
@@ -416,6 +387,102 @@ export async function getDistinctProductNames() {
     return data.productNames || []
   } catch (error) {
     console.error('获取产品名称列表失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 列出交付物的模板文件
+ * @param {number} deliverableId 交付物ID
+ * @returns {Promise<Array<{name:string, size:number, lastModified?:string}>>}
+ */
+export async function listDeliverableTemplates(deliverableId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/standard-deliverables/${deliverableId}/templates`, {
+      method: 'GET'
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    // 后端返回可能是 { files: [...] } 或直接数组
+    return Array.isArray(data) ? data : (data.files || [])
+  } catch (error) {
+    console.error('获取模板文件列表失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 上传交付物的模板文件（支持多文件）
+ * @param {number} deliverableId 交付物ID
+ * @param {File[]} files 要上传的文件数组
+ */
+export async function uploadDeliverableTemplates(deliverableId, files) {
+  try {
+    const formData = new FormData()
+    for (const f of files || []) {
+      formData.append('files', f)
+    }
+    const response = await fetch(`${API_BASE_URL}/standard-deliverables/${deliverableId}/templates/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    if (!response.ok) {
+      let errMsg = `HTTP error! status: ${response.status}`
+      try {
+        const err = await response.json()
+        errMsg = err.message || errMsg
+      } catch {}
+      throw new Error(errMsg)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('上传模板文件失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 下载交付物的单个模板文件
+ * @param {number} deliverableId 交付物ID
+ * @param {string} filename 文件名
+ * @returns {Promise<Blob>} 文件数据
+ */
+export async function downloadDeliverableTemplate(deliverableId, filename) {
+  try {
+    const url = `${API_BASE_URL}/standard-deliverables/${deliverableId}/templates/${encodeURIComponent(filename)}`
+    const response = await fetch(url, { method: 'GET' })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.blob()
+  } catch (error) {
+    console.error('下载模板文件失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 删除交付物的单个模板文件
+ * @param {number} deliverableId 交付物ID
+ * @param {string} filename 文件名
+ */
+export async function deleteDeliverableTemplate(deliverableId, filename) {
+  try {
+    const url = `${API_BASE_URL}/standard-deliverables/${deliverableId}/templates/${encodeURIComponent(filename)}`
+    const response = await fetch(url, { method: 'DELETE' })
+    if (!response.ok) {
+      let errMsg = `HTTP error! status: ${response.status}`
+      try {
+        const err = await response.json()
+        errMsg = err.message || errMsg
+      } catch {}
+      throw new Error(errMsg)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('删除模板文件失败:', error)
     throw error
   }
 }

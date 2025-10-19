@@ -46,8 +46,8 @@ public class StandardConstructStepController {
             @RequestParam(required = false) String systemName,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Long smilestoneId,
-            @RequestParam(defaultValue = "sstepId") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "createTime") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
 
         try {
             Page<StandardConstructStep> stepPage = standardConstructStepService.getStandardConstructSteps(

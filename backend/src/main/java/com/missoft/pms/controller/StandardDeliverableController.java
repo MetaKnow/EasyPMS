@@ -8,11 +8,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * 标准交付物管理控制器
@@ -336,26 +348,7 @@ public class StandardDeliverableController {
         }
     }
 
-    /**
-     * 检查交付物名称是否存在
-     *
-     * @param deliverableName 交付物名称
-     * @return 检查结果
-     */
-    @GetMapping("/check-name")
-    public ResponseEntity<Map<String, Object>> checkDeliverableNameExists(@RequestParam String deliverableName) {
-        try {
-            boolean exists = standardDeliverableService.checkDeliverableNameExists(deliverableName);
-            Map<String, Object> response = new HashMap<>();
-            response.put("exists", exists);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "检查交付物名称失败");
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
+
 
     /**
      * 获取交付物统计信息
@@ -381,4 +374,205 @@ public class StandardDeliverableController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
-}
+
+    /**
+     * 上传交付物模板文件（支持多文件）
+     */
+    @PostMapping("/{deliverableId}/templates/upload")
+    public ResponseEntity<Map<String, Object>> uploadTemplates(
+            @PathVariable Long deliverableId,
+            @RequestParam("files") MultipartFile[] files) {
+        try {
+            // 获取交付物并根据产品名称（systemName）生成存储目录（项目根）
+            var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
+            String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
+            String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+
+            Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+            Path root = projectRoot
+                    .resolve("deliveryTemplete")
+                    .resolve(safeSystemName);
+            Files.createDirectories(root);
+
+            // 持久化相对目录路径：deliveryTemplete/<systemName>/
+            String relativeDir = "deliveryTemplete/" + safeSystemName + "/";
+            standardDeliverableService.updateDeliverableTemplatePath(deliverableId, relativeDir);
+
+            List<Map<String, Object>> savedFiles = new ArrayList<>();
+            if (files != null) {
+                for (MultipartFile file : files) {
+                    if (file == null || file.isEmpty()) continue;
+                    String originalName = Paths.get(file.getOriginalFilename()).getFileName().toString();
+                    Path target = root.resolve(originalName).normalize();
+                    if (!target.startsWith(root)) {
+                        throw new RuntimeException("非法文件名");
+                    }
+                    try (InputStream in = file.getInputStream()) {
+                        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    Map<String, Object> info = new HashMap<>();
+                    info.put("name", originalName);
+                    info.put("size", Files.size(target));
+                    info.put("lastModified", Files.getLastModifiedTime(target).toMillis());
+                    // 也返回每个文件的相对路径
+                    info.put("relativePath", relativeDir + originalName);
+                    savedFiles.add(info);
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "文件上传成功");
+            response.put("relativePath", relativeDir);
+            response.put("files", savedFiles);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "文件上传失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "文件上传失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * 列出交付物模板文件
+     */
+    @GetMapping("/{deliverableId}/templates")
+    public ResponseEntity<Map<String, Object>> listTemplates(@PathVariable Long deliverableId) {
+        try {
+            var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
+            String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
+            String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+            Path root = projectRoot
+                    .resolve("deliveryTemplete")
+                    .resolve(safeSystemName);
+
+            List<Map<String, Object>> files = new ArrayList<>();
+            if (Files.exists(root) && Files.isDirectory(root)) {
+                try (Stream<Path> stream = Files.list(root)) {
+                    stream.filter(Files::isRegularFile).forEach(p -> {
+                        Map<String, Object> info = new HashMap<>();
+                        info.put("name", p.getFileName().toString());
+                        try {
+                            info.put("size", Files.size(p));
+                            info.put("lastModified", Files.getLastModifiedTime(p).toMillis());
+                        } catch (Exception ex) {
+                            info.put("size", 0L);
+                            info.put("lastModified", 0L);
+                        }
+                        files.add(info);
+                    });
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("files", files);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "获取文件列表失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "获取文件列表失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * 下载交付物模板文件
+     */
+    @GetMapping("/{deliverableId}/templates/{filename:.+}")
+    public ResponseEntity<Resource> downloadTemplate(
+            @PathVariable Long deliverableId,
+            @PathVariable String filename) {
+        try {
+            var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
+            String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
+            String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+            Path root = projectRoot
+                    .resolve("deliveryTemplete")
+                    .resolve(safeSystemName);
+            Path target = root.resolve(filename).normalize();
+            if (!target.startsWith(root) || !Files.exists(target)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            Resource resource = new UrlResource(target.toUri());
+            String contentType = Files.probeContentType(target);
+            if (contentType == null) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+            }
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + target.getFileName().toString() + "\"")
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(resource);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 删除交付物模板文件
+     */
+    @DeleteMapping("/{deliverableId}/templates/{filename:.+}")
+    public ResponseEntity<Map<String, Object>> deleteTemplate(
+            @PathVariable Long deliverableId,
+            @PathVariable String filename) {
+        try {
+            var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
+            String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
+            String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+            Path root = projectRoot
+                    .resolve("deliveryTemplete")
+                    .resolve(safeSystemName);
+            Path target = root.resolve(filename).normalize();
+            if (!target.startsWith(root) || !Files.exists(target)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "文件不存在");
+                error.put("message", "未找到指定文件");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+            Files.delete(target);
+            // 如果目录已空，清空数据库中的模板路径
+            boolean hasFiles = false;
+            if (Files.exists(root) && Files.isDirectory(root)) {
+                try (Stream<Path> s = Files.list(root)) {
+                    hasFiles = s.anyMatch(Files::isRegularFile);
+                }
+            }
+            if (!hasFiles) {
+                // 清空数据库中保存的模板相对路径
+                standardDeliverableService.updateDeliverableTemplatePath(deliverableId, null);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "文件删除成功");
+            response.put("filename", filename);
+            response.put("pathCleared", !hasFiles);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "删除文件失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "删除文件失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            }
+        }
+    }
+
+    // ... existing code ...

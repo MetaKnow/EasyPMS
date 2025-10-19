@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
+    <div class="modal-content" ref="dragModal" :style="dragStyle" @click.stop>
+      <div class="modal-header" @mousedown="startDrag">
         <h3>{{ mode === 'add' ? '新增里程碑' : '修改里程碑' }}</h3>
         <button class="close-btn" @click="close">×</button>
       </div>
@@ -100,7 +100,11 @@ export default {
       /**
        * 防抖定时器
        */
-      debounceTimer: null
+      debounceTimer: null,
+      // 拖动状态
+      dragStyle: { position: 'fixed', top: '0px', left: '0px' },
+      dragging: false,
+      dragStart: { mouseX: 0, mouseY: 0, top: 0, left: 0 }
     }
   },
   watch: {
@@ -123,15 +127,70 @@ export default {
         this.initializeFormData(this.milestone)
         // 清除之前的验证错误
         this.clearErrors()
+        this.$nextTick(() => this.centerModal())
       }
     }
+  },
+  mounted() {
+    this.$nextTick(() => this.centerModal())
   },
   methods: {
     /**
      * 关闭表单
      */
     close() {
+      this.endDrag()
       this.$emit('close')
+    },
+    
+    // 弹窗居中
+    centerModal() {
+      const modal = this.$refs.dragModal
+      if (!modal) return
+      const w = modal.offsetWidth
+      const h = modal.offsetHeight
+      const left = Math.max((window.innerWidth - w) / 2, 8)
+      const top = Math.max((window.innerHeight - h) / 2, 20)
+      this.dragStyle = { position: 'fixed', top: `${top}px`, left: `${left}px` }
+    },
+    
+    // 开始拖动
+    startDrag(e) {
+      if (e.button !== 0) return
+      const modal = this.$refs.dragModal
+      if (!modal) return
+      const top = parseInt((this.dragStyle.top || '0').toString().replace('px', '')) || 0
+      const left = parseInt((this.dragStyle.left || '0').toString().replace('px', '')) || 0
+      this.dragStart = { mouseX: e.clientX, mouseY: e.clientY, top, left }
+      this.dragging = true
+      document.addEventListener('mousemove', this.onDragMove)
+      document.addEventListener('mouseup', this.endDrag)
+    },
+    
+    // 拖动中
+    onDragMove(e) {
+      if (!this.dragging) return
+      const modal = this.$refs.dragModal
+      if (!modal) return
+      const dx = e.clientX - this.dragStart.mouseX
+      const dy = e.clientY - this.dragStart.mouseY
+      const w = modal.offsetWidth
+      const h = modal.offsetHeight
+      let left = this.dragStart.left + dx
+      let top = this.dragStart.top + dy
+      const maxLeft = Math.max(window.innerWidth - w, 0)
+      const maxTop = Math.max(window.innerHeight - h, 0)
+      left = Math.min(Math.max(0, left), maxLeft)
+      top = Math.min(Math.max(0, top), maxTop)
+      this.dragStyle = { position: 'fixed', top: `${top}px`, left: `${left}px` }
+    },
+    
+    // 结束拖动
+    endDrag() {
+      if (!this.dragging) return
+      this.dragging = false
+      document.removeEventListener('mousemove', this.onDragMove)
+      document.removeEventListener('mouseup', this.endDrag)
     },
     
     /**
@@ -318,6 +377,7 @@ export default {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer)
     }
+    this.endDrag()
   }
 }
 </script>
@@ -358,6 +418,8 @@ export default {
   padding: 16px 20px;
   border-bottom: 1px solid #f0f0f0;
   background: #fafafa;
+  cursor: move;
+  user-select: none;
 }
 
 .modal-header h3 {

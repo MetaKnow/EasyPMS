@@ -55,26 +55,38 @@
 
     <!-- 项目列表表格 -->
     <div class="table-section">
-      <div class="table-container">
+      <div class="table-container" @mouseover="onTableMouseOver" @mousemove="onTableMouseMove" @mouseout="onTableMouseOut" @scroll="onTableScroll">
         <table class="construction-table">
+            <colgroup>
+               <col style="width: 40px" />
+               <col style="width: 60px" />
+               <col style="width: 170px" />
+               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
+               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
+               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
+               <col style="width: 100px" />
+               <col style="width: 100px" />
+               <col style="width: 120px" />
+             </colgroup>
           <thead>
-            <tr>
-              <th width="40">
-                <input 
-                  type="checkbox" 
-                  @change="selectAll"
-                  :checked="isAllSelected"
-                />
-              </th>
-              <th width="60">序号</th>
-              <th width="120">项目编号</th>
-              <th width="100">项目状态</th>
-              <th width="200">项目名称</th>
-              <th width="180">客户</th>
-              <th width="100">项目负责人</th>
-              <th width="120">操作</th>
-            </tr>
-          </thead>
+              <tr>
+                <th width="40">
+                  <input 
+                    type="checkbox" 
+                    @change="selectAll"
+                    :checked="isAllSelected"
+                  />
+                </th>
+                <th width="60">序号</th>
+                <th width="180">项目编号</th>
+                <th>项目名称</th>
+                <th>软件系统</th>
+                <th>客户</th>
+                <th width="100">项目负责人</th>
+                <th width="100">项目状态</th>
+                <th width="120">操作</th>
+              </tr>
+            </thead>
           <tbody>
             <tr 
               v-for="(project, index) in projectList" 
@@ -90,26 +102,28 @@
                 />
               </td>
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <td>{{ project.projectNum }}</td>
-              <td>
-                <span class="status-badge" :class="getStatusClass(project.projectState)">
-                  {{ project.projectState }}
-                </span>
-              </td>
-              <td>{{ project.projectName }}</td>
-              <td>{{ project.customerName || '未知客户' }}</td>
-              <td>{{ project.projectLeaderName || project.projectLeader }}</td>
-              <td>
-                <button class="btn-small btn-primary" @click.stop="editProject(project)">
-                  编辑
-                </button>
-                <button class="btn-small btn-danger" @click.stop="deleteProject(project)">
-                  删除
-                </button>
-              </td>
+                <td>{{ project.projectNum }}</td>
+                <td>{{ project.projectName }}</td>
+                <td>{{ project.softName ? (project.softVersion ? project.softName + ' (' + project.softVersion + ')' : project.softName) : '未选择' }}</td>
+                <td>{{ project.customerName || '未知客户' }}</td>
+                <td>{{ project.projectLeaderName || project.projectLeader }}</td>
+                <td>
+                  <span class="status-badge" :class="getStatusClass(project.projectState)">
+                    {{ project.projectState }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-small btn-primary" @click.stop="editProject(project)">
+                    编辑
+                  </button>
+                  <button class="btn-small btn-danger" @click.stop="deleteProject(project)">
+                    删除
+                  </button>
+                </td>
             </tr>
           </tbody>
         </table>
+        <div v-if="tooltipVisible" class="cell-tooltip" :style="tooltipStyle" ref="cellTooltip">{{ tooltipText }}</div>
       </div>
 
       <!-- 分页 -->
@@ -179,7 +193,12 @@ export default {
       // 年度选项
       yearOptions: [],
       // 表单显示状态
-      createFormVisible: false
+      createFormVisible: false,
+      // 单元格悬浮提示
+      tooltipVisible: false,
+      tooltipText: '',
+      tooltipStyle: { top: '0px', left: '0px' },
+      tooltipCell: null
     }
   },
   computed: {
@@ -456,6 +475,58 @@ export default {
     formatMoney(amount) {
       if (!amount) return '-'
       return '¥' + Number(amount).toLocaleString()
+    },
+
+    // 悬浮提示事件与定位（与其他模块一致）
+    onTableMouseOver(e) {
+      const cell = e.target.closest('td')
+      if (!cell) return
+      if (cell.querySelector('button')) return
+      if (!this.isOverflowed(cell)) {
+        this.tooltipVisible = false
+        this.tooltipCell = null
+        return
+      }
+      this.tooltipText = (cell.textContent || '').trim()
+      this.tooltipVisible = true
+      this.tooltipCell = cell
+      this.positionTooltip(cell, e)
+    },
+    onTableMouseMove(e) {
+      if (!this.tooltipVisible || !this.tooltipCell) return
+      this.positionTooltip(this.tooltipCell, e)
+    },
+    onTableMouseOut(e) {
+      const toEl = e.relatedTarget
+      if (toEl && this.tooltipCell && this.tooltipCell.contains(toEl)) return
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    onTableScroll() {
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    isOverflowed(el) {
+      if (!el) return false
+      const style = getComputedStyle(el)
+      if (style.whiteSpace !== 'nowrap') return false
+      return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight
+    },
+    positionTooltip(cell, e) {
+      const rect = cell.getBoundingClientRect()
+      this.tooltipStyle = { top: '0px', left: '0px' }
+      this.$nextTick(() => {
+        const tip = this.$refs.cellTooltip
+        const tipRect = tip ? tip.getBoundingClientRect() : { width: 300, height: 80 }
+        const margin = 8
+        const showAbove = rect.bottom + tipRect.height + margin > window.innerHeight
+        const top = showAbove ? rect.top - tipRect.height - margin : rect.bottom + margin
+        let left = e.clientX + 12
+        const maxLeft = window.innerWidth - tipRect.width - margin
+        if (left > maxLeft) left = maxLeft
+        if (left < margin) left = margin
+        this.tooltipStyle = { top: `${top}px`, left: `${left}px` }
+      })
     }
   }
 }
@@ -545,6 +616,8 @@ export default {
 .construction-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+  --fixed-total: 600px;
 }
 
 .construction-table th,
@@ -553,6 +626,9 @@ export default {
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .construction-table th {
@@ -730,6 +806,23 @@ export default {
 
 .icon-refresh::before {
   content: '↻';
+}
+
+/* 悬浮提示样式：与其他模块一致 */
+.cell-tooltip {
+  position: fixed;
+  z-index: 2000;
+  background: rgba(0,0,0,0.88);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  max-width: 600px;
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* 响应式设计 */

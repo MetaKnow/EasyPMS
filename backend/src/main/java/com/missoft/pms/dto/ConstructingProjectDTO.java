@@ -5,7 +5,7 @@ import java.time.LocalDate;
 
 /**
  * 在建项目数据传输对象
- * 包含客户名称等关联信息
+ * 包含客户名称、软件系统等关联信息
  * 
  * @author MissoftPMS
  * @version 1.0.0
@@ -26,13 +26,19 @@ public class ConstructingProjectDTO {
     private Long customerId;
     private String customerName;  // 客户名称
 
+    // 软件系统相关字段
+    private Long softId;
+    private String softName;
+    private String softVersion;
+
     // 构造函数
     public ConstructingProjectDTO() {}
 
     public ConstructingProjectDTO(Long projectId, String projectNum, String projectName, 
                                 String projectType, String projectState, Long projectLeader, 
                                 String projectLeaderName, LocalDate startDate, LocalDate planEndDate, 
-                                BigDecimal value, Integer year, Long customerId, String customerName) {
+                                BigDecimal value, Integer year, Long customerId, String customerName,
+                                Long softId, String softName, String softVersion) {
         this.projectId = projectId;
         this.projectNum = projectNum;
         this.projectName = projectName;
@@ -46,6 +52,9 @@ public class ConstructingProjectDTO {
         this.year = year;
         this.customerId = customerId;
         this.customerName = customerName;
+        this.softId = softId;
+        this.softName = softName;
+        this.softVersion = softVersion;
     }
 
     // Getter和Setter方法
@@ -151,5 +160,29 @@ public class ConstructingProjectDTO {
 
     public void setCustomerName(String customerName) {
         this.customerName = customerName;
+    }
+
+    public Long getSoftId() {
+        return softId;
+    }
+
+    public void setSoftId(Long softId) {
+        this.softId = softId;
+    }
+
+    public String getSoftName() {
+        return softName;
+    }
+
+    public void setSoftName(String softName) {
+        this.softName = softName;
+    }
+
+    public String getSoftVersion() {
+        return softVersion;
+    }
+
+    public void setSoftVersion(String softVersion) {
+        this.softVersion = softVersion;
     }
 }

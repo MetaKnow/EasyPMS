@@ -39,6 +39,12 @@ public class StandardDeliverable {
     private String deliverableType;
 
     /**
+     * 模板文件相对路径
+     */
+    @Column(name = "deliveryTempletePath", length = 255)
+    private String deliveryTempletePath;
+
+    /**
      * 是否必须上传，0-非必须，1-必须
      */
     @Column(name = "isMustLoad")
@@ -160,6 +166,24 @@ public class StandardDeliverable {
     }
 
     /**
+     * 获取模板文件相对路径
+     *
+     * @return 模板文件相对路径
+     */
+    public String getDeliveryTempletePath() {
+        return deliveryTempletePath;
+    }
+
+    /**
+     * 设置模板文件相对路径
+     *
+     * @param deliveryTempletePath 模板文件相对路径
+     */
+    public void setDeliveryTempletePath(String deliveryTempletePath) {
+        this.deliveryTempletePath = deliveryTempletePath;
+    }
+
+    /**
      * 获取是否必须上传
      *
      * @return 是否必须上传
@@ -274,6 +298,7 @@ public class StandardDeliverable {
                 ", deliverableName='" + deliverableName + '\'' +
                 ", systemName='" + systemName + '\'' +
                 ", deliverableType='" + deliverableType + '\'' +
+                ", deliveryTempletePath='" + deliveryTempletePath + '\'' +
                 ", isMustLoad=" + isMustLoad +
                 ", sstepId=" + sstepId +
                 ", milestoneId=" + milestoneId +

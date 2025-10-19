@@ -56,6 +56,7 @@
               </th>
               <th width="60">序号</th>
               <th>产品名称</th>
+              <th>产品类型</th>
               <th>产品版本</th>
               <th>创建时间</th>
               <th>操作</th>
@@ -77,6 +78,7 @@
               </td>
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ product.softName }}</td>
+              <td>{{ product.softType || '-' }}</td>
               <td>{{ product.softVersion }}</td>
               <td>{{ formatDate(product.createTime) }}</td>
               <td>
@@ -89,7 +91,7 @@
               </td>
             </tr>
             <tr v-if="products.length === 0">
-              <td colspan="6" class="no-data">暂无数据</td>
+              <td colspan="7" class="no-data">暂无数据</td>
             </tr>
           </tbody>
         </table>
@@ -228,7 +230,7 @@ export default {
         const params = new URLSearchParams({
           page: this.currentPage - 1, // 后端分页从0开始
           size: this.pageSize,
-          sortBy: 'softId',
+          sortBy: 'typeVersion',
           sortDir: 'desc'
         })
         

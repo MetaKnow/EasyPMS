@@ -12,6 +12,21 @@
           <i class="icon-delete"></i>
           删除里程碑
         </button>
+        <button class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input 
+          ref="fileInput" 
+          type="file" 
+          accept=".csv" 
+          style="display: none" 
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -37,7 +52,7 @@
 
     <!-- 里程碑列表 -->
     <div class="table-section">
-      <div class="table-container">
+      <div class="table-container" @scroll="onTableScroll">
         <table class="milestone-table">
           <thead>
             <tr>
@@ -55,7 +70,7 @@
               <th>操作</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody @mouseover="onTableMouseOver" @mousemove="onTableMouseMove" @mouseout="onTableMouseOut">
             <tr 
               v-for="(milestone, index) in milestones" 
               :key="milestone.milestoneId"
@@ -69,7 +84,7 @@
                   @change.stop="toggleSelect(milestone)"
                 />
               </td>
-              <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td>{{ index + 1 }}</td>
               <td>{{ milestone.milestoneName }}</td>
               <td>{{ formatDate(milestone.createTime) }}</td>
               <td>{{ formatDate(milestone.updateTime) }}</td>
@@ -88,27 +103,8 @@
           </tbody>
         </table>
       </div>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <button 
-          class="btn btn-secondary" 
-          @click="prevPage" 
-          :disabled="currentPage <= 1"
-        >
-          上一页
-        </button>
-        <span class="page-info">
-          第 {{ currentPage }} 页，共 {{ totalPages }} 页，总计 {{ totalCount }} 条记录
-        </span>
-        <button 
-          class="btn btn-secondary" 
-          @click="nextPage" 
-          :disabled="currentPage >= totalPages"
-        >
-          下一页
-        </button>
-      </div>
+      <div v-if="tooltipVisible" ref="cellTooltip" class="cell-tooltip" :style="tooltipStyle">{{ tooltipText }}</div>
+      
     </div>
 
     <!-- 里程碑表单弹窗 -->
@@ -207,7 +203,13 @@ export default {
       totalPages: 0,
       
       // 加载状态
-      loading: false
+      loading: false,
+
+      // 悬浮提示状态
+      tooltipVisible: false,
+      tooltipText: '',
+      tooltipStyle: { top: '0px', left: '0px' },
+      tooltipCell: null
     }
   },
   computed: {
@@ -230,9 +232,9 @@ export default {
       this.loading = true
       try {
         const params = {
-          page: this.currentPage - 1, // 后端分页从0开始
-          size: this.pageSize,
-          sortBy: 'createTime',
+          page: 0, // 加载全部数据时固定为第一页
+          size: 100000, // 加载全量数据
+          sortBy: 'milestoneName',
           sortDir: 'asc'
         }
         
@@ -451,25 +453,7 @@ export default {
       }
     },
     
-    /**
-     * 上一页
-     */
-    prevPage() {
-      if (this.currentPage > 1) {
-        this.currentPage--
-        this.loadMilestones()
-      }
-    },
     
-    /**
-     * 下一页
-     */
-    nextPage() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++
-        this.loadMilestones()
-      }
-    },
     
     /**
      * 格式化日期
@@ -484,6 +468,206 @@ export default {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
+      })
+    },
+
+    /**
+     * 导出表格
+     */
+    exportTable() {
+      if (this.milestones.length === 0) {
+        this.$message?.warning('当前没有数据可导出')
+        return
+      }
+      try {
+        const exportData = this.milestones.map((m, index) => ({
+          '序号': index + 1,
+          '里程碑名称': m.milestoneName || '',
+          '创建时间': this.formatDate(m.createTime),
+          '更新时间': this.formatDate(m.updateTime)
+        }))
+        const headers = Object.keys(exportData[0])
+        const csvContent = [
+          headers.join(','),
+          ...exportData.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+        ].join('\n')
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `标准里程碑_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        this.$message?.success('表格导出成功')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        this.$message?.error('导出表格失败: ' + error.message)
+      }
+    },
+
+    /**
+     * 触发文件导入
+     */
+    triggerImport() {
+      this.$refs.fileInput?.click()
+    },
+
+    /**
+     * 处理文件导入
+     */
+    async handleFileImport(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      try {
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+
+        if (importData.length === 0) {
+          this.$message?.warning('文件中没有有效数据')
+          return
+        }
+
+        const validData = this.validateImportData(importData)
+        if (validData.length === 0) {
+          this.$message?.error('文件格式不正确或数据无效')
+          return
+        }
+
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importMilestones(validData)
+        }
+      } catch (error) {
+        console.error('导入文件失败:', error)
+        this.$message?.error('导入文件失败: ' + error.message)
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    /**
+     * 读取文件内容
+     */
+    readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, 'utf-8')
+      })
+    },
+
+    /**
+     * 解析CSV内容
+     */
+    parseCSV(text) {
+      const lines = text.split('\n').filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+      const data = []
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim())
+        const row = {}
+        headers.forEach((header, index) => {
+          row[header] = values[index] || ''
+        })
+        data.push(row)
+      }
+
+      return data
+    },
+
+    /**
+     * 验证导入数据
+     */
+    validateImportData(data) {
+      const validData = []
+      for (const row of data) {
+        if (row['里程碑名称']) {
+          validData.push({
+            milestoneName: row['里程碑名称'].trim()
+          })
+        }
+      }
+      return validData
+    },
+
+    /**
+     * 导入里程碑数据
+     */
+    async importMilestones(data) {
+      let successCount = 0
+      let errorCount = 0
+
+      for (const milestoneData of data) {
+        try {
+          await createStandardMilestone(milestoneData)
+          successCount++
+        } catch (error) {
+          console.error('导入里程碑失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        this.$message?.success(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`)
+        this.loadMilestones()
+      } else {
+        this.$message?.error('导入失败，请检查数据格式')
+      }
+    },
+
+    // 悬浮提示事件与定位
+    onTableMouseOver(e) {
+      const cell = e.target.closest('td')
+      if (!cell) return
+      if (cell.querySelector('button')) return
+      if (!this.isOverflowed(cell)) return
+      this.tooltipText = cell.textContent.trim()
+      this.tooltipVisible = true
+      this.tooltipCell = cell
+      this.positionTooltip(cell, e)
+    },
+    onTableMouseMove(e) {
+      if (!this.tooltipVisible || !this.tooltipCell) return
+      this.positionTooltip(this.tooltipCell, e)
+    },
+    onTableMouseOut(e) {
+      const toEl = e.relatedTarget
+      if (toEl && this.tooltipCell && this.tooltipCell.contains(toEl)) return
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    onTableScroll() {
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    isOverflowed(el) {
+      if (!el) return false
+      const style = getComputedStyle(el)
+      if (style.whiteSpace !== 'nowrap') return false
+      return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight
+    },
+    positionTooltip(cell, e) {
+      const rect = cell.getBoundingClientRect()
+      this.tooltipStyle = { top: '0px', left: '0px' }
+      this.$nextTick(() => {
+        const tip = this.$refs.cellTooltip
+        const tipRect = tip ? tip.getBoundingClientRect() : { width: 300, height: 80 }
+        const margin = 8
+        const showAbove = rect.bottom + tipRect.height + margin > window.innerHeight
+        const top = showAbove ? rect.top - tipRect.height - margin : rect.bottom + margin
+        let left = e.clientX + 12
+        const maxLeft = window.innerWidth - tipRect.width - margin
+        if (left > maxLeft) left = maxLeft
+        if (left < margin) left = margin
+        this.tooltipStyle = { top: `${top}px`, left: `${left}px` }
       })
     }
   }
@@ -575,6 +759,7 @@ export default {
 .milestone-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .milestone-table th,
@@ -583,12 +768,35 @@ export default {
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .milestone-table th {
   background: #fafafa;
   font-weight: 600;
   color: #262626;
+}
+
+/* 固定列宽与平均分配：1=40px, 2=60px, 6=操作(140px) */
+.milestone-table th:nth-child(1),
+.milestone-table td:nth-child(1) { width: 40px; }
+
+.milestone-table th:nth-child(2),
+.milestone-table td:nth-child(2) { width: 60px; }
+
+.milestone-table th:nth-child(6),
+.milestone-table td:nth-child(6) { width: 140px; }
+
+.milestone-table th:nth-child(3),
+.milestone-table th:nth-child(4),
+.milestone-table th:nth-child(5),
+.milestone-table td:nth-child(3),
+.milestone-table td:nth-child(4),
+.milestone-table td:nth-child(5) {
+  width: calc((100% - (40px + 60px + 140px)) / 3);
 }
 
 .milestone-table tbody tr {
@@ -602,6 +810,23 @@ export default {
 
 .milestone-table tbody tr.selected {
   background: #e6f7ff;
+}
+
+/* 悬浮提示样式 */
+.cell-tooltip {
+  position: fixed;
+  z-index: 2000;
+  background: rgba(0,0,0,0.88);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  max-width: 600px;
+  font-size: 14px;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .no-data {
@@ -785,4 +1010,30 @@ export default {
     padding: 8px 12px;
   }
 }
+  /* 导入/导出按钮样式与图标，保持与步骤模块一致 */
+  .btn-success {
+    background-color: #28a745;
+    color: #fff;
+  }
+  .btn-success:hover {
+    background-color: #218838;
+  }
+  .btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+  }
+  .btn-warning:hover {
+    background-color: #e0a800;
+    color: #212529;
+  }
+  .icon-download::before {
+    content: "\2193";
+    display: inline-block;
+    margin-right: 4px;
+  }
+  .icon-upload::before {
+    content: "\2191";
+    display: inline-block;
+    margin-right: 4px;
+  }
 </style>

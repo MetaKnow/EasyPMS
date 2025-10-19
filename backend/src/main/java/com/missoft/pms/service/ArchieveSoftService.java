@@ -40,7 +40,9 @@ public class ArchieveSoftService {
     public Page<ArchieveSoft> getArchieveSofts(int page, int size, String softName, String softVersion, 
                                                String sortBy, String sortDir) {
         // 创建排序对象
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        Sort sort = "typeVersion".equalsIgnoreCase(sortBy)
+                ? Sort.by(Sort.Order.asc("softType"), Sort.Order.desc("softVersion"))
+                : Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // 处理空字符串为null
@@ -105,6 +107,7 @@ public class ArchieveSoftService {
         // 更新产品信息
         existingArchieveSoft.setSoftName(archieveSoft.getSoftName());
         existingArchieveSoft.setSoftVersion(archieveSoft.getSoftVersion());
+        existingArchieveSoft.setSoftType(archieveSoft.getSoftType());
 
         // 保存更新
         return archieveSoftRepository.save(existingArchieveSoft);
@@ -206,12 +209,28 @@ public class ArchieveSoftService {
     }
 
     /**
-     * 获取所有去重的产品名称
+     * 获取所有去重的产品名称（按基础产品维护的排序：类型升序、版本降序）
      *
-     * @return 去重的产品名称列表
+     * 保留第一次出现顺序以便与产品维护列表保持一致。
+     * @return 去重的产品名称列表（已按类型+版本排序）
      */
     @Transactional(readOnly = true)
     public List<String> getDistinctSoftNames() {
-        return archieveSoftRepository.findDistinctSoftNames();
+        // 使用与产品维护相同的排序规则：softType ASC, softVersion DESC
+        Sort sort = Sort.by(Sort.Order.asc("softType"), Sort.Order.desc("softVersion"));
+        java.util.List<ArchieveSoft> all = archieveSoftRepository.findAll(sort);
+
+        // 按遇到的顺序去重产品名称
+        java.util.LinkedHashSet<String> orderedNames = new java.util.LinkedHashSet<>();
+        for (ArchieveSoft a : all) {
+            String name = a.getSoftName();
+            if (name != null) {
+                name = name.trim();
+                if (!name.isEmpty()) {
+                    orderedNames.add(name);
+                }
+            }
+        }
+        return new java.util.ArrayList<>(orderedNames);
     }
 }
