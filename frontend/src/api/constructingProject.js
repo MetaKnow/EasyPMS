@@ -80,3 +80,10 @@ export function batchDeleteConstructingProjects(ids) {
     data: { ids }
   })
 }
+
+export function getProjectSummary(id) {
+  return request({
+    url: `/api/projects/${id}/summary`,
+    method: 'get'
+  })
+}

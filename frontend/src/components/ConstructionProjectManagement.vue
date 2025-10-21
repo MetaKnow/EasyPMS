@@ -93,6 +93,7 @@
               :key="project.projectId"
               :class="{ selected: selectedProjects.includes(project.projectId) }"
               @click="selectProject(project)"
+              @dblclick="openProjectDetail(project)"
             >
               <td>
                 <input 
@@ -375,6 +376,14 @@ export default {
      */
     editProject(project) {
       this.$emit('show-constructing-project-form', project)
+    },
+
+    /**
+     * 打开项目详情页（双击行）
+     */
+    openProjectDetail(project) {
+      if (!project || !project.projectId) return
+      this.$router.push({ name: 'ProjectDetail', params: { projectId: project.projectId } })
     },
 
     /**

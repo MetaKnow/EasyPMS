@@ -68,8 +68,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/standard-construct-steps/**").permitAll()
                 // 允许访问标准交付物管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/standard-deliverables/**").permitAll()
+                // 允许访问项目交付文件上传/下载接口（临时开放）
+                .requestMatchers("/api/construct-deliverable-files/**").permitAll()
                 // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/constructing-projects/**").permitAll()
+                // 允许访问项目汇总与相关项目接口（临时开放）
+                .requestMatchers("/api/projects/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

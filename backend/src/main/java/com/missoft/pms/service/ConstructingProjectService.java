@@ -30,6 +30,10 @@ public class ConstructingProjectService {
 
     @Autowired
     private ConstructingProjectRepository constructingProjectRepository;
+    @Autowired
+    private ProjectSstepRelationService projectSstepRelationService;
+    @Autowired
+    private ConstructMilestoneService constructMilestoneService;
 
     /**
      * 分页查询在建项目列表
@@ -151,7 +155,19 @@ public class ConstructingProjectService {
         // 计算未回款金额
         calculateUnreceiveMoney(constructingProject);
 
-        return constructingProjectRepository.save(constructingProject);
+        // 保存项目并在成功后生成项目-步骤关系
+        ConstructingProject saved = constructingProjectRepository.save(constructingProject);
+        try {
+            projectSstepRelationService.generateRelationsForProject(saved);
+        } catch (Exception ignore) {
+            // 关系生成失败不影响项目创建；可根据需要添加日志
+        }
+        try {
+            constructMilestoneService.generateMilestonesForProject(saved);
+        } catch (Exception ignore) {
+            // 里程碑生成失败不影响项目创建；可根据需要添加日志
+        }
+        return saved;
     }
 
     /**

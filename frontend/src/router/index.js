@@ -12,6 +12,7 @@ import StandardConstructStepManagement from '../components/StandardConstructStep
 import StandardDeliverableManagement from '../components/StandardDeliverableManagement.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import ChannelDistributorManagement from '../components/ChannelDistributorManagement.vue'
+import ProjectDetail from '../components/ProjectDetail.vue'
 
 /**
  * 路由配置
@@ -49,6 +50,12 @@ const routes = [
         name: 'ConstructionProjects',
         component: ConstructionProjectManagement,
         meta: { title: '在建项目管理' }
+      },
+      {
+        path: 'project/:projectId',
+        name: 'ProjectDetail',
+        component: ProjectDetail,
+        meta: { title: '项目详情', fullscreen: true }
       },
       {
         path: 'maintenance',

@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <!-- 顶部Banner -->
-    <header class="top-banner">
+    <header class="top-banner" v-if="!$route.meta.fullscreen">
       <div class="banner-left">
         <img src="/favicon.ico" alt="Logo" class="logo" />
         <h1 class="system-title">MissoftPMS</h1>
@@ -12,9 +12,9 @@
       </div>
     </header>
 
-    <div class="main-container">
+    <div class="main-container" :class="{ fullscreen: $route.meta.fullscreen }">
       <!-- 左侧功能菜单 -->
-      <aside class="sidebar">
+      <aside class="sidebar" v-if="!$route.meta.fullscreen">
         <nav class="menu">
           <template v-for="item in menuItems" :key="item.id">
             <!-- 普通菜单项 -->
@@ -773,4 +773,5 @@ export default {
     flex-direction: column;
   }
 }
+.main-container.fullscreen .main-content { height: 100vh; }
 </style>

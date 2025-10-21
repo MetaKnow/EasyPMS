@@ -294,7 +294,6 @@
                   </button>
                 </div>
               </div>
-              <div v-else class="no-templates">暂无已上传模板</div>
             </div>
             
             <div class="modal-actions">
