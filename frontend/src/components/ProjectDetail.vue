@@ -17,59 +17,44 @@
     <div v-if="loading" class="state">正在加载...</div>
     <div v-else-if="error" class="state error">{{ error }}</div>
     <div v-else class="content-grid">
-      <section class="card">
-        <h3>项目信息</h3>
-        <div class="info-grid">
-          <div><label>名称</label><div>{{ project?.projectName }}</div></div>
-          <div><label>编号</label><div>{{ project?.projectNum }}</div></div>
-          <div><label>产品</label><div>{{ project?.systemName }}</div></div>
-          <div><label>状态</label><div>{{ project?.status }}</div></div>
-          <div><label>创建时间</label><div>{{ formatDate(project?.createTime) }}</div></div>
-        </div>
-      </section>
 
-      <section class="card">
-        <h3>里程碑</h3>
-        <ul class="list">
-          <li v-for="m in milestones" :key="m.id" class="list-item">
-            <span class="milestone-name">{{ m.milestoneName }}</span>
-            <span class="tag" :class="{done: m.isCompleted}">{{ m.isCompleted ? '完成' : '未完成' }}</span>
-          </li>
-        </ul>
-      </section>
-
-      <section class="card">
-        <h3>步骤</h3>
-        <ul class="list">
-          <li v-for="s in steps" :key="s.sstepId || s.nstepId" class="list-item">
-            <span class="step-name">{{ s.sstepName || s.nstepName }}</span>
-            <span class="tag">{{ s.type || '标准' }}</span>
-          </li>
-        </ul>
-      </section>
 
       <section class="card wide">
-        <h3>交付物与文件</h3>
-        <div v-if="deliverables.length === 0" class="empty">暂无交付物</div>
-        <div v-else class="deliverables">
-          <div v-for="d in deliverables" :key="d.deliverableId" class="deliverable">
-            <div class="deliverable-header">
-              <div class="deliverable-title">
-                <span class="name">{{ d.deliverableName || ('交付物 #' + d.deliverableId) }}</span>
-                <span class="type" v-if="d.type">类型：{{ d.type }}</span>
-              </div>
-              <div class="count">文件：{{ (filesByDeliverableId[d.deliverableId] || []).length }}</div>
-            </div>
-            <ul class="file-list">
-              <li v-for="f in (filesByDeliverableId[d.deliverableId] || [])" :key="f.fileId" class="file-item">
-                <a :href="downloadURL(f.fileId)" target="_blank" class="file-link">{{ fileBaseName(f.filePath) }}</a>
-                <span class="size" v-if="f.fileSize">{{ prettySize(f.fileSize) }}</span>
-                <span class="time">{{ formatDate(f.createTime) }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
+        <h3>步骤</h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th width="60">序号</th>
+              <th>步骤名称</th>
+              <th width="120">类型</th>
+              <th width="100">负责人</th>
+              <th width="120">计划开始</th>
+              <th width="120">计划结束</th>
+              <th width="120">实际开始</th>
+              <th width="120">实际结束</th>
+              <th width="100">计划工期</th>
+              <th width="100">实际工期</th>
+              <th width="140">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(s, idx) in steps" :key="s.sstepId || s.nstepId">
+              <td>{{ idx + 1 }}</td>
+              <td>{{ s.sstepName || s.nstepName }}</td>
+              <td>{{ s.type || '标准' }}</td>
+              <td>{{ s.director ?? '-' }}</td>
+              <td>{{ s.planStartDate ?? '-' }}</td>
+              <td>{{ s.planEndDate ?? '-' }}</td>
+              <td>{{ s.actualStartDate ?? '-' }}</td>
+              <td>{{ s.actualEndDate ?? '-' }}</td>
+              <td>{{ s.planPeriod ?? '-' }}</td>
+              <td>{{ s.actualPeriod ?? '-' }}</td>
+              <td>{{ s.isCompleted ? '完成' : (s.status || '未完成') }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
+
     </div>
   </div>
 </template>
@@ -99,12 +84,13 @@ export default {
       try {
         this.loading = true;
         const projectId = this.$route.params.projectId;
-        const { data } = await getProjectSummary(projectId);
-        this.project = data.project || data.constructingProject || {};
-        this.steps = data.steps || [];
-        this.milestones = data.milestones || [];
-        this.deliverables = data.deliverables || [];
-        this.files = data.files || [];
+        const resp = await getProjectSummary(projectId);
+        const payload = (resp && resp.data && resp.data.data) ? resp.data.data : (resp && resp.data ? resp.data : {});
+        this.project = payload.project || payload.constructingProject || {};
+        this.steps = payload.steps || [];
+        this.milestones = payload.milestones || [];
+        this.deliverables = payload.deliverables || [];
+        this.files = payload.files || [];
         const grouped = {};
         this.files.forEach(f => {
           const did = f.deliverableId;
@@ -149,7 +135,7 @@ export default {
 </script>
 
 <style scoped>
-.project-detail-page { display:flex; flex-direction:column; height:100%; padding:12px; box-sizing:border-box; }
+.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow-y:auto; padding:12px; box-sizing:border-box; }
 .topbar { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
 .back-btn { padding:6px 12px; border:1px solid #ddd; border-radius:4px; background:#fff; cursor:pointer; }
 .title { flex:1; display:flex; align-items:baseline; gap:12px; font-size:18px; font-weight:600; }
@@ -158,7 +144,7 @@ export default {
 .chip { padding:4px 8px; background:#f5f5f5; border-radius:12px; font-size:12px; }
 .state { padding:24px; color:#333; }
 .state.error { color:#c00; }
-.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; padding-top:12px; }
+.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; padding-top:12px; overflow-x:auto; }
 .card { background:#fff; border:1px solid #eee; border-radius:8px; padding:12px; }
 .card.wide { grid-column: 1 / -1; }
 .info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
@@ -176,4 +162,9 @@ export default {
 .file-link:hover { text-decoration:underline; }
 .size, .time { color:#888; font-size:12px; }
 .empty { color:#888; padding:8px 0; }
+
+/* 表格样式 */
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { padding:8px; border-bottom:1px dashed #eee; font-size:14px; text-align:left; }
+.table thead th { background:#fafafa; font-weight:600; color:#333; }
 </style>
