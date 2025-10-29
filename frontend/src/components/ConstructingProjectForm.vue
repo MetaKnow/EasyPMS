@@ -279,6 +279,24 @@
                 />
                 <label for="customDevelopment">个性化功能开发</label>
               </div>
+
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="userTraining"
+                  v-model="constructionContent.userTraining"
+                />
+                <label for="userTraining">用户培训</label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="systemTrialRun"
+                  v-model="constructionContent.systemTrialRun"
+                />
+                <label for="systemTrialRun">系统上线试运行</label>
+              </div>
             </div>
           </div>
         </div>
@@ -351,7 +369,9 @@ export default {
         standardProduct: false,
         interfaceDevelopment: false,
         dataMigration: false,
-        customDevelopment: false
+        customDevelopment: false,
+        userTraining: true,
+        systemTrialRun: true
       }
     }
   },
@@ -444,7 +464,9 @@ export default {
             standardProduct: contentString.includes('标准产品'),
             interfaceDevelopment: contentString.includes('接口开发'),
             dataMigration: contentString.includes('数据迁移'),
-            customDevelopment: contentString.includes('个性化功能开发')
+            customDevelopment: contentString.includes('个性化功能开发'),
+            userTraining: contentString.includes('用户培训'),
+            systemTrialRun: contentString.includes('系统上线试运行')
           }
         } else {
           // 如果没有建设内容，重置为默认状态
@@ -452,7 +474,9 @@ export default {
             standardProduct: false,
             interfaceDevelopment: false,
             dataMigration: false,
-            customDevelopment: false
+            customDevelopment: false,
+            userTraining: true,
+            systemTrialRun: true
           }
         }
       } else {
@@ -491,7 +515,9 @@ export default {
         standardProduct: false,
         interfaceDevelopment: false,
         dataMigration: false,
-        customDevelopment: false
+        customDevelopment: false,
+        userTraining: true,
+        systemTrialRun: true
       }
     },
 
@@ -688,6 +714,8 @@ export default {
         if (this.constructionContent.interfaceDevelopment) selectedContents.push('接口开发')
         if (this.constructionContent.dataMigration) selectedContents.push('数据迁移')
         if (this.constructionContent.customDevelopment) selectedContents.push('个性化功能开发')
+        if (this.constructionContent.userTraining) selectedContents.push('用户培训')
+        if (this.constructionContent.systemTrialRun) selectedContents.push('系统上线试运行')
         
         // 合并基本信息和建设内容
         const projectData = {

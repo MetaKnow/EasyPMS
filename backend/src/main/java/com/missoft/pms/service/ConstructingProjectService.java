@@ -181,6 +181,9 @@ public class ConstructingProjectService {
     public ConstructingProject updateConstructingProject(Long projectId, ConstructingProject constructingProject) {
         // 检查项目是否存在
         ConstructingProject existingProject = getConstructingProjectById(projectId);
+        // 记录编辑前的建设内容与产品ID
+        String oldConstructContent = existingProject.getConstructContent();
+        Long oldSoftId = existingProject.getSoftId();
 
         // 验证必填字段
         validateConstructingProject(constructingProject);
@@ -219,7 +222,23 @@ public class ConstructingProjectService {
         // 计算未回款金额
         calculateUnreceiveMoney(existingProject);
 
-        return constructingProjectRepository.save(existingProject);
+        // 保存更新
+        ConstructingProject saved = constructingProjectRepository.save(existingProject);
+
+        // 基于建设内容的增减，按产品过滤增删对应关系，不影响其他步骤
+        try {
+            projectSstepRelationService.adjustRelationsForProjectOnEdit(
+                    saved.getProjectId(),
+                    oldConstructContent,
+                    saved.getConstructContent(),
+                    saved.getSoftId() != null ? saved.getSoftId() : oldSoftId,
+                    saved.getProjectLeader()
+            );
+        } catch (Exception ignore) {
+            // 关系调整失败不影响项目更新；可按需记录日志
+        }
+
+        return saved;
     }
 
     /**

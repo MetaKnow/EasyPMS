@@ -276,6 +276,24 @@
                 />
                 <label for="customDevelopment">个性化功能开发</label>
               </div>
+
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="userTraining"
+                  v-model="constructionContent.userTraining"
+                />
+                <label for="userTraining">用户培训</label>
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="systemTrialRun"
+                  v-model="constructionContent.systemTrialRun"
+                />
+                <label for="systemTrialRun">系统上线试运行</label>
+              </div>
             </div>
           </div>
         </div>
@@ -344,7 +362,9 @@ export default {
         standardProduct: true,
         interfaceDevelopment: false,
         dataMigration: false,
-        customDevelopment: false
+        customDevelopment: false,
+        userTraining: true,
+        systemTrialRun: true
       }
     }
   },
@@ -429,7 +449,9 @@ export default {
         standardProduct: true,
         interfaceDevelopment: false,
         dataMigration: false,
-        customDevelopment: false
+        customDevelopment: false,
+        userTraining: true,
+        systemTrialRun: true
       }
     },
 
@@ -566,6 +588,12 @@ export default {
       }
       if (this.constructionContent.customDevelopment) {
         selectedContent.push('个性化功能开发')
+      }
+      if (this.constructionContent.userTraining) {
+        selectedContent.push('用户培训')
+      }
+      if (this.constructionContent.systemTrialRun) {
+        selectedContent.push('系统上线试运行')
       }
       
       return selectedContent.join('/')

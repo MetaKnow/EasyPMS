@@ -87,7 +87,9 @@ export default {
         const resp = await getProjectSummary(projectId);
         const payload = (resp && resp.data && resp.data.data) ? resp.data.data : (resp && resp.data ? resp.data : {});
         this.project = payload.project || payload.constructingProject || {};
-        this.steps = payload.steps || [];
+        // 原始步骤包含产品下所有标准步骤 + 关联关系覆盖；按需求仅展示已生成的步骤（存在项目-步骤关系）
+        const rawSteps = payload.steps || [];
+        this.steps = rawSteps.filter(s => ('relationId' in s));
         this.milestones = payload.milestones || [];
         this.deliverables = payload.deliverables || [];
         this.files = payload.files || [];

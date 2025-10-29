@@ -115,4 +115,13 @@ public interface StandardConstructStepRepository extends JpaRepository<StandardC
      * @return 步骤列表
      */
     List<StandardConstructStep> findByType(String type);
+
+    /**
+     * 根据档案系统名称和步骤类型查询所有步骤（按步骤名称排序）
+     *
+     * @param systemName 档案系统名称（产品）
+     * @param type       步骤类型
+     * @return 步骤列表
+     */
+    List<StandardConstructStep> findBySystemNameAndTypeOrderBySstepNameAsc(String systemName, String type);
 }
