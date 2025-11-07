@@ -47,6 +47,9 @@ public class ProjectSstepRelation {
     @Column(name = "actualPeriod")
     private Integer actualPeriod;
 
+    @Column(name = "stepStatus")
+    private String stepStatus;
+
     @Column(name = "createTime", updatable = false)
     private LocalDateTime createTime;
 
@@ -59,6 +62,10 @@ public class ProjectSstepRelation {
     protected void onCreate() {
         createTime = LocalDateTime.now();
         updateTime = LocalDateTime.now();
+        // 默认状态写入：若未设置，则默认“未开始”
+        if (this.stepStatus == null || this.stepStatus.trim().isEmpty()) {
+            this.stepStatus = "未开始";
+        }
     }
 
     @PreUpdate
@@ -98,6 +105,9 @@ public class ProjectSstepRelation {
 
     public Integer getActualPeriod() { return actualPeriod; }
     public void setActualPeriod(Integer actualPeriod) { this.actualPeriod = actualPeriod; }
+
+    public String getStepStatus() { return stepStatus; }
+    public void setStepStatus(String stepStatus) { this.stepStatus = stepStatus; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

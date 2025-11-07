@@ -5,6 +5,7 @@ import com.missoft.pms.repository.ArchieveSoftRepository;
 import com.missoft.pms.repository.StandardConstructStepRepository;
 import com.missoft.pms.repository.StandardDeliverableRepository;
 import com.missoft.pms.repository.ConstructDeliverableFileRepository;
+import com.missoft.pms.repository.UserRepository;
 import com.missoft.pms.service.ConstructMilestoneService;
 import com.missoft.pms.service.ConstructingProjectService;
 import com.missoft.pms.service.ProjectSstepRelationService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 项目汇总接口：返回指定项目的步骤、里程碑、交付物与文件信息
@@ -36,6 +38,8 @@ public class ProjectSummaryController {
   private ConstructMilestoneService constructMilestoneService;
   @Autowired
   private ProjectSstepRelationService projectSstepRelationService;
+  @Autowired
+  private UserRepository userRepository;
 
   @GetMapping("/{projectId}/summary")
   public ResponseEntity<Map<String, Object>> getProjectSummary(@PathVariable Long projectId) {
@@ -64,6 +68,20 @@ public class ProjectSummaryController {
         }
       }
 
+      // 预取负责人姓名映射，便于前端直接显示姓名
+      Set<Long> directorIds = relations.stream()
+              .map(ProjectSstepRelation::getDirector)
+              .filter(Objects::nonNull)
+              .collect(Collectors.toSet());
+      Map<Long, String> directorNameMap = new HashMap<>();
+      if (!directorIds.isEmpty()) {
+        List<User> users = userRepository.findAllById(directorIds);
+        for (User u : users) {
+          String nm = (u.getName() != null && !u.getName().trim().isEmpty()) ? u.getName().trim() : u.getUserName();
+          directorNameMap.put(u.getUserId(), nm);
+        }
+      }
+
       // 将标准步骤与关系字段合并，保证无关系数据时仍显示标准步骤
       List<Map<String, Object>> stepViews = new ArrayList<>();
       Set<Long> baseStepIds = new HashSet<>();
@@ -80,12 +98,15 @@ public class ProjectSummaryController {
           m.put("relationId", rel.getRelationId());
           m.put("projectId", rel.getProjectId());
           m.put("director", rel.getDirector());
+          m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
           m.put("planStartDate", rel.getPlanStartDate());
           m.put("planEndDate", rel.getPlanEndDate());
           m.put("actualStartDate", rel.getActualStartDate());
           m.put("actualEndDate", rel.getActualEndDate());
           m.put("planPeriod", rel.getPlanPeriod());
           m.put("actualPeriod", rel.getActualPeriod());
+          // 返回步骤状态，供前端状态列展示
+          m.put("stepStatus", rel.getStepStatus());
         }
         stepViews.add(m);
       }
@@ -99,12 +120,15 @@ public class ProjectSummaryController {
         m.put("projectId", rel.getProjectId());
         m.put("sstepId", rel.getSstepId());
         m.put("director", rel.getDirector());
+        m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
         m.put("planStartDate", rel.getPlanStartDate());
         m.put("planEndDate", rel.getPlanEndDate());
         m.put("actualStartDate", rel.getActualStartDate());
         m.put("actualEndDate", rel.getActualEndDate());
         m.put("planPeriod", rel.getPlanPeriod());
         m.put("actualPeriod", rel.getActualPeriod());
+        // 返回步骤状态，供前端状态列展示
+        m.put("stepStatus", rel.getStepStatus());
         StandardConstructStep s = standardConstructStepRepository.findById(rel.getSstepId()).orElse(null);
         if (s != null) {
           m.put("sstepName", s.getSstepName());
@@ -114,6 +138,9 @@ public class ProjectSummaryController {
         }
         stepViews.add(m);
       }
+
+      // 根据最新步骤实际工期，刷新项目里程碑的工期汇总并持久化
+      constructMilestoneService.updateMilestonePeriodsForProject(projectId);
 
       // 里程碑（项目专属）
       List<ConstructMilestone> milestones = constructMilestoneService.getMilestonesByProjectId(projectId);

@@ -35,6 +35,38 @@ public class ProjectSstepRelationService {
     @Autowired
     private ArchieveSoftRepository archieveSoftRepository;
 
+    // 在自动生成关系时需要跳过的建设内容类型（type）
+    private static final java.util.Set<String> SKIP_TYPES_FOR_AUTOGEN =
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    "接口开发"
+            ));
+
+    // 指定在新建项目时负责人需置空的步骤名称（去掉前缀编号后匹配）
+    private static final java.util.Set<String> STEP_NAMES_WITH_EMPTY_DIRECTOR =
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    "接口开发",
+                    "接口联调测试",
+                    "个性化需求整体设计",
+                    "个性化需求开发",
+                    "个性化需求测试验证"
+            ));
+
+    /**
+     * 规范化步骤名称用于匹配：去掉前缀的数字、空白与常见分隔符
+     */
+    private String normalizeStepName(String name) {
+        if (name == null) return "";
+        String result = name.trim();
+        // 去掉前缀的数字、空白和常见分隔符（- _ . 、 / （ ） ： ;）
+        result = result.replaceFirst("^[\\s\\d\\-_.、/（）()：:；;]+", "");
+        return result;
+    }
+
+    private boolean shouldEmptyDirector(String sstepName) {
+        String base = normalizeStepName(sstepName);
+        return STEP_NAMES_WITH_EMPTY_DIRECTOR.contains(base);
+    }
+
     /**
      * 为项目生成与产品相关的标准步骤关系（按产品名称匹配standard_construct_step.systemName）
      *
@@ -87,6 +119,10 @@ public class ProjectSstepRelationService {
         Set<Long> toCreateSstepIds = new HashSet<>();
         List<ProjectSstepRelation> toCreate = new ArrayList<>();
         for (String type : types) {
+            // 跳过“接口开发”类型，后续在接口添加逻辑中生成相应步骤
+            if (SKIP_TYPES_FOR_AUTOGEN.contains(type)) {
+                continue;
+            }
             List<StandardConstructStep> stepsByType = standardConstructStepRepository
                     .findBySystemNameAndTypeOrderBySstepNameAsc(systemName, type);
             for (StandardConstructStep step : stepsByType) {
@@ -97,8 +133,12 @@ public class ProjectSstepRelationService {
                 ProjectSstepRelation rel = new ProjectSstepRelation();
                 rel.setProjectId(project.getProjectId());
                 rel.setSstepId(sid);
-                // 初始设置负责人为项目负责人（如有）
-                rel.setDirector(project.getProjectLeader());
+                // 初始负责人：指定步骤置空，其余默认项目负责人
+                if (shouldEmptyDirector(step.getSstepName())) {
+                    rel.setDirector(null);
+                } else {
+                    rel.setDirector(project.getProjectLeader());
+                }
                 toCreate.add(rel);
                 toCreateSstepIds.add(sid);
             }
@@ -164,6 +204,10 @@ public class ProjectSstepRelationService {
         if (!addedTypes.isEmpty()) {
             List<ProjectSstepRelation> toCreate = new ArrayList<>();
             for (String type : addedTypes) {
+                // 编辑时新增建设内容为“接口开发”，同样跳过自动生成
+                if (SKIP_TYPES_FOR_AUTOGEN.contains(type)) {
+                    continue;
+                }
                 List<StandardConstructStep> steps = standardConstructStepRepository
                         .findBySystemNameAndTypeOrderBySstepNameAsc(systemName, type);
                 for (StandardConstructStep step : steps) {
@@ -173,7 +217,12 @@ public class ProjectSstepRelationService {
                     ProjectSstepRelation rel = new ProjectSstepRelation();
                     rel.setProjectId(projectId);
                     rel.setSstepId(sid);
-                    rel.setDirector(projectLeader);
+                    // 新增关系时，同步应用负责人置空规则
+                    if (shouldEmptyDirector(step.getSstepName())) {
+                        rel.setDirector(null);
+                    } else {
+                        rel.setDirector(projectLeader);
+                    }
                     toCreate.add(rel);
                     existingSstepIds.add(sid); // 立即纳入集合，避免重复
                 }

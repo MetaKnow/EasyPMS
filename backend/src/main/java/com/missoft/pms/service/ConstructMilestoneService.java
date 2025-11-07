@@ -5,10 +5,12 @@ import com.missoft.pms.entity.ConstructMilestone;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.entity.StandardConstructStep;
 import com.missoft.pms.entity.StandardMilestone;
+import com.missoft.pms.entity.ProjectSstepRelation;
 import com.missoft.pms.repository.ArchieveSoftRepository;
 import com.missoft.pms.repository.ConstructMilestoneRepository;
 import com.missoft.pms.repository.StandardConstructStepRepository;
 import com.missoft.pms.repository.StandardMilestoneRepository;
+import com.missoft.pms.repository.ProjectSstepRelationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,9 @@ public class ConstructMilestoneService {
 
     @Autowired
     private ArchieveSoftRepository archieveSoftRepository;
+
+    @Autowired
+    private ProjectSstepRelationRepository projectSstepRelationRepository;
 
     /**
      * 根据项目的产品（systemName）生成项目里程碑数据。
@@ -119,5 +124,64 @@ public class ConstructMilestoneService {
     public List<ConstructMilestone> getMilestonesByProjectId(Long projectId) {
         if (projectId == null) return List.of();
         return constructMilestoneRepository.findByProjectId(projectId);
+    }
+
+    /**
+     * 根据项目的步骤实际工期汇总，写回项目里程碑的 milestonePeriod。
+     * 规则：按标准步骤的 smilestoneId 找到标准里程碑名称，按名称分组求和 actualPeriod。
+     * 对于没有有效实际工期的里程碑写回 null，避免保留过期值。
+     *
+     * @param projectId 项目ID
+     * @return 被更新的里程碑数量
+     */
+    public int updateMilestonePeriodsForProject(Long projectId) {
+        if (projectId == null) return 0;
+
+        // 读取项目步骤关系
+        List<ProjectSstepRelation> relations = projectSstepRelationRepository.findByProjectId(projectId);
+        if (relations == null || relations.isEmpty()) {
+            // 没有关系时，将所有项目里程碑的工期置空
+            List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(projectId);
+            for (ConstructMilestone m : milestones) {
+                m.setMilestonePeriod(null);
+            }
+            if (!milestones.isEmpty()) {
+                constructMilestoneRepository.saveAll(milestones);
+            }
+            return milestones.size();
+        }
+
+        // 计算：标准里程碑名称 -> 实际工期求和
+        Map<String, Integer> sumByMilestoneName = new HashMap<>();
+        for (ProjectSstepRelation rel : relations) {
+            if (rel == null || rel.getSstepId() == null) continue;
+            Integer ap = rel.getActualPeriod();
+            if (ap == null) continue; // 仅汇总有效的实际工期
+
+            StandardConstructStep step = standardConstructStepRepository.findById(rel.getSstepId()).orElse(null);
+            if (step == null || step.getSmilestoneId() == null) continue;
+
+            StandardMilestone sm = standardMilestoneRepository.findById(step.getSmilestoneId()).orElse(null);
+            if (sm == null || sm.getMilestoneName() == null) continue;
+            String name = sm.getMilestoneName().trim();
+            if (name.isEmpty()) continue;
+
+            sumByMilestoneName.merge(name, ap, Integer::sum);
+        }
+
+        // 写回构建里程碑表
+        List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(projectId);
+        int updated = 0;
+        for (ConstructMilestone m : milestones) {
+            if (m == null || m.getMilestoneName() == null) continue;
+            String name = m.getMilestoneName().trim();
+            Integer sum = sumByMilestoneName.get(name);
+            m.setMilestonePeriod(sum); // 若无汇总值则写回null
+            updated++;
+        }
+        if (!milestones.isEmpty()) {
+            constructMilestoneRepository.saveAll(milestones);
+        }
+        return updated;
     }
 }
