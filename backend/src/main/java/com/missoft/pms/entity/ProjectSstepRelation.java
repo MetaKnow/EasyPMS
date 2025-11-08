@@ -56,6 +56,25 @@ public class ProjectSstepRelation {
     @Column(name = "updateTime")
     private LocalDateTime updateTime;
 
+    /**
+     * 关联的接口ID（当步骤类型为“接口开发”时用于区分具体接口）
+     */
+    @Column(name = "interfaceId")
+    private Long interfaceId;
+
+    /**
+     * 关联的个人开发项ID（预留扩展字段）
+     */
+    @Column(name = "personalDevId")
+    private Long personalDevId;
+
+    /**
+     * 关联的项目里程碑ID（construct_milestone 外键）
+     * 用于将项目步骤关系归属到具体的项目里程碑，以支持按里程碑统计与展示。
+     */
+    @Column(name = "milestoneId")
+    private Long milestoneId;
+
     public ProjectSstepRelation() {}
 
     @PrePersist
@@ -114,4 +133,40 @@ public class ProjectSstepRelation {
 
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+
+    /**
+     * 获取关联的接口ID
+     * @return 接口ID
+     */
+    public Long getInterfaceId() { return interfaceId; }
+
+    /**
+     * 设置关联的接口ID
+     * @param interfaceId 接口ID
+     */
+    public void setInterfaceId(Long interfaceId) { this.interfaceId = interfaceId; }
+
+    /**
+     * 获取关联的个人开发项ID
+     * @return 个人开发项ID
+     */
+    public Long getPersonalDevId() { return personalDevId; }
+
+    /**
+     * 设置关联的个人开发项ID
+     * @param personalDevId 个人开发项ID
+     */
+    public void setPersonalDevId(Long personalDevId) { this.personalDevId = personalDevId; }
+
+    /**
+     * 获取关联的项目里程碑ID
+     * @return 里程碑ID
+     */
+    public Long getMilestoneId() { return milestoneId; }
+
+    /**
+     * 设置关联的项目里程碑ID
+     * @param milestoneId 里程碑ID
+     */
+    public void setMilestoneId(Long milestoneId) { this.milestoneId = milestoneId; }
 }

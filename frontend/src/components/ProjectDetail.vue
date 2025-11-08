@@ -44,7 +44,9 @@
                 ? (row.sstepId || row.nstepId || row.relationId)
                 : (row.rowType === 'milestone'
                   ? ('m-' + (row.milestoneId || row.milestoneName))
-                  : (row.rowType + '-' + (row.blockId || idx)))"
+                  : (row.rowType === 'interface_step'
+                    ? ('i-' + (row.relationId || (row.blockId + '-' + idx)))
+                    : (row.rowType + '-' + (row.blockId || idx))))"
             >
               <tr v-if="row.rowType === 'step'">
                 <td>{{ idx + 1 }}</td>
@@ -106,29 +108,145 @@
               <!-- 接口基本信息展示行 -->
               <tr v-else-if="row.rowType === 'interface_info'" class="interface-info-row">
                 <td>{{ idx + 1 }}</td>
-                <td>【接口】{{ row.integrationSysName }}（{{ row.interfaceType }}）</td>
-                <td>接口基本信息</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td>接口：{{ row.integrationSysName }}（{{ row.interfaceType }}）</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
               </tr>
-              <!-- 接口开发步骤（只读展示） -->
+              <!-- 个性化需求基本信息展示行 -->
+              <tr v-else-if="row.rowType === 'personal_info'" class="personal-info-row">
+                <td>{{ idx + 1 }}</td>
+                <td>个性化需求：{{ row.personalDevName }}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <!-- 接口开发步骤（支持双击编辑） -->
               <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
                 <td>{{ idx + 1 }}</td>
                 <td>{{ row.sstepName }}</td>
                 <td>{{ row.type }}</td>
-                <td>{{ row.directorName ?? '-' }}</td>
-                <td>{{ row.planStartDate ?? '-' }}</td>
-                <td>{{ row.planEndDate ?? '-' }}</td>
-                <td>{{ row.actualStartDate ?? '-' }}</td>
-                <td>{{ row.actualEndDate ?? '-' }}</td>
-                <td>{{ row.planPeriod ?? '-' }}</td>
-                <td>{{ row.actualPeriod ?? '-' }}</td>
+                <td @dblclick="startEdit(row, 'director')">
+                  <template v-if="isEditing(row, 'director')">
+                    <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit" class="cell-input">
+                      <option :value="null">-</option>
+                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                        {{ u.name || u.userName }}
+                      </option>
+                    </select>
+                  </template>
+                  <template v-else>
+                    {{ row.directorName ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'planStartDate')">
+                  <template v-if="isEditing(row, 'planStartDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')" @blur="commitEdit(row, 'planStartDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.planStartDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'planEndDate')">
+                  <template v-if="isEditing(row, 'planEndDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')" @blur="commitEdit(row, 'planEndDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.planEndDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'actualStartDate')">
+                  <template v-if="isEditing(row, 'actualStartDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')" @blur="commitEdit(row, 'actualStartDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.actualStartDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'actualEndDate')">
+                  <template v-if="isEditing(row, 'actualEndDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')" @blur="commitEdit(row, 'actualEndDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.actualEndDate ?? '-' }}
+                  </template>
+                </td>
+                <td>
+                  {{ row.planPeriod ?? '-' }}
+                </td>
+                <td>
+                  {{ row.actualPeriod ?? '-' }}
+                </td>
+                <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+              </tr>
+              <!-- 个性化开发步骤（支持双击编辑） -->
+              <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
+                <td>{{ idx + 1 }}</td>
+                <td>{{ row.sstepName }}</td>
+                <td>{{ row.type }}</td>
+                <td @dblclick="startEdit(row, 'director')">
+                  <template v-if="isEditing(row, 'director')">
+                    <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit" class="cell-input">
+                      <option :value="null">-</option>
+                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                        {{ u.name || u.userName }}
+                      </option>
+                    </select>
+                  </template>
+                  <template v-else>
+                    {{ row.directorName ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'planStartDate')">
+                  <template v-if="isEditing(row, 'planStartDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')" @blur="commitEdit(row, 'planStartDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.planStartDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'planEndDate')">
+                  <template v-if="isEditing(row, 'planEndDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')" @blur="commitEdit(row, 'planEndDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.planEndDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'actualStartDate')">
+                  <template v-if="isEditing(row, 'actualStartDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')" @blur="commitEdit(row, 'actualStartDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.actualStartDate ?? '-' }}
+                  </template>
+                </td>
+                <td @dblclick="startEdit(row, 'actualEndDate')">
+                  <template v-if="isEditing(row, 'actualEndDate')">
+                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')" @blur="commitEdit(row, 'actualEndDate')" class="cell-input"/>
+                  </template>
+                  <template v-else>
+                    {{ row.actualEndDate ?? '-' }}
+                  </template>
+                </td>
+                <td>
+                  {{ row.planPeriod ?? '-' }}
+                </td>
+                <td>
+                  {{ row.actualPeriod ?? '-' }}
+                </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
               </tr>
               <!-- 添加接口按钮行（位于目标里程碑上一行） -->
@@ -136,6 +254,13 @@
                 <td>{{ idx + 1 }}</td>
                 <td colspan="10">
                   <button class="add-interface-btn" @click="openInterfaceDialog">添加接口</button>
+                </td>
+              </tr>
+              <!-- 添加个性化需求按钮行（位于目标里程碑上一行） -->
+              <tr v-else-if="row.rowType === 'add_personal'" class="add-personal-row">
+                <td>{{ idx + 1 }}</td>
+                <td colspan="10">
+                  <button class="add-personal-btn" @click="openPersonalDialog">添加个性化需求</button>
                 </td>
               </tr>
               <tr v-else class="milestone-row">
@@ -187,6 +312,21 @@
         </div>
       </div>
 
+      <!-- 新增个性化需求弹窗 -->
+      <div v-if="showPersonalDialog" class="dialog-mask" @click.self="closePersonalDialog">
+        <div class="dialog">
+          <h4>新增个性化需求</h4>
+          <div class="form-row">
+            <label>需求名称 <span class="required">*</span></label>
+            <input type="text" v-model.trim="personalForm.personalDevName" placeholder="请输入个性化需求名称" />
+          </div>
+          <div class="dialog-actions">
+            <button class="btn" @click="confirmPersonal">确定</button>
+            <button class="btn ghost" @click="closePersonalDialog">取消</button>
+          </div>
+        </div>
+      </div>
+
       
 
     </div>
@@ -199,8 +339,17 @@ import { updateProjectRelation } from '../api/projectRelation';
 import { getAllUsers } from '../api/user';
 import { getAllStandardMilestones } from '../api/standardMilestone';
 import { createInterface, listInterfacesByProject } from '../api/interface';
+import { createPersonalDevelope, listPersonalDevelopesByProject } from '../api/personalDevelope';
 export default {
   name: 'ProjectDetail',
+  /**
+   * 类级注释：
+   * 项目详情组件，展示项目步骤、里程碑、交付物与文件。
+   * 渲染规则：
+   * - 步骤与里程碑按标准里程碑顺序排序展示（使用标准里程碑名称正序）。
+   * - 当项目建设内容包含“接口开发”时，在“05完成接口开发集成”里程碑之前插入接口信息块与“添加接口”按钮；
+   *   若该里程碑尚未由后端生成，也仍按排序位置插入入口与占位里程碑行，避免接口入口落在页面最下方。
+   */
   data() {
     return {
       loading: true,
@@ -228,42 +377,117 @@ export default {
         customType: ''
       },
       interfaceTypeOptions: ['数据归档接口', '单点登录', '组织机构和用户同步', '待办消息集成'],
-      interfaceBlocks: [] // { id, integrationSysName, interfaceType }
+      interfaceBlocks: [], // { id, integrationSysName, interfaceType }
+      // 个性化新增弹窗与块数据
+      showPersonalDialog: false,
+      personalForm: {
+        personalDevName: ''
+      },
+      personalBlocks: [] // { id, personalDevName }
     };
   },
   computed: {
     // 将步骤与里程碑合并后用于渲染的行
+    /*
+     * 函数级注释：
+     * 组合并排序步骤与里程碑：
+     * - 先按标准里程碑名称正序确定渲染顺序；
+     * - 每个里程碑分组内先展示非“接口开发”的步骤（保留“接口需求调研”），再展示对应的里程碑行；
+     * - 若勾选“接口开发”，在“05完成接口开发集成”里程碑之前插入接口信息块与“添加接口”按钮；
+     * - 若该里程碑未生成但存在于项目里程碑列表，仍按排序位置插入接口入口与占位里程碑行；
+     * - 保证接口入口不落在页面最下方。
+     */
     combinedRows() {
       const rows = []
       if (!Array.isArray(this.steps) || this.steps.length === 0) return rows
 
-      // 分组步骤：按标准里程碑ID
-      const groups = new Map()
+      // 是否勾选了“接口开发”建设内容
+      const includeInterfaceDev = !!(this.project && typeof this.project.constructContent === 'string' && this.project.constructContent.includes('接口开发'))
+      // 是否勾选了“个性化功能开发”建设内容
+      const includePersonalDev = !!(this.project && typeof this.project.constructContent === 'string' && this.project.constructContent.includes('个性化功能开发'))
+
+      // 标准里程碑名称顺序（正序）与ID->名称映射
+      const standardOrder = (this.standardMilestones || []).map(m => m.milestoneName).filter(n => !!n)
+      const orderIdx = new Map(standardOrder.map((n, i) => [n, i]))
+      const nameById = this.milestoneNameById || {}
+
+      // 分组步骤：按标准里程碑名称
+      const groupsByName = new Map()
       for (const s of this.steps) {
         const mid = s.smilestoneId ?? null
-        if (!groups.has(mid)) groups.set(mid, [])
-        groups.get(mid).push(s)
+        const name = mid != null ? nameById[mid] : null
+        if (!name) continue
+        if (!groupsByName.has(name)) groupsByName.set(name, [])
+        groupsByName.get(name).push(s)
       }
 
-      // 记录已插入的项目里程碑名称，避免重复追加
-      const insertedMilestoneNames = new Set()
+      // 待渲染的里程碑名称集合（存在步骤的 + 必要的接口里程碑）
+      const existingNames = Array.from(groupsByName.keys())
+      const targetName = '05完成接口开发集成'
+      const pmExists = (this.milestones || []).some(m => m.milestoneName === targetName)
+      if (includeInterfaceDev && pmExists && !existingNames.includes(targetName)) {
+        existingNames.push(targetName)
+      }
+      // 个性化开发目标里程碑
+      const personalTargetName = '06完成个性化功能开发'
+      const pmPersonalExists = (this.milestones || []).some(m => m.milestoneName === personalTargetName)
+      if (includePersonalDev && pmPersonalExists && !existingNames.includes(personalTargetName)) {
+        existingNames.push(personalTargetName)
+      }
 
-      // 逐组输出：先步骤，再对应的项目里程碑
-      for (const [mid, list] of groups.entries()) {
-        // 先追加非“接口开发”的步骤；
-        // 若项目建设内容包含“接口开发”，则保留需求确定阶段的“05业务系统接口需求调研”步骤
-        const includeInterfaceDev = !!(this.project && typeof this.project.constructContent === 'string' && this.project.constructContent.includes('接口开发'))
+      // 按标准里程碑顺序排序
+      existingNames.sort((a, b) => (orderIdx.get(a) ?? Number.MAX_SAFE_INTEGER) - (orderIdx.get(b) ?? Number.MAX_SAFE_INTEGER))
+
+      // 渲染各里程碑分组
+      for (const name of existingNames) {
+        const list = groupsByName.get(name) || []
+        // 非“接口开发/个性化功能开发”的步骤（保留接口需求调研）
         const nonInterfaceSteps = list.filter(s => {
-          if (s.type !== '接口开发') return true
-          const stepName = s.sstepName || s.nstepName || ''
-          const keepDemandResearch = includeInterfaceDev && stepName.includes('业务系统接口需求调研')
-          return keepDemandResearch
+          if (s.type === '接口开发') {
+            const stepName = s.sstepName || s.nstepName || ''
+            const keepDemandResearch = includeInterfaceDev && stepName.includes('业务系统接口需求调研')
+            return keepDemandResearch
+          }
+          if (s.type === '个性化功能开发') {
+            return false
+          }
+          return true
         })
         for (const s of nonInterfaceSteps) {
           rows.push({ ...s, rowType: 'step' })
         }
+
+        // 接口开发步骤与入口（仅在目标里程碑前插入）
         const interfaceSteps = list.filter(s => s.type === '接口开发')
-        // 计算该里程碑下步骤的实际工期汇总
+        if (includeInterfaceDev && name === targetName) {
+          for (const blk of this.interfaceBlocks) {
+            // 接口块信息
+            rows.push({ rowType: 'interface_info', blockId: blk.id, integrationSysName: blk.integrationSysName, interfaceType: blk.interfaceType })
+            // 仅渲染属于该接口的步骤，避免重复渲染导致编辑串联
+            const stepsForBlock = interfaceSteps.filter(s => s.interfaceId === blk.id)
+            for (const s of stepsForBlock) {
+              rows.push({ ...s, rowType: 'interface_step', blockId: blk.id })
+            }
+          }
+          rows.push({ rowType: 'add_interface' })
+        }
+
+        // 个性化功能开发步骤与入口（仅在目标里程碑前插入）
+        const personalSteps = list.filter(s => s.type === '个性化功能开发')
+        if (includePersonalDev && name === personalTargetName) {
+          for (const blk of this.personalBlocks) {
+            // 个性化需求块信息
+            rows.push({ rowType: 'personal_info', blockId: blk.id, personalDevName: blk.personalDevName })
+            // 仅渲染属于该个性化需求的步骤
+            const stepsForBlock = personalSteps.filter(s => s.personalDevId === blk.id)
+            for (const s of stepsForBlock) {
+              rows.push({ ...s, rowType: 'personal_step', blockId: blk.id })
+            }
+          }
+          rows.push({ rowType: 'add_personal' })
+        }
+
+        // 计算实际工期汇总
         const actualVals = list
           .map(s => {
             const v = Number(s.actualPeriod)
@@ -271,47 +495,13 @@ export default {
           })
           .filter(v => v !== null)
         const sumActual = actualVals.length > 0 ? actualVals.reduce((a, b) => a + b, 0) : null
-        // 然后找到对应的项目里程碑（通过标准里程碑名称匹配）
-        if (mid != null && this.milestoneNameById && this.milestoneNameById[mid]) {
-          const name = this.milestoneNameById[mid]
-          const pm = (this.milestones || []).find(m => m.milestoneName === name)
-          // 在目标里程碑之前插入“添加接口”按钮与已新增接口块
-          if (name === '05完成接口开发集成') {
-            // 已有接口块（旧在上，新在下）
-            for (const blk of this.interfaceBlocks) {
-              rows.push({ rowType: 'interface_info', blockId: blk.id, integrationSysName: blk.integrationSysName, interfaceType: blk.interfaceType })
-              for (const s of interfaceSteps) {
-                rows.push({ ...s, rowType: 'interface_step', blockId: blk.id })
-              }
-            }
-            // 添加按钮行
-            rows.push({ rowType: 'add_interface' })
-          }
-          if (pm) {
-            rows.push({ ...pm, milestoneName: name, milestonePeriod: sumActual, rowType: 'milestone' })
-            insertedMilestoneNames.add(name)
-          } else {
-            // 若项目里程碑未生成，仍插入一个占位的里程碑行
-            rows.push({ milestoneName: name, milestoneId: `placeholder-${mid}`, milestonePeriod: sumActual, rowType: 'milestone' })
-            insertedMilestoneNames.add(name)
-          }
-        }
-      }
 
-      // 若未插入“05完成接口开发集成”里程碑，且该里程碑存在于项目里程碑列表，则补充添加接口入口与里程碑行
-      if (!insertedMilestoneNames.has('05完成接口开发集成')) {
-        const targetName = '05完成接口开发集成'
-        const pm = (this.milestones || []).find(m => m.milestoneName === targetName)
+        // 里程碑行（若未生成则插入占位）
+        const pm = (this.milestones || []).find(m => m.milestoneName === name)
         if (pm) {
-          // 已有接口块（旧在上、新在下）
-          for (const blk of this.interfaceBlocks) {
-            rows.push({ rowType: 'interface_info', blockId: blk.id, integrationSysName: blk.integrationSysName, interfaceType: blk.interfaceType })
-          }
-          // 添加接口按钮行
-          rows.push({ rowType: 'add_interface' })
-          // 里程碑行（无步骤汇总时工期置空）
-          rows.push({ ...pm, milestoneName: targetName, milestonePeriod: null, rowType: 'milestone' })
-          insertedMilestoneNames.add(targetName)
+          rows.push({ ...pm, milestoneName: name, milestonePeriod: sumActual, rowType: 'milestone' })
+        } else {
+          rows.push({ milestoneName: name, milestoneId: `placeholder-${name}`, milestonePeriod: sumActual, rowType: 'milestone' })
         }
       }
 
@@ -365,6 +555,17 @@ export default {
           } catch (e) {
             // 保持为空，不影响其他加载流程
             this.interfaceBlocks = [];
+          }
+          // 加载该项目下的个性化需求信息，用于展示个性化块与对应步骤
+          try {
+            const resp3 = await listPersonalDevelopesByProject(this.project.projectId);
+            const list2 = Array.isArray(resp3?.data) ? resp3.data : (resp3?.data?.personalDevelopes || []);
+            this.personalBlocks = (list2 || []).map(it => ({
+              id: it.personalDevId,
+              personalDevName: it.personalDevName || '未命名需求'
+            }));
+          } catch (e) {
+            this.personalBlocks = [];
           }
         }
       } catch (err) {
@@ -633,6 +834,21 @@ export default {
     closeInterfaceDialog() {
       this.showInterfaceDialog = false
     },
+    // 个性化新增弹窗控制
+    openPersonalDialog() {
+      this.showPersonalDialog = true
+      this.personalForm.personalDevName = ''
+    },
+    closePersonalDialog() {
+      this.showPersonalDialog = false
+    },
+    /**
+     * 函数级注释：
+     * 确认新增接口并刷新展示：
+     * - 校验表单并调用后端创建接口记录；
+     * - 成功后关闭弹窗，并调用 loadSummary 重新拉取项目步骤、里程碑与接口块；
+     * - 保证新增接口生成的标准开发步骤在“步骤与里程碑”表格中即时展示。
+     */
     async confirmInterface() {
       const name = (this.interfaceForm.integrationSysName || '').trim()
       const manufacturer = (this.interfaceForm.integrationSysManufacturer || '').trim()
@@ -676,9 +892,54 @@ export default {
         const id = created?.interfaceId || Date.now()
         this.interfaceBlocks.push({ id, integrationSysName: name, interfaceType: type })
         this.$message && this.$message.success('接口已保存')
+        // 关闭弹窗后刷新项目摘要，确保新生成的接口步骤与块即时呈现
         this.closeInterfaceDialog()
+        await this.loadSummary()
       } catch (e) {
         this.showError('保存接口失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
+    }
+    ,
+    /**
+     * 函数级注释：
+     * 确认新增个性化需求并刷新展示：
+     * - 校验名称并调用后端创建个性化开发记录；
+     * - 成功后关闭弹窗，并调用 loadSummary 重新拉取项目步骤、里程碑与个性化块；
+     * - 保证新增个性化需求生成的标准开发步骤在“步骤与里程碑”表格中即时展示。
+     */
+    async confirmPersonal() {
+      const name = (this.personalForm.personalDevName || '').trim()
+      if (!name) {
+        return this.showError('请输入个性化需求名称')
+      }
+      try {
+        const projectId = this.project?.projectId
+        if (!projectId) {
+          return this.showError('项目ID缺失，无法保存个性化需求')
+        }
+        // 里程碑：选择“06完成个性化功能开发”
+        const milestone = (this.milestones || []).find(m => m.milestoneName === '06完成个性化功能开发')
+        const milestoneId = milestone?.milestoneId ?? null
+        if (!milestoneId) {
+          return this.showError('未找到个性化功能开发对应的里程碑，请检查标准配置')
+        }
+
+        const payload = {
+          projectId,
+          milestoneId,
+          personalDevName: name
+        }
+        const resp = await createPersonalDevelope(payload)
+        const data = resp?.data || {}
+        const created = data.personalDevelope || data
+        const id = created?.personalDevId || Date.now()
+        this.personalBlocks.push({ id, personalDevName: name })
+        this.$message && this.$message.success('个性化需求已保存')
+        // 关闭弹窗后刷新项目摘要，确保新生成的个性化步骤与块即时呈现
+        this.closePersonalDialog()
+        await this.loadSummary()
+      } catch (e) {
+        this.showError('保存个性化需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
       }
     }
   }
@@ -742,6 +1003,11 @@ export default {
 .add-interface-row { background:#f7fbff; }
 .add-interface-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
 .add-interface-btn:hover { background:#0f5fd6; }
+.personal-info-row { background:#f7fbff; color:#0a65c2; }
+.personal-step-row { background:#fafdff; }
+.add-personal-row { background:#f7fbff; }
+.add-personal-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
+.add-personal-btn:hover { background:#0f5fd6; }
 .dialog-mask { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .dialog { width:420px; background:#fff; border-radius:8px; border:1px solid #eee; padding:16px; }
 .dialog h4 { margin:0 0 12px; }

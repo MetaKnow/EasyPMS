@@ -44,6 +44,7 @@ public class ConstructMilestoneService {
      * 根据项目的产品（systemName）生成项目里程碑数据。
      * 规则：从 standard_construct_step 表中取该产品对应的所有步骤的 smilestoneId，
      * 映射到 standard_milestone 的名称，按名称去重后在 construct_milestone 中创建记录。
+     * 同时，当项目建设内容未勾选“接口开发”时，过滤掉名称为“05完成接口开发集成”的里程碑。
      *
      * @param project 在建项目
      * @return 生成的里程碑数量
@@ -96,6 +97,17 @@ public class ConstructMilestoneService {
             return 0;
         }
 
+        // 当未勾选“接口开发”建设内容时，过滤掉接口相关里程碑
+        boolean includeInterfaceDev = project.getConstructContent() != null && project.getConstructContent().contains("接口开发");
+        if (!includeInterfaceDev) {
+            milestoneNames = milestoneNames.stream()
+                    .filter(name -> !"05完成接口开发集成".equals(name))
+                    .collect(Collectors.toList());
+            if (milestoneNames.isEmpty()) {
+                return 0;
+            }
+        }
+
         // 去除已存在的里程碑，避免重复生成
         List<ConstructMilestone> existing = constructMilestoneRepository.findByProjectIdAndMilestoneNames(project.getProjectId(), milestoneNames);
         Set<String> existingNames = existing.stream().map(ConstructMilestone::getMilestoneName).collect(Collectors.toSet());
@@ -120,6 +132,42 @@ public class ConstructMilestoneService {
         return toCreate.size();
     }
 
+    /**
+     * 在项目编辑时根据“接口开发”建设内容的勾选状态，增删接口开发里程碑。
+     * 当未勾选“接口开发”时，删除项目下名称为“05完成接口开发集成”的里程碑；
+     * 当勾选“接口开发”且该里程碑不存在时，补充创建（初始未完成、工期为空）。
+     *
+     * @param projectId        项目ID
+     * @param constructContent 项目建设内容（按/分隔）
+     * @return 变更的里程碑数量（删除或新增的数量）
+     */
+    public int adjustMilestonesForInterfaceDev(Long projectId, String constructContent) {
+        if (projectId == null) return 0;
+        boolean includeInterfaceDev = constructContent != null && constructContent.contains("接口开发");
+        String targetName = "05完成接口开发集成";
+        int changes = 0;
+
+        if (!includeInterfaceDev) {
+            // 未勾选接口开发：删除对应里程碑
+            if (constructMilestoneRepository.existsByProjectIdAndMilestoneName(projectId, targetName)) {
+                constructMilestoneRepository.deleteByProjectIdAndMilestoneName(projectId, targetName);
+                changes++;
+            }
+        } else {
+            // 勾选接口开发：若不存在则补充创建
+            if (!constructMilestoneRepository.existsByProjectIdAndMilestoneName(projectId, targetName)) {
+                ConstructMilestone cm = new ConstructMilestone();
+                cm.setProjectId(projectId);
+                cm.setMilestoneName(targetName);
+                cm.setIscomplete(false);
+                cm.setMilestonePeriod(null);
+                constructMilestoneRepository.save(cm);
+                changes++;
+            }
+        }
+
+        return changes;
+    }
     @Transactional(readOnly = true)
     public List<ConstructMilestone> getMilestonesByProjectId(Long projectId) {
         if (projectId == null) return List.of();

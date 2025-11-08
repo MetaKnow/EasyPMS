@@ -16,6 +16,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.HashSet;
 
 /**
  * 在建项目服务类
@@ -34,6 +37,8 @@ public class ConstructingProjectService {
     private ProjectSstepRelationService projectSstepRelationService;
     @Autowired
     private ConstructMilestoneService constructMilestoneService;
+    @Autowired
+    private InterfaceService interfaceService;
 
     /**
      * 分页查询在建项目列表
@@ -155,17 +160,23 @@ public class ConstructingProjectService {
         // 计算未回款金额
         calculateUnreceiveMoney(constructingProject);
 
-        // 保存项目并在成功后生成项目-步骤关系
+        // 保存项目后优先生成项目里程碑（函数级注释：确保随后生成的步骤关系可正确回填 milestoneId）
         ConstructingProject saved = constructingProjectRepository.save(constructingProject);
+        try {
+            constructMilestoneService.generateMilestonesForProject(saved);
+        } catch (Exception ignore) {
+            // 里程碑生成失败不影响项目创建；可根据需要添加日志
+        }
         try {
             projectSstepRelationService.generateRelationsForProject(saved);
         } catch (Exception ignore) {
             // 关系生成失败不影响项目创建；可根据需要添加日志
         }
+        // 当新建项目勾选了“接口开发”时，补充生成“05业务系统接口需求调研”步骤（函数级注释：按产品+类型精准匹配步骤并避免重复）
         try {
-            constructMilestoneService.generateMilestonesForProject(saved);
+            projectSstepRelationService.generateInterfaceDemandResearchForProject(saved.getProjectId());
         } catch (Exception ignore) {
-            // 里程碑生成失败不影响项目创建；可根据需要添加日志
+            // 生成失败不影响项目创建；可根据需要添加日志
         }
         return saved;
     }
@@ -236,6 +247,30 @@ public class ConstructingProjectService {
             );
         } catch (Exception ignore) {
             // 关系调整失败不影响项目更新；可按需记录日志
+        }
+
+        // 编辑时根据“接口开发”建设内容的勾选状态，增删对应里程碑（函数级注释：确保未勾选时不显示接口开发里程碑）
+        try {
+            constructMilestoneService.adjustMilestonesForInterfaceDev(saved.getProjectId(), saved.getConstructContent());
+        } catch (Exception ignore) {
+            // 里程碑调整失败不影响项目更新；可按需记录日志
+        }
+
+        // 当编辑取消勾选“接口开发”时，级联删除该项目下的接口数据（函数级注释：保持前后端一致性）
+        try {
+            Set<String> oldTypes = parseTypes(oldConstructContent);
+            Set<String> newTypes = parseTypes(saved.getConstructContent());
+            boolean removedInterfaceDev = oldTypes.contains("接口开发") && !newTypes.contains("接口开发");
+            if (removedInterfaceDev) {
+                interfaceService.deleteInterfacesByProject(saved.getProjectId());
+            }
+            // 当编辑新增勾选“接口开发”时，补充生成“05业务系统接口需求调研”步骤（函数级注释：仅在新增时生成一次，避免重复）
+            boolean addedInterfaceDev = !oldTypes.contains("接口开发") && newTypes.contains("接口开发");
+            if (addedInterfaceDev) {
+                projectSstepRelationService.generateInterfaceDemandResearchForProject(saved.getProjectId());
+            }
+        } catch (Exception ignore) {
+            // 接口数据清理失败不影响项目更新；可按需记录日志
         }
 
         return saved;
@@ -383,5 +418,27 @@ public class ConstructingProjectService {
     @Transactional(readOnly = true)
     public long countByProjectState(String projectState) {
         return constructingProjectRepository.countByProjectState(projectState);
+    }
+
+    /**
+     * 解析项目建设内容类型集合（函数级注释：按“/”分隔并去除空白）
+     * @param constructContent 项目建设内容，按“/”分隔
+     * @return 去重后的类型集合
+     */
+    private Set<String> parseTypes(String constructContent) {
+        Set<String> set = new HashSet<>();
+        if (!StringUtils.hasText(constructContent)) {
+            return set;
+        }
+        List<String> rawTypes = Arrays.asList(constructContent.split("/"));
+        for (String t : rawTypes) {
+            if (t != null) {
+                String tt = t.trim();
+                if (!tt.isEmpty()) {
+                    set.add(tt);
+                }
+            }
+        }
+        return set;
     }
 }

@@ -59,13 +59,13 @@ public class ProjectSummaryController {
           ? standardConstructStepRepository.findBySystemNameOrderBySstepNameAsc(systemName)
           : standardConstructStepRepository.findAllByOrderBySstepNameAsc();
 
-      // 读取项目-标准步骤关系，并按 sstepId 建立映射
+      // 读取项目-标准步骤关系，并按 sstepId 建立映射（支持同一标准步骤的多条关系，例如接口开发）
       List<ProjectSstepRelation> relations = projectSstepRelationService.getRelationsByProjectId(projectId);
-      Map<Long, ProjectSstepRelation> relBySstepId = new HashMap<>();
+      Map<Long, List<ProjectSstepRelation>> relListBySstepId = new HashMap<>();
       for (ProjectSstepRelation rel : relations) {
-        if (rel.getSstepId() != null) {
-          relBySstepId.put(rel.getSstepId(), rel);
-        }
+        Long sid = rel.getSstepId();
+        if (sid == null) continue;
+        relListBySstepId.computeIfAbsent(sid, k -> new ArrayList<>()).add(rel);
       }
 
       // 预取负责人姓名映射，便于前端直接显示姓名
@@ -87,28 +87,87 @@ public class ProjectSummaryController {
       Set<Long> baseStepIds = new HashSet<>();
       for (StandardConstructStep s : steps) {
         baseStepIds.add(s.getSstepId());
-        Map<String, Object> m = new HashMap<>();
-        m.put("sstepId", s.getSstepId());
-        m.put("sstepName", s.getSstepName());
-        m.put("type", s.getType());
-        m.put("systemName", s.getSystemName());
-        m.put("smilestoneId", s.getSmilestoneId());
-        ProjectSstepRelation rel = relBySstepId.get(s.getSstepId());
-        if (rel != null) {
-          m.put("relationId", rel.getRelationId());
-          m.put("projectId", rel.getProjectId());
-          m.put("director", rel.getDirector());
-          m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
-          m.put("planStartDate", rel.getPlanStartDate());
-          m.put("planEndDate", rel.getPlanEndDate());
-          m.put("actualStartDate", rel.getActualStartDate());
-          m.put("actualEndDate", rel.getActualEndDate());
-          m.put("planPeriod", rel.getPlanPeriod());
-          m.put("actualPeriod", rel.getActualPeriod());
-          // 返回步骤状态，供前端状态列展示
-          m.put("stepStatus", rel.getStepStatus());
+        List<ProjectSstepRelation> relList = relListBySstepId.get(s.getSstepId());
+        // 若存在关系
+        if (relList != null && !relList.isEmpty()) {
+          // 接口开发：为每条关系单独生成一个视图，避免丢失其他接口的步骤
+          if ("接口开发".equals(s.getType())) {
+            for (ProjectSstepRelation rel : relList) {
+              Map<String, Object> m = new HashMap<>();
+              m.put("relationId", rel.getRelationId());
+              m.put("projectId", rel.getProjectId());
+              m.put("sstepId", s.getSstepId());
+              m.put("sstepName", s.getSstepName());
+              m.put("type", s.getType());
+              m.put("systemName", s.getSystemName());
+              m.put("smilestoneId", s.getSmilestoneId());
+              m.put("interfaceId", rel.getInterfaceId());
+              m.put("director", rel.getDirector());
+              m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
+              m.put("planStartDate", rel.getPlanStartDate());
+              m.put("planEndDate", rel.getPlanEndDate());
+              m.put("actualStartDate", rel.getActualStartDate());
+              m.put("actualEndDate", rel.getActualEndDate());
+              m.put("planPeriod", rel.getPlanPeriod());
+              m.put("actualPeriod", rel.getActualPeriod());
+              m.put("stepStatus", rel.getStepStatus());
+              stepViews.add(m);
+            }
+          } else if ("个性化功能开发".equals(s.getType())) {
+            // 个性化功能开发：每条关系对应一个视图，区分具体个性化需求块
+            for (ProjectSstepRelation rel : relList) {
+              Map<String, Object> m = new HashMap<>();
+              m.put("relationId", rel.getRelationId());
+              m.put("projectId", rel.getProjectId());
+              m.put("sstepId", s.getSstepId());
+              m.put("sstepName", s.getSstepName());
+              m.put("type", s.getType());
+              m.put("systemName", s.getSystemName());
+              m.put("smilestoneId", s.getSmilestoneId());
+              m.put("personalDevId", rel.getPersonalDevId());
+              m.put("director", rel.getDirector());
+              m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
+              m.put("planStartDate", rel.getPlanStartDate());
+              m.put("planEndDate", rel.getPlanEndDate());
+              m.put("actualStartDate", rel.getActualStartDate());
+              m.put("actualEndDate", rel.getActualEndDate());
+              m.put("planPeriod", rel.getPlanPeriod());
+              m.put("actualPeriod", rel.getActualPeriod());
+              m.put("stepStatus", rel.getStepStatus());
+              stepViews.add(m);
+            }
+          } else {
+            // 非接口类型：按旧逻辑仅合并一条关系（通常只有一条）
+            ProjectSstepRelation rel = relList.get(relList.size() - 1);
+            Map<String, Object> m = new HashMap<>();
+            m.put("relationId", rel.getRelationId());
+            m.put("projectId", rel.getProjectId());
+            m.put("sstepId", s.getSstepId());
+            m.put("sstepName", s.getSstepName());
+            m.put("type", s.getType());
+            m.put("systemName", s.getSystemName());
+            m.put("smilestoneId", s.getSmilestoneId());
+            m.put("director", rel.getDirector());
+            m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
+            m.put("planStartDate", rel.getPlanStartDate());
+            m.put("planEndDate", rel.getPlanEndDate());
+            m.put("actualStartDate", rel.getActualStartDate());
+            m.put("actualEndDate", rel.getActualEndDate());
+            m.put("planPeriod", rel.getPlanPeriod());
+            m.put("actualPeriod", rel.getActualPeriod());
+            m.put("stepStatus", rel.getStepStatus());
+            stepViews.add(m);
+          }
+        } else {
+          // 无关系时仍返回基础步骤（前端会过滤掉无 relationId 的项）
+          Map<String, Object> m = new HashMap<>();
+          m.put("sstepId", s.getSstepId());
+          m.put("sstepName", s.getSstepName());
+          m.put("type", s.getType());
+          m.put("systemName", s.getSystemName());
+          m.put("smilestoneId", s.getSmilestoneId());
+          stepViews.add(m);
         }
-        stepViews.add(m);
       }
 
       // 若存在关系但其 sstepId 不在标准步骤中（例如历史或自定义），也追加展示
@@ -119,6 +178,9 @@ public class ProjectSummaryController {
         m.put("relationId", rel.getRelationId());
         m.put("projectId", rel.getProjectId());
         m.put("sstepId", rel.getSstepId());
+        // 返回 interfaceId / personalDevId，供前端将步骤归属到具体块
+        m.put("interfaceId", rel.getInterfaceId());
+        m.put("personalDevId", rel.getPersonalDevId());
         m.put("director", rel.getDirector());
         m.put("directorName", rel.getDirector() != null ? directorNameMap.get(rel.getDirector()) : null);
         m.put("planStartDate", rel.getPlanStartDate());

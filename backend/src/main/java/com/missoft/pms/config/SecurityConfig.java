@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/standard-deliverables/**").permitAll()
                 // 允许访问接口开发管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/interfaces", "/api/interfaces/**").permitAll()
+                // 允许访问个性化开发管理接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/personal-developes", "/api/personal-developes/**").permitAll()
                 // 允许访问项目交付文件上传/下载接口（临时开放）
                 .requestMatchers("/api/construct-deliverable-files/**").permitAll()
                 // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
