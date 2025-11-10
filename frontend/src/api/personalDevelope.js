@@ -27,3 +27,15 @@ export function listPersonalDevelopesByProject(projectId) {
     method: 'get'
   })
 }
+
+/**
+ * 函数级注释：按ID删除个性化开发
+ * @param {number} personalDevId 个性化开发ID
+ * @returns {Promise} 响应数据
+ */
+export function deletePersonalDevelope(personalDevId) {
+  return request({
+    url: `/api/personal-developes/${personalDevId}`,
+    method: 'delete'
+  })
+}

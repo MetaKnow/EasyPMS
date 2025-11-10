@@ -39,6 +39,8 @@ public class ConstructingProjectService {
     private ConstructMilestoneService constructMilestoneService;
     @Autowired
     private InterfaceService interfaceService;
+    @Autowired
+    private PersonalDevelopeService personalDevelopeService;
 
     /**
      * 分页查询在建项目列表
@@ -178,6 +180,18 @@ public class ConstructingProjectService {
         } catch (Exception ignore) {
             // 生成失败不影响项目创建；可根据需要添加日志
         }
+        // 当新建项目勾选了“个性化功能开发”时，补充生成“06个性化功能需求调研”步骤（函数级注释：按产品+类型精准匹配步骤并避免重复）
+        try {
+            projectSstepRelationService.generatePersonalDemandResearchForProject(saved.getProjectId());
+        } catch (Exception ignore) {
+            // 生成失败不影响项目创建；可根据需要添加日志
+        }
+        // 在所有关系生成完成后，统一回填项目里程碑ID（函数级注释：提升里程碑与步骤的一致性）
+        try {
+            projectSstepRelationService.backfillMilestoneIdsForProject(saved.getProjectId());
+        } catch (Exception ignore) {
+            // 回填失败不影响项目创建；可根据需要添加日志
+        }
         return saved;
     }
 
@@ -236,6 +250,21 @@ public class ConstructingProjectService {
         // 保存更新
         ConstructingProject saved = constructingProjectRepository.save(existingProject);
 
+        // 先调整里程碑，再调整步骤关系，避免新增步骤无法正确回填 milestoneId
+        // 编辑时根据“接口开发”建设内容的勾选状态，增删对应里程碑（函数级注释：确保未勾选时不显示接口开发里程碑）
+        try {
+            constructMilestoneService.adjustMilestonesForInterfaceDev(saved.getProjectId(), saved.getConstructContent());
+        } catch (Exception ignore) {
+            // 里程碑调整失败不影响项目更新；可按需记录日志
+        }
+
+        // 编辑时根据“个性化功能开发”建设内容的勾选状态，增删对应里程碑（函数级注释：与接口开发一致的规则）
+        try {
+            constructMilestoneService.adjustMilestonesForPersonalDev(saved.getProjectId(), saved.getConstructContent());
+        } catch (Exception ignore) {
+            // 里程碑调整失败不影响项目更新；可按需记录日志
+        }
+
         // 基于建设内容的增减，按产品过滤增删对应关系，不影响其他步骤
         try {
             projectSstepRelationService.adjustRelationsForProjectOnEdit(
@@ -249,11 +278,13 @@ public class ConstructingProjectService {
             // 关系调整失败不影响项目更新；可按需记录日志
         }
 
-        // 编辑时根据“接口开发”建设内容的勾选状态，增删对应里程碑（函数级注释：确保未勾选时不显示接口开发里程碑）
+        // 根据当前实际生成的步骤同步项目里程碑集合（函数级注释：删除无步骤的里程碑，保留入口里程碑）
         try {
-            constructMilestoneService.adjustMilestonesForInterfaceDev(saved.getProjectId(), saved.getConstructContent());
+            constructMilestoneService.syncMilestonesWithProjectSteps(saved);
+            // 步骤变更后，刷新里程碑工期汇总
+            constructMilestoneService.updateMilestonePeriodsForProject(saved.getProjectId());
         } catch (Exception ignore) {
-            // 里程碑调整失败不影响项目更新；可按需记录日志
+            // 同步失败不影响项目更新；可按需记录日志
         }
 
         // 当编辑取消勾选“接口开发”时，级联删除该项目下的接口数据（函数级注释：保持前后端一致性）
@@ -269,8 +300,26 @@ public class ConstructingProjectService {
             if (addedInterfaceDev) {
                 projectSstepRelationService.generateInterfaceDemandResearchForProject(saved.getProjectId());
             }
+
+            // 当编辑取消勾选“个性化功能开发”时，删除该项目下的个性化开发记录（函数级注释：保持 personal_develope 与前端展示一致）
+            boolean removedPersonalDev = oldTypes.contains("个性化功能开发") && !newTypes.contains("个性化功能开发");
+            if (removedPersonalDev) {
+                personalDevelopeService.deleteByProjectId(saved.getProjectId());
+            }
+            // 当编辑新增勾选“个性化功能开发”时，补充生成“06个性化功能需求调研”步骤（函数级注释：仅在新增时生成一次，避免重复）
+            boolean addedPersonalDev = !oldTypes.contains("个性化功能开发") && newTypes.contains("个性化功能开发");
+            if (addedPersonalDev) {
+                projectSstepRelationService.generatePersonalDemandResearchForProject(saved.getProjectId());
+            }
         } catch (Exception ignore) {
             // 接口数据清理失败不影响项目更新；可按需记录日志
+        }
+
+        // 编辑新增或调整关系后，统一回填项目里程碑ID（函数级注释：确保新增关系也具备里程碑归属）
+        try {
+            projectSstepRelationService.backfillMilestoneIdsForProject(saved.getProjectId());
+        } catch (Exception ignore) {
+            // 回填失败不影响项目更新；可按需记录日志
         }
 
         return saved;

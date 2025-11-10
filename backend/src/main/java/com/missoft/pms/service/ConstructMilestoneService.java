@@ -41,6 +41,106 @@ public class ConstructMilestoneService {
     private ProjectSstepRelationRepository projectSstepRelationRepository;
 
     /**
+     * 函数级注释：根据“已生成的项目步骤关系”同步项目里程碑集合。
+     * 目标：保证 construct_milestone 表仅保留与当前项目存在步骤的里程碑；
+     * 同时在勾选了“接口开发/个性化功能开发”时，保留对应入口里程碑（05/06），即使暂未生成关联步骤。
+     *
+     * 规则：
+     * - 从 project_sstep_relations 读取当前项目的关系列表；
+     *   · 对于标准步骤（sstepId 非空），通过 standard_construct_step -> standard_milestone 映射得到里程碑名称；
+     *   · 对于非标准步骤或关系中已回填 milestoneId 的情况，优先使用关系中的 milestoneId -> construct_milestone 名称；
+     * - 根据项目建设内容 constructContent，若包含“接口开发”，强制保留“05完成接口开发集成”；
+     *   若包含“个性化功能开发”，强制保留“06完成个性化功能开发”。
+     * - 删除项目下其余不在保留集合中的里程碑；对缺失但应保留的名称进行补充创建（初始 iscomplete=false, period=null）。
+     *
+     * @param project 当前项目实体（需要 projectId 与 constructContent）
+     * @return 变更数量（新增+删除）
+     */
+    public int syncMilestonesWithProjectSteps(ConstructingProject project) {
+        if (project == null || project.getProjectId() == null) {
+            return 0;
+        }
+
+        final Long projectId = project.getProjectId();
+        final String constructContent = project.getConstructContent();
+
+        // 1) 读取项目已有的步骤关系
+        List<ProjectSstepRelation> relations = projectSstepRelationRepository.findByProjectId(projectId);
+
+        // 2) 计算应保留的里程碑名称集合
+        Set<String> keepNames = new LinkedHashSet<>();
+
+        if (relations != null) {
+            for (ProjectSstepRelation rel : relations) {
+                if (rel == null) continue;
+                String name = null;
+                // 优先使用关系中的 milestoneId（如果存在）：通过 construct_milestone 获取名称
+                if (rel.getMilestoneId() != null) {
+                    ConstructMilestone cm = constructMilestoneRepository.findById(rel.getMilestoneId()).orElse(null);
+                    if (cm != null && cm.getMilestoneName() != null) {
+                        name = cm.getMilestoneName().trim();
+                    }
+                }
+                // 其次使用标准步骤的 smilestoneId -> 名称映射
+                if (name == null && rel.getSstepId() != null) {
+                    StandardConstructStep step = standardConstructStepRepository.findById(rel.getSstepId()).orElse(null);
+                    if (step != null && step.getSmilestoneId() != null) {
+                        StandardMilestone sm = standardMilestoneRepository.findById(step.getSmilestoneId()).orElse(null);
+                        if (sm != null && sm.getMilestoneName() != null) {
+                            name = sm.getMilestoneName().trim();
+                        }
+                    }
+                }
+                if (name != null && !name.isEmpty()) {
+                    keepNames.add(name);
+                }
+            }
+        }
+
+        // 入口里程碑保留：接口开发/个性化功能开发
+        boolean includeInterfaceDev = constructContent != null && constructContent.contains("接口开发");
+        boolean includePersonalDev = constructContent != null && constructContent.contains("个性化功能开发");
+        if (includeInterfaceDev) {
+            keepNames.add("05完成接口开发集成");
+        }
+        if (includePersonalDev) {
+            keepNames.add("06完成个性化功能开发");
+        }
+
+        // 3) 读取项目现有里程碑并对比，确定增删集
+        List<ConstructMilestone> existing = constructMilestoneRepository.findByProjectId(projectId);
+        Set<String> existingNames = existing.stream()
+                .filter(m -> m != null && m.getMilestoneName() != null)
+                .map(m -> m.getMilestoneName().trim())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        int changes = 0;
+
+        // 删除多余的里程碑
+        for (String name : existingNames) {
+            if (!keepNames.contains(name)) {
+                constructMilestoneRepository.deleteByProjectIdAndMilestoneName(projectId, name);
+                changes++;
+            }
+        }
+
+        // 补充缺失的里程碑
+        for (String name : keepNames) {
+            if (!existingNames.contains(name)) {
+                ConstructMilestone cm = new ConstructMilestone();
+                cm.setProjectId(projectId);
+                cm.setMilestoneName(name);
+                cm.setIscomplete(false);
+                cm.setMilestonePeriod(null);
+                constructMilestoneRepository.save(cm);
+                changes++;
+            }
+        }
+
+        return changes;
+    }
+
+    /**
      * 根据项目的产品（systemName）生成项目里程碑数据。
      * 规则：从 standard_construct_step 表中取该产品对应的所有步骤的 smilestoneId，
      * 映射到 standard_milestone 的名称，按名称去重后在 construct_milestone 中创建记录。
@@ -166,6 +266,42 @@ public class ConstructMilestoneService {
             }
         }
 
+        return changes;
+    }
+
+    /**
+     * 函数级注释：在项目编辑时根据“个性化功能开发”勾选状态，增删对应里程碑。
+     * 当未勾选“个性化功能开发”时，删除项目下名称为“06完成个性化功能开发”的里程碑；
+     * 当勾选且该里程碑不存在时，补充创建（初始未完成、工期为空）。
+     *
+     * @param projectId        项目ID
+     * @param constructContent 项目建设内容（按/分隔）
+     * @return 变更的里程碑数量（删除或新增的数量）
+     */
+    public int adjustMilestonesForPersonalDev(Long projectId, String constructContent) {
+        if (projectId == null) return 0;
+        boolean includePersonalDev = constructContent != null && constructContent.contains("个性化功能开发");
+        String targetName = "06完成个性化功能开发";
+        int changes = 0;
+
+        if (!includePersonalDev) {
+            // 未勾选个性化功能开发：删除对应里程碑
+            if (constructMilestoneRepository.existsByProjectIdAndMilestoneName(projectId, targetName)) {
+                constructMilestoneRepository.deleteByProjectIdAndMilestoneName(projectId, targetName);
+                changes++;
+            }
+        } else {
+            // 勾选个性化功能开发：若不存在则补充创建
+            if (!constructMilestoneRepository.existsByProjectIdAndMilestoneName(projectId, targetName)) {
+                ConstructMilestone cm = new ConstructMilestone();
+                cm.setProjectId(projectId);
+                cm.setMilestoneName(targetName);
+                cm.setIscomplete(false);
+                cm.setMilestonePeriod(null);
+                constructMilestoneRepository.save(cm);
+                changes++;
+            }
+        }
         return changes;
     }
     @Transactional(readOnly = true)

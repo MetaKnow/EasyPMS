@@ -114,6 +114,67 @@ public class ProjectSstepRelationService {
     }
 
     /**
+     * 函数级注释：为指定项目的所有项目-步骤关系回填项目里程碑ID。
+     * 适用场景：在首次生成关系或编辑后新增关系时，存在 milestoneId 为空但标准步骤已配置 smilestoneId 的情况。
+     * 回填规则：
+     * - 仅处理 milestoneId 为空且 sstepId 非空的关系；
+     * - 通过 sstepId -> standard_construct_step -> standard_milestone 映射获取标准里程碑名称；
+     * - 在 construct_milestone 表中按项目ID与名称查找对应记录，将其 milestoneId 写回关系；
+     * 返回值为成功写回的数量。
+     *
+     * @param projectId 项目ID
+     * @return 成功回填的关系数量
+     */
+    public int backfillMilestoneIdsForProject(Long projectId) {
+        if (projectId == null) {
+            return 0;
+        }
+
+        List<ProjectSstepRelation> relations = projectSstepRelationRepository.findByProjectId(projectId);
+        if (relations == null || relations.isEmpty()) {
+            return 0;
+        }
+
+        // 预加载项目下的里程碑并构建名称到ID的映射，避免重复查询
+        List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(projectId);
+        java.util.Map<String, Long> milestoneNameToId = new java.util.HashMap<>();
+        for (ConstructMilestone cm : milestones) {
+            if (cm != null && cm.getMilestoneName() != null && cm.getMilestoneId() != null) {
+                milestoneNameToId.put(cm.getMilestoneName().trim(), cm.getMilestoneId());
+            }
+        }
+
+        int updated = 0;
+        List<ProjectSstepRelation> toSave = new java.util.ArrayList<>();
+        for (ProjectSstepRelation rel : relations) {
+            if (rel == null) continue;
+            if (rel.getMilestoneId() != null) continue; // 已有里程碑ID跳过
+            Long sstepId = rel.getSstepId();
+            if (sstepId == null) continue; // 非标准步骤或缺失，跳过
+
+            StandardConstructStep step = standardConstructStepRepository.findById(sstepId).orElse(null);
+            if (step == null || step.getSmilestoneId() == null) continue; // 未配置标准里程碑，无法回填
+
+            StandardMilestone sm = standardMilestoneRepository.findById(step.getSmilestoneId()).orElse(null);
+            if (sm == null || sm.getMilestoneName() == null) continue;
+            String name = sm.getMilestoneName().trim();
+            if (name.isEmpty()) continue;
+
+            Long cmId = milestoneNameToId.get(name);
+            if (cmId != null) {
+                rel.setMilestoneId(cmId);
+                toSave.add(rel);
+                updated++;
+            }
+        }
+
+        if (!toSave.isEmpty()) {
+            projectSstepRelationRepository.saveAll(toSave);
+        }
+        return updated;
+    }
+
+    /**
      * 当项目建设内容勾选了“接口开发”时，生成标准步骤“05业务系统接口需求调研”的项目-步骤关系。
      * 规则：
      * 1) 按项目绑定产品(systemName) + 类型("接口开发")过滤标准步骤；
@@ -161,6 +222,86 @@ public class ProjectSstepRelationService {
         for (StandardConstructStep s : steps) {
             String base = normalizeStepName(s.getSstepName());
             if ("业务系统接口需求调研".equals(base)) {
+                target = s;
+                break;
+            }
+        }
+        if (target == null || target.getSstepId() == null) {
+            return 0;
+        }
+
+        // 避免重复：若该项目已存在对应 sstepId 的关系，则跳过
+        List<ProjectSstepRelation> existing = projectSstepRelationRepository.findByProjectId(projectId);
+        for (ProjectSstepRelation r : existing) {
+            if (r != null && r.getSstepId() != null && r.getSstepId().equals(target.getSstepId())) {
+                return 0;
+            }
+        }
+
+        // 创建关系，负责人遵循置空规则，其余默认项目负责人
+        ProjectSstepRelation rel = new ProjectSstepRelation();
+        rel.setProjectId(projectId);
+        rel.setSstepId(target.getSstepId());
+        // 回填所属项目里程碑ID
+        rel.setMilestoneId(resolveConstructMilestoneIdForStep(projectId, target));
+        if (shouldEmptyDirector(target.getSstepName())) {
+            rel.setDirector(null);
+        } else {
+            rel.setDirector(project.getProjectLeader());
+        }
+
+        projectSstepRelationRepository.save(rel);
+        return 1;
+    }
+
+    /**
+     * 当项目建设内容勾选了“个性化功能开发”时，生成标准步骤“06个性化功能需求调研”的项目-步骤关系。
+     * 规则：
+     * 1) 按项目绑定产品(systemName) + 类型("个性化功能开发")过滤标准步骤；
+     * 2) 以去编号后的名称匹配“个性化功能需求调研”；
+     * 3) 仅在该步骤关系不存在时创建，负责人默认设置为项目负责人；
+     * 4) 若无法定位产品或未勾选“个性化功能开发”，则不生成。
+     *
+     * @param projectId 项目ID
+     * @return 生成的关系数量（0或1）
+     */
+    public int generatePersonalDemandResearchForProject(Long projectId) {
+        if (projectId == null) {
+            return 0;
+        }
+
+        // 读取项目，校验勾选了“个性化功能开发”并获取产品与负责人
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return 0;
+        }
+        String constructContent = project.getConstructContent();
+        boolean includePersonalDev = StringUtils.hasText(constructContent) && constructContent.contains("个性化功能开发");
+        if (!includePersonalDev) {
+            return 0;
+        }
+
+        String systemName = null;
+        if (project.getSoftId() != null) {
+            ArchieveSoft soft = archieveSoftRepository.findById(project.getSoftId()).orElse(null);
+            if (soft != null && StringUtils.hasText(soft.getSoftName())) {
+                systemName = soft.getSoftName().trim();
+            }
+        }
+        if (!StringUtils.hasText(systemName)) {
+            return 0;
+        }
+
+        // 查询该产品下类型为“个性化功能开发”的标准步骤，定位“个性化功能需求调研”
+        List<StandardConstructStep> steps = standardConstructStepRepository
+                .findBySystemNameAndTypeOrderBySstepNameAsc(systemName, "个性化功能开发");
+        if (steps == null || steps.isEmpty()) {
+            return 0;
+        }
+        StandardConstructStep target = null;
+        for (StandardConstructStep s : steps) {
+            String base = normalizeStepName(s.getSstepName());
+            if ("个性化功能需求调研".equals(base)) {
                 target = s;
                 break;
             }

@@ -1,9 +1,14 @@
 package com.missoft.pms.service;
 
 import com.missoft.pms.entity.InterfaceEntity;
+import com.missoft.pms.entity.ProjectSstepRelation;
+import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.service.ProjectSstepRelationService;
 import com.missoft.pms.repository.InterfaceRepository;
+import com.missoft.pms.repository.ProjectSstepRelationRepository;
+import com.missoft.pms.repository.ConstructingProjectRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,15 +20,27 @@ import java.util.List;
 public class InterfaceService {
     private final InterfaceRepository repository;
     private final ProjectSstepRelationService relationService;
+    private final ProjectSstepRelationRepository relationRepository;
+    private final ConstructingProjectRepository constructingProjectRepository;
+    private final ConstructMilestoneService constructMilestoneService;
 
     /**
      * 构造函数
      * @param repository 接口仓库
      * @param relationService 项目步骤关系服务（用于在接口创建后生成四个“接口开发”步骤）
      */
-    public InterfaceService(InterfaceRepository repository, ProjectSstepRelationService relationService) {
+    public InterfaceService(
+            InterfaceRepository repository,
+            ProjectSstepRelationService relationService,
+            ProjectSstepRelationRepository relationRepository,
+            ConstructingProjectRepository constructingProjectRepository,
+            ConstructMilestoneService constructMilestoneService
+    ) {
         this.repository = repository;
         this.relationService = relationService;
+        this.relationRepository = relationRepository;
+        this.constructingProjectRepository = constructingProjectRepository;
+        this.constructMilestoneService = constructMilestoneService;
     }
 
     /**
@@ -57,7 +74,64 @@ public class InterfaceService {
         if (interfaces == null || interfaces.isEmpty()) {
             return 0;
         }
+        // 先清理与这些接口相关的项目-步骤关系
+        for (InterfaceEntity iface : interfaces) {
+            Long iid = iface != null ? iface.getInterfaceId() : null;
+            if (iid != null) {
+                List<ProjectSstepRelation> rels = relationRepository.findByProjectIdAndInterfaceId(projectId, iid);
+                if (rels != null && !rels.isEmpty()) {
+                    relationRepository.deleteAll(rels);
+                }
+            }
+        }
+        // 删除接口记录
         repository.deleteAll(interfaces);
+        // 同步项目里程碑集合与工期汇总
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+        if (project != null) {
+            try {
+                constructMilestoneService.syncMilestonesWithProjectSteps(project);
+                constructMilestoneService.updateMilestonePeriodsForProject(projectId);
+            } catch (Exception ignore) {}
+        }
         return interfaces.size();
+    }
+
+    /**
+     * 函数级注释：按接口ID删除该接口并级联删除其生成的项目-步骤关系，同时刷新项目里程碑集合与工期汇总。
+     * 业务语义：前端在接口信息行点击“删除”后，应删除该接口条目以及其对应的“接口开发”步骤集合。
+     * @param interfaceId 接口ID
+     * @return 是否删除成功
+     */
+    @Transactional
+    public boolean deleteInterfaceById(Long interfaceId) {
+        if (interfaceId == null) {
+            return false;
+        }
+        InterfaceEntity iface = repository.findById(interfaceId).orElse(null);
+        if (iface == null) {
+            return false;
+        }
+        Long projectId = iface.getProjectId();
+        // 删除该接口关联的项目-步骤关系
+        if (projectId != null) {
+            List<ProjectSstepRelation> rels = relationRepository.findByProjectIdAndInterfaceId(projectId, interfaceId);
+            if (rels != null && !rels.isEmpty()) {
+                relationRepository.deleteAll(rels);
+            }
+        }
+        // 删除接口记录
+        repository.deleteById(interfaceId);
+        // 同步项目里程碑集合与工期汇总
+        if (projectId != null) {
+            ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+            if (project != null) {
+                try {
+                    constructMilestoneService.syncMilestonesWithProjectSteps(project);
+                    constructMilestoneService.updateMilestonePeriodsForProject(projectId);
+                } catch (Exception ignore) {}
+            }
+        }
+        return true;
     }
 }

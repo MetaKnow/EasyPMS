@@ -24,6 +24,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -377,6 +381,11 @@ public class StandardDeliverableController {
 
     /**
      * 上传交付物模板文件（支持多文件）
+     *
+     * 需求实现：
+     * 1) 存储到项目根目录下的 deliveryTempletes/<systemName>/ 路径（注意复数拼写）。
+     * 2) 以 “交付物名称-文件原名称” 进行重命名保存。
+     * 3) 同时更新交付物实体中的相对路径字段为 deliveryTempletes/<systemName>/。
      */
     @PostMapping("/{deliverableId}/templates/upload")
     public ResponseEntity<Map<String, Object>> uploadTemplates(
@@ -388,14 +397,21 @@ public class StandardDeliverableController {
             String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
             String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
 
+            // 项目根目录（后端目录的上一级）
             Path projectRoot = Paths.get("").toAbsolutePath().getParent();
-            Path root = projectRoot
-                    .resolve("deliveryTemplete")
+            // 模板存储目录限定：docs/deliveryTempletes/<systemName>/
+            Path docsRoot = projectRoot
+                    .resolve("docs")
+                    .resolve("deliveryTempletes")
                     .resolve(safeSystemName);
-            Files.createDirectories(root);
+            Files.createDirectories(docsRoot);
 
-            // 持久化相对目录路径：deliveryTemplete/<systemName>/
-            String relativeDir = "deliveryTemplete/" + safeSystemName + "/";
+            // 交付物名称作为前缀，参与重命名
+            String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "deliverable";
+            String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
+
+            // 持久化相对目录路径：docs/deliveryTempletes/<systemName>/
+            String relativeDir = "docs/deliveryTempletes/" + safeSystemName + "/";
             standardDeliverableService.updateDeliverableTemplatePath(deliverableId, relativeDir);
 
             List<Map<String, Object>> savedFiles = new ArrayList<>();
@@ -403,19 +419,22 @@ public class StandardDeliverableController {
                 for (MultipartFile file : files) {
                     if (file == null || file.isEmpty()) continue;
                     String originalName = Paths.get(file.getOriginalFilename()).getFileName().toString();
-                    Path target = root.resolve(originalName).normalize();
-                    if (!target.startsWith(root)) {
+                    String safeOriginalName = originalName.replaceAll("[\\\\/:*?\"<>|]", "_");
+                    // 重命名：交付物名称-文件原名称
+                    String finalName = safeDeliverableName + "-" + safeOriginalName;
+                    Path docsTarget = docsRoot.resolve(finalName).normalize();
+                    if (!docsTarget.startsWith(docsRoot)) {
                         throw new RuntimeException("非法文件名");
                     }
-                    try (InputStream in = file.getInputStream()) {
-                        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                    try (InputStream in2 = file.getInputStream()) {
+                        Files.copy(in2, docsTarget, StandardCopyOption.REPLACE_EXISTING);
                     }
                     Map<String, Object> info = new HashMap<>();
-                    info.put("name", originalName);
-                    info.put("size", Files.size(target));
-                    info.put("lastModified", Files.getLastModifiedTime(target).toMillis());
+                    info.put("name", finalName);
+                    info.put("size", Files.size(docsTarget));
+                    info.put("lastModified", Files.getLastModifiedTime(docsTarget).toMillis());
                     // 也返回每个文件的相对路径
-                    info.put("relativePath", relativeDir + originalName);
+                    info.put("relativePath", relativeDir + finalName);
                     savedFiles.add(info);
                 }
             }
@@ -440,6 +459,11 @@ public class StandardDeliverableController {
 
     /**
      * 列出交付物模板文件
+     *
+     * 需求实现：
+     * 1) 优先列出 deliveryTempletes/<systemName>/ 目录下的所有文件。
+     * 2) 同时从 docs/deliveryTempletes/<systemName>/ 目录中匹配“文件名前半部分为交付物名称”的文件并并入列表。
+     * 3) 兼容历史目录 deliveryTemplete/<systemName>/（如果存在），也并入列表。
      */
     @GetMapping("/{deliverableId}/templates")
     public ResponseEntity<Map<String, Object>> listTemplates(@PathVariable Long deliverableId) {
@@ -447,28 +471,43 @@ public class StandardDeliverableController {
             var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
             String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
             String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
+            String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String prefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
             Path projectRoot = Paths.get("").toAbsolutePath().getParent();
-            Path root = projectRoot
-                    .resolve("deliveryTemplete")
-                    .resolve(safeSystemName);
+            Path docsRoot = projectRoot.resolve("docs").resolve("deliveryTempletes").resolve(safeSystemName);
 
-            List<Map<String, Object>> files = new ArrayList<>();
-            if (Files.exists(root) && Files.isDirectory(root)) {
-                try (Stream<Path> stream = Files.list(root)) {
-                    stream.filter(Files::isRegularFile).forEach(p -> {
-                        Map<String, Object> info = new HashMap<>();
-                        info.put("name", p.getFileName().toString());
-                        try {
-                            info.put("size", Files.size(p));
-                            info.put("lastModified", Files.getLastModifiedTime(p).toMillis());
-                        } catch (Exception ex) {
-                            info.put("size", 0L);
-                            info.put("lastModified", 0L);
-                        }
-                        files.add(info);
-                    });
+            // 使用有序去重集合，按插入顺序去重（避免重复文件名）
+            Map<String, Map<String, Object>> byName = new LinkedHashMap<>();
+
+            // 仅在 docs/deliveryTempletes 中列出模板（限定生效范围）
+            String docsPrefix = prefix;
+            if (Files.exists(docsRoot) && Files.isDirectory(docsRoot)) {
+                try (Stream<Path> s = Files.list(docsRoot)) {
+                    s.filter(Files::isRegularFile)
+                     .filter(p -> {
+                         String name = p.getFileName().toString();
+                         String base = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : name;
+                         boolean prefixMatch = docsPrefix.isEmpty() || name.startsWith(docsPrefix);
+                         boolean equalsMatch = !safeDeliverableName.isEmpty() && base.equals(safeDeliverableName);
+                         return prefixMatch || equalsMatch;
+                     })
+                     .forEach(p -> {
+                         Map<String, Object> info = new HashMap<>();
+                         info.put("name", p.getFileName().toString());
+                         try {
+                             info.put("size", Files.size(p));
+                             info.put("lastModified", Files.getLastModifiedTime(p).toMillis());
+                         } catch (Exception ex) {
+                             info.put("size", 0L);
+                             info.put("lastModified", 0L);
+                         }
+                         byName.putIfAbsent(p.getFileName().toString(), info);
+                     });
                 }
             }
+
+            List<Map<String, Object>> files = new ArrayList<>(byName.values());
 
             Map<String, Object> response = new HashMap<>();
             response.put("files", files);
@@ -488,6 +527,8 @@ public class StandardDeliverableController {
 
     /**
      * 下载交付物模板文件
+     *
+     * 范围限定：仅从 docs/deliveryTempletes/<systemName>/ 目录提供下载。
      */
     @GetMapping("/{deliverableId}/templates/{filename:.+}")
     public ResponseEntity<Resource> downloadTemplate(
@@ -497,11 +538,24 @@ public class StandardDeliverableController {
             var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
             String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
             String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
+            String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String requiredPrefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
+            // 安全限制：仅允许下载“当前交付物前缀”的文件，避免跨交付物访问
+            if (!requiredPrefix.isEmpty()) {
+                String base = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+                boolean prefixMatch = filename.startsWith(requiredPrefix);
+                boolean equalsMatch = base.equals(safeDeliverableName);
+                if (!prefixMatch && !equalsMatch) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                }
+            }
             Path projectRoot = Paths.get("").toAbsolutePath().getParent();
-            Path root = projectRoot
-                    .resolve("deliveryTemplete")
-                    .resolve(safeSystemName);
-            Path target = root.resolve(filename).normalize();
+            Path docsRoot = projectRoot.resolve("docs").resolve("deliveryTempletes").resolve(safeSystemName);
+
+            Path target = docsRoot.resolve(filename).normalize();
+            Path root = docsRoot; // 用于startsWith校验的根
+
             if (!target.startsWith(root) || !Files.exists(target)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
@@ -523,6 +577,8 @@ public class StandardDeliverableController {
 
     /**
      * 删除交付物模板文件
+     *
+     * 范围限定：仅删除 docs/deliveryTempletes/<systemName>/ 目录中的文件。
      */
     @DeleteMapping("/{deliverableId}/templates/{filename:.+}")
     public ResponseEntity<Map<String, Object>> deleteTemplate(
@@ -532,27 +588,42 @@ public class StandardDeliverableController {
             var deliverable = standardDeliverableService.getStandardDeliverableById(deliverableId);
             String systemName = deliverable.getSystemName() != null ? deliverable.getSystemName().trim() : "unknown";
             String safeSystemName = systemName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
+            String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String requiredPrefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
+            // 安全限制：仅允许删除“当前交付物前缀”的文件，避免跨交付物误删
+            if (!requiredPrefix.isEmpty()) {
+                String base = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+                boolean prefixMatch = filename.startsWith(requiredPrefix);
+                boolean equalsMatch = base.equals(safeDeliverableName);
+                if (!prefixMatch && !equalsMatch) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "文件名不匹配当前交付物");
+                    error.put("message", "禁止跨交付物删除文件");
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+                }
+            }
             Path projectRoot = Paths.get("").toAbsolutePath().getParent();
-            Path root = projectRoot
-                    .resolve("deliveryTemplete")
-                    .resolve(safeSystemName);
-            Path target = root.resolve(filename).normalize();
-            if (!target.startsWith(root) || !Files.exists(target)) {
+            Path docsRoot = projectRoot.resolve("docs").resolve("deliveryTempletes").resolve(safeSystemName);
+
+            Path targetDocs = docsRoot.resolve(filename).normalize();
+            if (!(targetDocs.startsWith(docsRoot) && Files.exists(targetDocs))) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "文件不存在");
                 error.put("message", "未找到指定文件");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
-            Files.delete(target);
-            // 如果目录已空，清空数据库中的模板路径
+            Files.delete(targetDocs);
+
+            // 如果 docs 目录已空，清空数据库中的模板路径
             boolean hasFiles = false;
-            if (Files.exists(root) && Files.isDirectory(root)) {
-                try (Stream<Path> s = Files.list(root)) {
+            if (Files.exists(docsRoot) && Files.isDirectory(docsRoot)) {
+                try (Stream<Path> s = Files.list(docsRoot)) {
                     hasFiles = s.anyMatch(Files::isRegularFile);
                 }
             }
             if (!hasFiles) {
-                // 清空数据库中保存的模板相对路径
+                // 清空数据库中保存的模板相对路径（仅针对 docs/deliveryTempletes 路径）
                 standardDeliverableService.updateDeliverableTemplatePath(deliverableId, null);
             }
 

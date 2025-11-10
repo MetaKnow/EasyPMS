@@ -35,6 +35,7 @@
               <th width="100">计划工期</th>
               <th width="100">实际工期</th>
               <th width="140">状态</th>
+              <th width="160">交付物管理</th>
             </tr>
           </thead>
           <tbody>
@@ -104,6 +105,17 @@
                   {{ row.actualPeriod ?? '-' }}
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                <td class="deliverable-actions">
+                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                  </button>
+                </td>
               </tr>
               <!-- 接口基本信息展示行 -->
               <tr v-else-if="row.rowType === 'interface_info'" class="interface-info-row">
@@ -117,7 +129,10 @@
                 <td></td>
                 <td></td>
                 <td></td>
-                <td></td>
+                <td>
+                  <button class="btn ghost" @click="onDeleteInterface(row.blockId)">删除</button>
+                </td>
+                <td class="deliverable-actions"></td>
               </tr>
               <!-- 个性化需求基本信息展示行 -->
               <tr v-else-if="row.rowType === 'personal_info'" class="personal-info-row">
@@ -131,7 +146,10 @@
                 <td></td>
                 <td></td>
                 <td></td>
-                <td></td>
+                <td>
+                  <button class="btn ghost" @click="onDeletePersonal(row.blockId)">删除</button>
+                </td>
+                <td class="deliverable-actions"></td>
               </tr>
               <!-- 接口开发步骤（支持双击编辑） -->
               <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
@@ -190,6 +208,17 @@
                   {{ row.actualPeriod ?? '-' }}
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                <td class="deliverable-actions">
+                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                  </button>
+                </td>
               </tr>
               <!-- 个性化开发步骤（支持双击编辑） -->
               <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
@@ -248,18 +277,29 @@
                   {{ row.actualPeriod ?? '-' }}
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                <td class="deliverable-actions">
+                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                  </button>
+                </td>
               </tr>
               <!-- 添加接口按钮行（位于目标里程碑上一行） -->
               <tr v-else-if="row.rowType === 'add_interface'" class="add-interface-row">
                 <td>{{ idx + 1 }}</td>
-                <td colspan="10">
+                <td colspan="11">
                   <button class="add-interface-btn" @click="openInterfaceDialog">添加接口</button>
                 </td>
               </tr>
               <!-- 添加个性化需求按钮行（位于目标里程碑上一行） -->
               <tr v-else-if="row.rowType === 'add_personal'" class="add-personal-row">
                 <td>{{ idx + 1 }}</td>
-                <td colspan="10">
+                <td colspan="11">
                   <button class="add-personal-btn" @click="openPersonalDialog">添加个性化需求</button>
                 </td>
               </tr>
@@ -275,6 +315,17 @@
                 <td>-</td>
                 <td>{{ row.milestonePeriod ?? '-' }}</td>
                 <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
+                <td class="deliverable-actions">
+                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                  </button>
+                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                  </button>
+                </td>
               </tr>
             </template>
           </tbody>
@@ -327,6 +378,37 @@
         </div>
       </div>
 
+      <!-- 交付物查看弹窗（轻量版） -->
+      <div v-if="showDeliverableDialog" class="dialog-mask" @click.self="closeDeliverableDialog">
+        <div class="dialog">
+          <h4>交付物列表</h4>
+          <div class="form-row">
+            <div v-if="deliverableLoading">正在加载交付物...</div>
+            <div v-else-if="deliverableError" class="state error">{{ deliverableError }}</div>
+            <div v-else>
+              <div v-if="!deliverableList || deliverableList.length === 0" style="color:#999">当前未配置可查看的交付物</div>
+              <ul v-else class="deliverable-list">
+                <li v-for="d in deliverableList" :key="d.deliverableId || d.id">
+                  <span class="name">{{ d.deliverableName || d.name }}</span>
+                  <span class="type">{{ d.deliverableType || '-' }}</span>
+                  <template v-if="deliverableDialogMode === 'download'">
+                    <button class="icon-btn" title="下载模板" @click="downloadFirstTemplate(d)" aria-label="下载模板">
+                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                    </button>
+                  </template>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="dialog-actions">
+            <button class="btn" @click="closeDeliverableDialog">关闭</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 隐藏上传输入 -->
+      <input ref="deliverableUploader" type="file" multiple style="display:none" @change="handleDeliverableFilesSelected" />
+
       
 
     </div>
@@ -338,10 +420,16 @@ import { getProjectSummary } from '../api/constructingProject';
 import { updateProjectRelation } from '../api/projectRelation';
 import { getAllUsers } from '../api/user';
 import { getAllStandardMilestones } from '../api/standardMilestone';
-import { createInterface, listInterfacesByProject } from '../api/interface';
-import { createPersonalDevelope, listPersonalDevelopesByProject } from '../api/personalDevelope';
+import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverableTemplates, downloadDeliverableTemplate } from '../api/standardDeliverable';
+import { createInterface, listInterfacesByProject, deleteInterface } from '../api/interface';
+import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
 export default {
   name: 'ProjectDetail',
+  /**
+   * 类级注释：ProjectDetail 组件
+   * 展示在建项目的步骤、里程碑、接口与个性化信息，支持基础编辑、
+   * 交付物管理（查看、上传、下载）、接口与个性化块的增删。
+   */
   /**
    * 类级注释：
    * 项目详情组件，展示项目步骤、里程碑、交付物与文件。
@@ -384,6 +472,16 @@ export default {
         personalDevName: ''
       },
       personalBlocks: [] // { id, personalDevName }
+      ,
+      // 交付物管理弹窗与数据
+      showDeliverableDialog: false,
+      deliverableDialogRow: null,
+      deliverableList: [],
+      deliverableLoading: false,
+      deliverableError: '',
+      selectedUploadFiles: [],
+      deliverableDialogMode: 'view', // view | download
+      deliverableTemplates: {} // { [deliverableId]: Array<{filename: string, name?:string}> }
     };
   },
   computed: {
@@ -441,7 +539,7 @@ export default {
       // 渲染各里程碑分组
       for (const name of existingNames) {
         const list = groupsByName.get(name) || []
-        // 非“接口开发/个性化功能开发”的步骤（保留接口需求调研）
+        // 非“接口开发/个性化功能开发”的步骤（保留接口需求调研与个性化需求调研）
         const nonInterfaceSteps = list.filter(s => {
           if (s.type === '接口开发') {
             const stepName = s.sstepName || s.nstepName || ''
@@ -449,7 +547,10 @@ export default {
             return keepDemandResearch
           }
           if (s.type === '个性化功能开发') {
-            return false
+            const stepName = s.sstepName || s.nstepName || ''
+            // 仅在“02需求确定”里程碑下保留“个性化功能需求调研”步骤
+            const keepPersonalDemandResearch = includePersonalDev && name === '02需求确定' && stepName.includes('个性化功能需求调研')
+            return keepPersonalDemandResearch
           }
           return true
         })
@@ -521,6 +622,134 @@ export default {
     document.removeEventListener('click', this.onDocumentClick);
   },
   methods: {
+    /**
+     * 函数级注释：
+     * 打开交付物查看弹窗并加载与当前行关联的交付物。
+     * 行关联规则：
+     * - 标准步骤行：使用 row.sstepId 查询标准交付物；
+     * - 里程碑行：使用 row.milestoneId 或名称映射查询标准交付物；
+     * - 其他类型（接口/个性化信息行）：当前展示占位，后续接入项目级交付物。
+     */
+    async onViewDeliverables(row, mode = 'view') {
+      try {
+        this.deliverableDialogMode = mode
+        this.showDeliverableDialog = true
+        this.deliverableDialogRow = row
+        this.deliverableError = ''
+        this.deliverableLoading = true
+        let list = []
+        if (row.rowType === 'step' && row.sstepId) {
+          const resp = await getStandardDeliverablesByStepId(row.sstepId)
+          list = resp?.deliverables || resp?.items || resp || []
+        } else if (row.rowType === 'milestone') {
+          // 优先使用里程碑ID，其次根据名称在已加载的标准里程碑中映射ID
+          let mid = row.milestoneId || null
+          if (!mid && this.standardMilestones && row.milestoneName) {
+            const m = this.standardMilestones.find(x => x.milestoneName === row.milestoneName)
+            mid = m ? m.milestoneId : null
+          }
+          if (mid) {
+            const resp = await getStandardDeliverables({ milestoneId: mid, page: 0, size: 100 })
+            list = resp?.deliverables || resp?.items || resp || []
+          }
+        } else {
+          // 接口/个性化信息及其步骤暂不直接关联标准交付物，保留占位
+          list = []
+        }
+        this.deliverableList = Array.isArray(list) ? list : []
+      } catch (e) {
+        this.deliverableError = e?.message || '交付物加载失败'
+      } finally {
+        this.deliverableLoading = false
+      }
+    },
+    /**
+     * 函数级注释：
+     * 触发上传文件选择。
+     * 后端对接计划：将文件与项目步骤/里程碑实体关联，上传到项目交付文件表。
+     */
+    onUploadDeliverable(row) {
+      this.deliverableDialogRow = row
+      const input = this.$refs?.deliverableUploader
+      if (input) input.click()
+    },
+    /**
+     * 函数级注释：
+     * 触发下载交付物模板/文件。
+     * 当前实现为打开“交付物列表”弹窗并切换为下载模式，
+     * 在列表中可为每个交付物拉取模板并下载首个文件。
+     */
+    async onDownloadDeliverables(row) {
+      await this.onViewDeliverables(row, 'download')
+    },
+    /**
+     * 函数级注释：
+     * 为指定交付物拉取模板列表，并下载第一个模板文件。
+     * 若无模板，提示用户。
+     */
+    async downloadFirstTemplate(d) {
+      try {
+        const did = d?.deliverableId || d?.id
+        if (!did) return this.showError('交付物ID缺失，无法下载模板')
+        const files = await listDeliverableTemplates(did)
+        if (!files || files.length === 0) {
+          const msg = '该交付物暂无模板文件'
+          this.$message?.warning ? this.$message.warning(msg) : alert(msg)
+          return
+        }
+        const filename = files[0]?.name || files[0]?.filename
+        if (!filename) {
+          return this.showError('模板文件名缺失，无法下载')
+        }
+        const blob = await downloadDeliverableTemplate(did, filename)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        this.showError('下载模板失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：
+     * 处理文件选择完成事件，暂存文件并提示。
+     * 后续将通过后端API上传并与当前行绑定。
+     */
+    handleDeliverableFilesSelected(evt) {
+      const files = Array.from(evt?.target?.files || [])
+      this.selectedUploadFiles = files
+      if (files.length > 0) {
+        const msg = `已选择 ${files.length} 个文件，稍后将接入上传接口`
+        this.$message?.info ? this.$message.info(msg) : alert(msg)
+      }
+      // 重置 input 以便重复选择相同文件
+      if (evt?.target) evt.target.value = ''
+    },
+    /**
+     * 函数级注释：
+     * 删除交付物入口（占位）。
+     * 当前暂未接入后端删除接口，统一在“查看”弹窗中执行具体删除操作。
+     */
+    onDeleteDeliverables(row) {
+      const msg = '请在“查看”列表中选择具体交付物进行删除（后端待对接）'
+      this.$message?.info ? this.$message.info(msg) : alert(msg)
+      // 也可直接打开查看弹窗
+      this.onViewDeliverables(row)
+    },
+    /**
+     * 函数级注释：
+     * 关闭交付物查看弹窗并清理状态。
+     */
+    closeDeliverableDialog() {
+      this.showDeliverableDialog = false
+      this.deliverableDialogRow = null
+      this.deliverableList = []
+      this.deliverableError = ''
+    },
     async loadSummary() {
       try {
         this.loading = true;
@@ -941,6 +1170,39 @@ export default {
       } catch (e) {
         this.showError('保存个性化需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
       }
+    },
+    /**
+     * 函数级注释：删除接口块并刷新摘要
+     * @param {number} interfaceId 接口ID
+     */
+    async onDeleteInterface(interfaceId) {
+      try {
+        const ok = this.$confirm ? await this.$confirm('确认删除该接口及其生成的步骤关系？') : window.confirm('确认删除该接口及其生成的步骤关系？')
+        if (!ok) return
+        await deleteInterface(interfaceId)
+        // 本地移除并刷新摘要
+        this.interfaceBlocks = (this.interfaceBlocks || []).filter(b => b.id !== interfaceId)
+        this.$message && this.$message.success('接口已删除')
+        await this.loadSummary()
+      } catch (e) {
+        this.showError('删除接口失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：删除个性化需求块并刷新摘要
+     * @param {number} personalDevId 个性化开发ID
+     */
+    async onDeletePersonal(personalDevId) {
+      try {
+        const ok = this.$confirm ? await this.$confirm('确认删除该个性化需求及其生成的步骤关系？') : window.confirm('确认删除该个性化需求及其生成的步骤关系？')
+        if (!ok) return
+        await deletePersonalDevelope(personalDevId)
+        this.personalBlocks = (this.personalBlocks || []).filter(b => b.id !== personalDevId)
+        this.$message && this.$message.success('个性化需求已删除')
+        await this.loadSummary()
+      } catch (e) {
+        this.showError('删除个性化需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
     }
   }
 }
@@ -1017,4 +1279,56 @@ export default {
 .dialog-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 .btn { padding:6px 12px; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer; }
 .btn.ghost { background:#f5f7fa; }
+/* 删除按钮颜色与名称文字颜色保持一致（接口与个性化信息行） */
+.interface-info-row .btn.ghost,
+.personal-info-row .btn.ghost {
+  color: inherit;
+}
+/* 交付物管理列与图标按钮样式 */
+.deliverable-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .15s ease;
+  color: #374151;
+}
+.icon-btn:hover {
+  background: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.icon-btn.danger {
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.deliverable-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.deliverable-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+.deliverable-list .name { font-weight: 500; }
+.deliverable-list .type { color: #6b7280; font-size: 12px; }
 </style>
