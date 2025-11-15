@@ -62,4 +62,11 @@ public interface StandardMilestoneRepository extends JpaRepository<StandardMiles
      * @return 里程碑列表
      */
     List<StandardMilestone> findAllByOrderByCreateTimeAsc();
+
+    /**
+     * 根据里程碑名称（不区分大小写）精确查询单个里程碑
+     * @param milestoneName 里程碑名称
+     * @return 里程碑（可能为空）
+     */
+    java.util.Optional<StandardMilestone> findByMilestoneNameIgnoreCase(String milestoneName);
 }

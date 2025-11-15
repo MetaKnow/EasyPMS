@@ -122,6 +122,15 @@ public interface StandardDeliverableRepository extends JpaRepository<StandardDel
     List<StandardDeliverable> findByMilestoneId(Long milestoneId);
 
     /**
+     * 根据系统名称与里程碑ID查询所有交付物
+     *
+     * @param systemName  系统名称（产品名）
+     * @param milestoneId 里程碑ID
+     * @return 交付物列表
+     */
+    List<StandardDeliverable> findBySystemNameAndMilestoneId(String systemName, Long milestoneId);
+
+    /**
      * 获取所有交付物列表（按交付物名称排序）
      *
      * @return 交付物列表

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  项目级 Maven Toolchains 配置：指定使用项目根 tools/jdk 作为 JDK 17。
+  不修改系统环境变量，通过 maven.toolchains.file 指向本文件。
+-->
+<toolchains xmlns="http://maven.apache.org/TOOLCHAINS/1.1.0"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/TOOLCHAINS/1.1.0 https://maven.apache.org/xsd/toolchains-1.1.0.xsd">
+  <toolchain>
+    <type>jdk</type>
+    <provides>
+      <version>17</version>
+      <vendor>any</vendor>
+    </provides>
+    <configuration>
+      <!-- 使用相对路径，指向项目根目录下的 tools/jdk -->
+      <!-- 该文件位于 .mvn/ 下，故相对路径为 ../tools/jdk -->
+      <jdkHome>../tools/jdk</jdkHome>
+    </configuration>
+  </toolchain>
+</toolchains>

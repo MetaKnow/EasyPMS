@@ -42,6 +42,21 @@ public class StandardDeliverableController {
     @Autowired
     private StandardDeliverableService standardDeliverableService;
 
+    @Autowired
+    private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
+
+    @Autowired
+    private com.missoft.pms.repository.StandardMilestoneRepository standardMilestoneRepository;
+
+    @Autowired
+    private com.missoft.pms.repository.StandardDeliverableRepository standardDeliverableRepository;
+
+    @Autowired
+    private com.missoft.pms.repository.ConstructingProjectRepository constructingProjectRepository;
+
+    @Autowired
+    private com.missoft.pms.repository.ArchieveSoftRepository archieveSoftRepository;
+
     /**
      * 分页查询交付物列表
      *
@@ -313,6 +328,65 @@ public class StandardDeliverableController {
     }
 
     /**
+     * 根据项目ID与里程碑名称获取交付物列表
+     * 逻辑：校验该项目存在该里程碑名称（construct_milestone），
+     * 然后按名称在标准里程碑（standard_milestone）中找到 milestone_id，
+     * 最终用该 milestone_id 查询标准交付物（standard_deliverable）列表。
+     *
+     * @param projectId     项目ID
+     * @param milestoneName 里程碑名称
+     * @return 交付物列表
+     */
+    @GetMapping("/by-project-milestone-name")
+    public ResponseEntity<Map<String, Object>> getStandardDeliverablesByProjectAndMilestoneName(
+            @RequestParam Long projectId,
+            @RequestParam String milestoneName) {
+        try {
+            if (projectId == null || milestoneName == null || milestoneName.trim().isEmpty()) {
+                Map<String, Object> empty = new HashMap<>();
+                empty.put("deliverables", List.of());
+                return ResponseEntity.ok(empty);
+            }
+            // 先确认项目是否包含该里程碑名称
+            boolean exists = constructMilestoneRepository.existsByProjectIdAndMilestoneName(projectId, milestoneName);
+            if (!exists) {
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("deliverables", List.of());
+                return ResponseEntity.ok(resp);
+            }
+            // 按名称在标准里程碑中找到里程碑ID（忽略大小写）
+            var optSm = standardMilestoneRepository.findByMilestoneNameIgnoreCase(milestoneName);
+            if (optSm.isEmpty()) {
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("deliverables", List.of());
+                return ResponseEntity.ok(resp);
+            }
+            Long milestoneId = optSm.get().getMilestoneId();
+            // 计算项目对应的系统名称（产品名）
+            String systemName = null;
+            var optProj = constructingProjectRepository.findById(projectId);
+            if (optProj.isPresent() && optProj.get().getSoftId() != null) {
+                var optSoft = archieveSoftRepository.findById(optProj.get().getSoftId());
+                if (optSoft.isPresent() && optSoft.get().getSoftName() != null) {
+                    systemName = optSoft.get().getSoftName().trim();
+                }
+            }
+            List<com.missoft.pms.entity.StandardDeliverable> deliverables =
+                    (systemName != null && !systemName.isEmpty())
+                            ? standardDeliverableRepository.findBySystemNameAndMilestoneId(systemName, milestoneId)
+                            : standardDeliverableRepository.findByMilestoneId(milestoneId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("deliverables", deliverables);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "查询交付物列表失败");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * 获取所有交付物列表
      *
      * @return 交付物列表
@@ -474,6 +548,10 @@ public class StandardDeliverableController {
             String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
             String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
             String prefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
+            // 兼容：去掉“【...】”标签前缀后的名称匹配（如【里程碑】01项目正式启动 -> 01项目正式启动）
+            String strippedName = deliverableName.replaceFirst("^\s*【[^】]*】\s*", "");
+            String safeStrippedName = strippedName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String strippedPrefix = safeStrippedName.isEmpty() ? "" : safeStrippedName + "-";
             Path projectRoot = Paths.get("").toAbsolutePath().getParent();
             Path docsRoot = projectRoot.resolve("docs").resolve("deliveryTempletes").resolve(safeSystemName);
 
@@ -490,7 +568,10 @@ public class StandardDeliverableController {
                          String base = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : name;
                          boolean prefixMatch = docsPrefix.isEmpty() || name.startsWith(docsPrefix);
                          boolean equalsMatch = !safeDeliverableName.isEmpty() && base.equals(safeDeliverableName);
-                         return prefixMatch || equalsMatch;
+                         // 兼容剥离标签后的匹配
+                         boolean prefixMatchStripped = strippedPrefix.isEmpty() || name.startsWith(strippedPrefix);
+                         boolean equalsMatchStripped = !safeStrippedName.isEmpty() && base.equals(safeStrippedName);
+                         return prefixMatch || equalsMatch || prefixMatchStripped || equalsMatchStripped;
                      })
                      .forEach(p -> {
                          Map<String, Object> info = new HashMap<>();
@@ -541,12 +622,18 @@ public class StandardDeliverableController {
             String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
             String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
             String requiredPrefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
+            // 兼容：去掉“【...】”标签前缀后的名称匹配
+            String strippedName = deliverableName.replaceFirst("^\s*【[^】]*】\s*", "");
+            String safeStrippedName = strippedName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String requiredPrefixStripped = safeStrippedName.isEmpty() ? "" : safeStrippedName + "-";
             // 安全限制：仅允许下载“当前交付物前缀”的文件，避免跨交付物访问
             if (!requiredPrefix.isEmpty()) {
                 String base = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
                 boolean prefixMatch = filename.startsWith(requiredPrefix);
                 boolean equalsMatch = base.equals(safeDeliverableName);
-                if (!prefixMatch && !equalsMatch) {
+                boolean prefixMatchStripped = filename.startsWith(requiredPrefixStripped);
+                boolean equalsMatchStripped = base.equals(safeStrippedName);
+                if (!(prefixMatch || equalsMatch || prefixMatchStripped || equalsMatchStripped)) {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
                 }
             }
@@ -591,12 +678,18 @@ public class StandardDeliverableController {
             String deliverableName = deliverable.getDeliverableName() != null ? deliverable.getDeliverableName().trim() : "";
             String safeDeliverableName = deliverableName.replaceAll("[\\\\/:*?\"<>|]", "_");
             String requiredPrefix = safeDeliverableName.isEmpty() ? "" : safeDeliverableName + "-";
+            // 兼容：去掉“【...】”标签前缀后的名称匹配
+            String strippedName = deliverableName.replaceFirst("^\s*【[^】]*】\s*", "");
+            String safeStrippedName = strippedName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            String requiredPrefixStripped = safeStrippedName.isEmpty() ? "" : safeStrippedName + "-";
             // 安全限制：仅允许删除“当前交付物前缀”的文件，避免跨交付物误删
             if (!requiredPrefix.isEmpty()) {
                 String base = filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename;
                 boolean prefixMatch = filename.startsWith(requiredPrefix);
                 boolean equalsMatch = base.equals(safeDeliverableName);
-                if (!prefixMatch && !equalsMatch) {
+                boolean prefixMatchStripped = filename.startsWith(requiredPrefixStripped);
+                boolean equalsMatchStripped = base.equals(safeStrippedName);
+                if (!(prefixMatch || equalsMatch || prefixMatchStripped || equalsMatchStripped)) {
                     Map<String, Object> error = new HashMap<>();
                     error.put("error", "文件名不匹配当前交付物");
                     error.put("message", "禁止跨交付物删除文件");

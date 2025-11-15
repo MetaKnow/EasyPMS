@@ -89,15 +89,76 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- 已按需求移除 Office 文档预览与转换依赖 -->
     </dependencies>
 
     <build>
         <plugins>
+            <!--
+              函数级注释：使用项目内置 JDK 17 进行编译（Maven Toolchains）
+              - 通过 jdkToolchain 指定版本，结合 .mvn/toolchains.xml 的 jdkHome 生效；
+              - 不依赖系统 JAVA_HOME，确保编译与运行一致使用 tools/jdk。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>17</release>
+                    <jdkToolchain>
+                        <version>17</version>
+                    </jdkToolchain>
+                </configuration>
+            </plugin>
+            <!--
+              函数级注释：测试运行使用项目内置 JDK 17（Maven Toolchains）
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <jdkToolchain>
+                        <version>17</version>
+                    </jdkToolchain>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
+
+    <!--
+      函数级注释：可选运行配置，使用项目内置 JDK 启动打包后的 Spring Boot Jar
+      使用方式：
+        1) 打包：mvn -DskipTests package
+        2) 运行：mvn -Prun-tools-jdk exec:exec
+    -->
+    <profiles>
+        <profile>
+            <id>run-tools-jdk</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <configuration>
+                            <!-- 固定使用项目内置 JDK 可执行文件 -->
+                            <executable>${project.basedir}/../tools/jdk/bin/java.exe</executable>
+                            <workingDirectory>${project.basedir}/backend</workingDirectory>
+                            <arguments>
+                                <argument>-jar</argument>
+                                <argument>${project.build.directory}/${project.artifactId}-${project.version}.jar</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

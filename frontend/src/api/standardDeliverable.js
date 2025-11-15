@@ -272,7 +272,7 @@ export async function getStandardDeliverablesBySystemNameAndType(systemName, del
  */
 export async function getStandardDeliverablesByStepId(sstepId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/standard-deliverables/by-step/${sstepId}`, {
+    const response = await fetch(`${API_BASE_URL}/standard-deliverables/by-step?sstepId=${encodeURIComponent(sstepId)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -297,7 +297,7 @@ export async function getStandardDeliverablesByStepId(sstepId) {
  */
 export async function getStandardDeliverablesByMilestoneId(milestoneId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/standard-deliverables/by-milestone/${milestoneId}`, {
+    const response = await fetch(`${API_BASE_URL}/standard-deliverables/by-milestone?milestoneId=${encodeURIComponent(milestoneId)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -311,6 +311,34 @@ export async function getStandardDeliverablesByMilestoneId(milestoneId) {
     return await response.json()
   } catch (error) {
     console.error('根据里程碑ID获取标准交付物失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 根据项目ID与里程碑名称获取标准交付物列表
+ * @param {number} projectId 项目ID
+ * @param {string} milestoneName 里程碑名称
+ * @returns {Promise<Object[]>} 交付物列表
+ */
+export async function getStandardDeliverablesByProjectAndMilestoneName(projectId, milestoneName) {
+  try {
+    const params = new URLSearchParams()
+    params.append('projectId', projectId)
+    params.append('milestoneName', milestoneName)
+    const response = await fetch(`${API_BASE_URL}/standard-deliverables/by-project-milestone-name?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json()
+    return Array.isArray(data) ? data : (data.deliverables || [])
+  } catch (error) {
+    console.error('根据项目与里程碑名称获取标准交付物失败:', error)
     throw error
   }
 }

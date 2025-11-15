@@ -106,15 +106,19 @@
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
                 <td class="deliverable-actions">
-                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                  </button>
+                  <template v-if="shouldShowDeliverableActions(row)">
+                    <div class="actions-inner">
+                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </button>
+                    </div>
+                  </template>
                 </td>
               </tr>
               <!-- 接口基本信息展示行 -->
@@ -209,15 +213,19 @@
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
                 <td class="deliverable-actions">
-                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                  </button>
+                  <template v-if="shouldShowDeliverableActions(row)">
+                    <div class="actions-inner">
+                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </button>
+                    </div>
+                  </template>
                 </td>
               </tr>
               <!-- 个性化开发步骤（支持双击编辑） -->
@@ -278,15 +286,19 @@
                 </td>
                 <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
                 <td class="deliverable-actions">
-                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                  </button>
+                  <template v-if="shouldShowDeliverableActions(row)">
+                    <div class="actions-inner">
+                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </button>
+                    </div>
+                  </template>
                 </td>
               </tr>
               <!-- 添加接口按钮行（位于目标里程碑上一行） -->
@@ -316,15 +328,17 @@
                 <td>{{ row.milestonePeriod ?? '-' }}</td>
                 <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
                 <td class="deliverable-actions">
-                  <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                    <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                  </button>
-                  <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                    <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                  </button>
+                  <div class="actions-inner">
+                    <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                      <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                    </button>
+                    <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
+                    </button>
+                    <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </template>
@@ -406,8 +420,97 @@
         </div>
       </div>
 
+      <!-- 交付物上传弹窗 -->
+      <div v-if="showUploadDialog" class="dialog-mask" @click.self="closeUploadDialog">
+        <div class="dialog upload-dialog">
+          <h4>上传交付物</h4>
+          <div class="form-row">
+            <div v-if="uploadLoading">正在准备上传上下文...</div>
+            <div v-else-if="uploadError" class="state error">{{ uploadError }}</div>
+            <div v-else>
+              <div v-if="!uploadDeliverables || uploadDeliverables.length === 0" style="color:#999">当前步骤/里程碑下没有交付物</div>
+              <div v-else class="upload-list">
+                <div v-for="d in uploadDeliverables" :key="d.deliverableId" class="upload-item">
+                  <div class="upload-head">
+                    <span class="name">{{ d.deliverableName }}</span>
+                    <span class="hint">支持多文件上传</span>
+                  </div>
+                  <div class="template-chips" v-if="uploadTemplatesByDeliverableId[d.deliverableId]?.length">
+                    <div class="template-title">模板：</div>
+                    <div class="chip-group">
+                      <button type="button" class="chip clickable" v-for="t in uploadTemplatesByDeliverableId[d.deliverableId]" :key="t.name" @click="downloadTemplateForDialog(d.deliverableId, t.name)">
+                        <span class="chip-name">{{ t.name }}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="upload-actions">
+                    <label class="btn primary" :class="{ disabled: uploadingByDeliverableId[d.deliverableId] }" :for="`file-input-${d.deliverableId}`">选择文件</label>
+                    <input :id="`file-input-${d.deliverableId}`" type="file" multiple :disabled="uploadingByDeliverableId[d.deliverableId]" @change="handleUploadFileSelectedForDeliverable(d, $event)" hidden />
+                    <div class="progress" v-if="uploadingByDeliverableId[d.deliverableId]">
+                      <div class="bar" :style="{ width: (uploadProgressByDeliverableId[d.deliverableId] || 0) + '%' }"></div>
+                      <span class="percent">{{ uploadProgressByDeliverableId[d.deliverableId] || 0 }}%</span>
+                    </div>
+                  </div>
+                  <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[d.deliverableId]?.length">
+                    <div class="template-title">已上传文件：</div>
+                    <ul class="file-list compact">
+                      <li v-for="f in uploadedFilesByDeliverableId[d.deliverableId]" :key="f.fileId" class="file-item">
+                        <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{ fileBaseName(f.filePath) }}</button>
+                        <span class="size">{{ prettySize(f.fileSize) }}</span>
+                        <button class="icon-btn danger" title="删除" @click="deleteUploadedFile(f.fileId, d.deliverableId)">
+                          <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                        </button>
+                        <a class="icon-btn" :href="downloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="dialog-actions">
+            <button class="btn" @click="closeUploadDialog">关闭</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文件名点击进行预览，保留右侧下载图标 -->
+
       <!-- 隐藏上传输入 -->
       <input ref="deliverableUploader" type="file" multiple style="display:none" @change="handleDeliverableFilesSelected" />
+
+      <!-- 全屏文件预览弹窗 -->
+      <div v-if="showPreviewDialog" class="preview-overlay">
+      <div class="preview-header">
+        <span class="title">{{ previewTitle }}</span>
+        <div class="tools">
+          <button v-if="previewType !== 'pdf' && previewType !== 'sheet'" class="icon-btn" title="缩小" @click="pdfZoomOut">
+            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          </button>
+          <button v-if="previewType !== 'pdf' && previewType !== 'video'" class="icon-btn" title="放大" @click="pdfZoomIn">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          </button>
+          <button class="icon-btn" title="关闭" @click="closePreviewDialog">
+            <svg viewBox="0 0 24 24"><path d="M18.3 5.71L12 12.01 5.7 5.71 4.29 7.12 10.59 13.41 4.29 19.7 5.7 21.11 12 14.82 18.3 21.11 19.71 19.7 13.41 13.41 19.71 7.12z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="preview-body">
+        <div v-if="previewLoading" class="loading">正在加载…</div>
+        <div v-else-if="previewError" class="error">{{ previewError }}</div>
+        <div v-else class="preview-content" :style="(previewType === 'pdf' || previewType === 'video') ? { width: '100%', height: 'calc(100vh - 48px - 24px)', display: 'block' } : { transform: 'scale(' + previewScale + ')', transformOrigin: 'center top' }">
+          <img v-if="previewType === 'image'" :src="previewUrl" class="preview-image" />
+          <iframe v-else-if="previewType === 'pdf'" :src="previewUrl" class="pdf-embed"></iframe>
+          <video v-else-if="previewType === 'video'" :src="previewUrl" class="video-player" controls autoplay playsinline></video>
+          <div v-else-if="previewType === 'docx'" class="html-view" v-html="previewHTML"></div>
+          
+          <pre v-else-if="previewType === 'text'" class="text-view">{{ previewText }}</pre>
+          <div v-else class="unsupported">文件格式不支持预览，请下载后查看</div>
+        </div>
+      </div>
+      </div>
 
       
 
@@ -420,9 +523,14 @@ import { getProjectSummary } from '../api/constructingProject';
 import { updateProjectRelation } from '../api/projectRelation';
 import { getAllUsers } from '../api/user';
 import { getAllStandardMilestones } from '../api/standardMilestone';
-import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverableTemplates, downloadDeliverableTemplate } from '../api/standardDeliverable';
+import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverableTemplates, downloadDeliverableTemplate, getStandardDeliverablesByProjectAndMilestoneName } from '../api/standardDeliverable';
 import { createInterface, listInterfacesByProject, deleteInterface } from '../api/interface';
 import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
+import request from '../api/request'
+// 引入预览依赖：Mammoth（docx→HTML）、XLSX
+import mammoth from 'mammoth/mammoth.browser'
+// 已移除 Luckysheet/XLSX 前端预览，统一走后端转 PDF
+import { uploadConstructDeliverableFiles, listConstructDeliverableFiles, deleteConstructDeliverableFile } from '../api/constructDeliverableFile';
 export default {
   name: 'ProjectDetail',
   /**
@@ -482,6 +590,30 @@ export default {
       selectedUploadFiles: [],
       deliverableDialogMode: 'view', // view | download
       deliverableTemplates: {} // { [deliverableId]: Array<{filename: string, name?:string}> }
+      ,
+      // 上传交付物弹窗与数据
+      showUploadDialog: false,
+      uploadDeliverables: [], // [{ deliverableId, deliverableName, sstepId?, milestoneId?, projectStepId? }]
+      uploadTemplatesByDeliverableId: {}, // { [deliverableId]: Array<{name:string,size:number,lastModified?:number}> }
+      selectedUploadFilesByDeliverableId: {}, // { [deliverableId]: File[] }
+      uploadedFilesByDeliverableId: {}, // { [deliverableId]: Array<{fileId:number,filePath:string,fileSize:number,lastModified?:number,exists?:boolean}> }
+      uploadingByDeliverableId: {}, // { [deliverableId]: boolean }
+      uploadProgressByDeliverableId: {}, // { [deliverableId]: number(0-100) }
+      uploadLoading: false,
+      uploadError: '',
+      hasDeliverablesBySstepId: {}
+      ,
+      // 文件预览弹窗状态
+      showPreviewDialog: false,
+      previewTitle: '',
+      previewType: '', // image | pdf | video | docx | text | unsupported
+      previewUrl: '', // 用于 image / pdf（Blob URL）
+      previewHTML: '', // docx
+      previewText: '', // txt
+      previewLoading: false,
+      previewError: '',
+      // 预览缩放（非 PDF 内置工具）
+      previewScale: 1.0
     };
   },
   computed: {
@@ -664,14 +796,50 @@ export default {
       }
     },
     /**
+     * 函数级注释：下载指定交付物的模板文件（上传弹窗中使用）
+     * @param {number} deliverableId 交付物ID
+     * @param {string} filename 文件名
+     */
+    async downloadTemplateForDialog(deliverableId, filename) {
+      try {
+        const blob = await downloadDeliverableTemplate(deliverableId, filename)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        this.showError('下载模板失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：是否展示“交付物管理”三按钮
+     * 仅当当前行是步骤（标准/接口/个性化），且该 sstepId 有交付物配置时显示。
+     */
+    shouldShowDeliverableActions(row) {
+      const type = row?.rowType
+      if (type === 'step' || type === 'interface_step' || type === 'personal_step') {
+        const sid = row?.sstepId
+        return !!sid && !!this.hasDeliverablesBySstepId[sid]
+      }
+      // 里程碑行保持原样显示
+      if (type === 'milestone') return true
+      return false
+    },
+    /**
      * 函数级注释：
      * 触发上传文件选择。
      * 后端对接计划：将文件与项目步骤/里程碑实体关联，上传到项目交付文件表。
      */
     onUploadDeliverable(row) {
-      this.deliverableDialogRow = row
-      const input = this.$refs?.deliverableUploader
-      if (input) input.click()
+      // 打开“上传交付物”弹窗，并根据当前行（步骤或里程碑）准备上下文
+      this.uploadError = ''
+      this.uploadLoading = true
+      this.showUploadDialog = true
+      this.prepareUploadContext(row)
     },
     /**
      * 函数级注释：
@@ -750,6 +918,223 @@ export default {
       this.deliverableList = []
       this.deliverableError = ''
     },
+    /**
+     * 函数级注释：准备“上传交付物”上下文
+     * 根据行类型拉取标准交付物列表，并为每个交付物拉取模板（仅保留有模板的交付物）。
+     * 步骤：使用 sstepId 获取交付物；里程碑：根据名称映射 milestoneId 获取交付物。
+     */
+    async prepareUploadContext(row) {
+      try {
+        this.uploadDeliverables = []
+        this.uploadTemplatesByDeliverableId = {}
+        this.uploadedFilesByDeliverableId = {}
+        // 获取当前行对应的交付物列表
+        let list = []
+        if (row.rowType === 'step' && row.sstepId) {
+          const resp = await getStandardDeliverablesByStepId(row.sstepId)
+          list = Array.isArray(resp) ? resp : (resp?.deliverables || resp?.items || [])
+          // 为模板过滤保留 sstepId
+          list = (list || []).map(d => ({ ...d, sstepId: row.sstepId }))
+        } else if (row.rowType === 'interface_step' && row.sstepId) {
+          // 接口开发步骤：使用标准步骤ID载入交付物与模板
+          const resp = await getStandardDeliverablesByStepId(row.sstepId)
+          list = Array.isArray(resp) ? resp : (resp?.deliverables || resp?.items || [])
+          list = (list || []).map(d => ({ ...d, sstepId: row.sstepId }))
+        } else if (row.rowType === 'personal_step' && row.sstepId) {
+          // 个性化开发步骤：使用标准步骤ID载入交付物与模板
+          const resp = await getStandardDeliverablesByStepId(row.sstepId)
+          list = Array.isArray(resp) ? resp : (resp?.deliverables || resp?.items || [])
+          list = (list || []).map(d => ({ ...d, sstepId: row.sstepId }))
+        } else if (row.rowType === 'milestone') {
+          // 按项目ID与里程碑名称查询标准交付物（后台按名称映射标准里程碑ID）
+          const projectId = this.project?.projectId
+          const milestoneName = row.milestoneName
+          if (projectId && milestoneName) {
+            const listByName = await getStandardDeliverablesByProjectAndMilestoneName(projectId, milestoneName)
+            list = Array.isArray(listByName) ? listByName : []
+          }
+          // 兜底：仍尝试使用已加载的标准里程碑映射ID
+          if ((!list || list.length === 0) && this.standardMilestones && row.milestoneName) {
+            let mid = row.milestoneId || null
+            if (!mid) {
+              const m = this.standardMilestones.find(x => x.milestoneName === row.milestoneName)
+              mid = m ? m.milestoneId : null
+            }
+            if (mid) {
+              const resp = await getStandardDeliverables({ milestoneId: mid, page: 0, size: 200 })
+              list = Array.isArray(resp) ? resp : (resp?.deliverables || resp?.items || [])
+            }
+          }
+        }
+        // 拉取模板（若无模板也允许上传）与已上传文件列表
+        const result = []
+        const projectId = this.project?.projectId
+        for (const d of list || []) {
+          const did = d?.deliverableId || d?.id
+          if (!did) continue
+          try {
+            const templates = await listDeliverableTemplates(did)
+            if (templates && templates.length > 0) {
+              this.uploadTemplatesByDeliverableId[did] = templates
+            } else {
+              this.uploadTemplatesByDeliverableId[did] = []
+            }
+          } catch (_) {
+            this.uploadTemplatesByDeliverableId[did] = []
+          }
+          // 已上传文件列表
+          try {
+            if (projectId) {
+              const files = await listConstructDeliverableFiles(projectId, did)
+              this.uploadedFilesByDeliverableId[did] = Array.isArray(files) ? files : []
+            } else {
+              this.uploadedFilesByDeliverableId[did] = []
+            }
+          } catch (_) { /* 忽略单个失败 */ }
+          // 无论是否有模板，都允许上传
+          // 注入当前行的项目步骤关系ID以供上传接口使用（projectStepId）
+          result.push({ deliverableId: did, deliverableName: d.deliverableName, sstepId: d.sstepId, milestoneId: d.milestoneId, projectStepId: row.relationId || null })
+        }
+        this.uploadDeliverables = result
+      } catch (e) {
+        this.uploadError = e?.message || '上传上下文准备失败'
+      } finally {
+        this.uploadLoading = false
+      }
+    },
+    /**
+     * 函数级注释：关闭上传弹窗并清理状态
+     */
+    closeUploadDialog() {
+      this.showUploadDialog = false
+      this.uploadDeliverables = []
+      this.uploadTemplatesByDeliverableId = {}
+      this.selectedUploadFilesByDeliverableId = {}
+      this.uploadError = ''
+      this.uploadLoading = false
+    },
+    /**
+     * 函数级注释：为某个交付物选择待上传文件
+     * @param {Object} d 交付物
+     * @param {Event} evt 文件选择事件
+     */
+    /**
+     * 函数级注释：文件选择后自动发起上传并显示进度
+     * - 存储选中文件并立即调用上传方法；
+     * - 使用 axios 的 onUploadProgress 回调更新进度条；
+     * - 上传完成后刷新已上传文件列表。
+     */
+    handleUploadFileSelectedForDeliverable(d, evt) {
+      const files = Array.from(evt?.target?.files || [])
+      const did = d?.deliverableId
+      if (did) this.selectedUploadFilesByDeliverableId[did] = files
+      // 重置 input 便于重复选择
+      if (evt?.target) evt.target.value = ''
+      if (did && files.length > 0) {
+        this.uploadingByDeliverableId[did] = true
+        this.uploadProgressByDeliverableId[did] = 0
+        this.uploadFilesForDeliverable(d, (percent) => {
+          this.uploadProgressByDeliverableId[did] = percent
+        }).finally(() => {
+          this.uploadingByDeliverableId[did] = false
+        })
+      }
+    },
+    /**
+     * 函数级注释：执行上传交付物文件
+     * 使用后端 `/construct-deliverable-files/{projectId}/{deliverableId}/upload` 接口，
+     * 后端将按规则重命名并保存到 `deliverableFiles/<项目编号-项目名称>/<里程碑名称>/`。
+     * @param {Object} d 交付物对象
+     */
+    /**
+     * 函数级注释：执行上传交付物文件（支持进度回调）
+     * 使用后端 `/construct-deliverable-files/{projectId}/{deliverableId}/upload` 接口，
+     * 后端将按规则重命名并保存到 `deliverableFiles/<项目编号-项目名称>/<里程碑名称>/`。
+     * @param {Object} d 交付物对象
+     * @param {Function} [onProgress] 进度回调，参数为百分比整数 0-100
+     */
+    /**
+     * 函数级注释：执行上传交付物文件（支持进度回调，避免整页刷新闪烁）
+     * - 上传成功后仅刷新当前交付物的文件列表并本地同步摘要文件映射，
+     *   不再调用整页的 loadSummary()，从而避免页面闪烁。
+     */
+    async uploadFilesForDeliverable(d, onProgress) {
+      try {
+        const projectId = this.project?.projectId
+        const deliverableId = d?.deliverableId
+        if (!projectId || !deliverableId) {
+          return this.showError('项目或交付物信息缺失，无法上传')
+        }
+        const files = this.selectedUploadFilesByDeliverableId[deliverableId] || []
+        if (!files || files.length === 0) {
+          return this.showError('请先选择文件')
+        }
+        const options = {}
+        // 步骤交付物传递 projectStepId，以便后端解析步骤名称与接口/个性化目录段
+        if (d.projectStepId) options.projectStepId = d.projectStepId
+        if (typeof onProgress === 'function') options.onProgress = onProgress
+        await uploadConstructDeliverableFiles(projectId, deliverableId, files, options)
+        this.$message && this.$message.success('上传成功')
+        // 仅刷新当前交付物的已上传文件列表并本地同步摘要文件映射，避免整页闪烁
+        await this.refreshUploadedFiles(deliverableId)
+        this.applyUploadedFilesToSummary(deliverableId)
+      } catch (e) {
+        this.showError('上传失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：刷新指定交付物的已上传文件列表
+     * @param {number} deliverableId 交付物ID
+     */
+    async refreshUploadedFiles(deliverableId) {
+      try {
+        const projectId = this.project?.projectId
+        if (!projectId || !deliverableId) return
+        const files = await listConstructDeliverableFiles(projectId, deliverableId)
+        this.uploadedFilesByDeliverableId[deliverableId] = Array.isArray(files) ? files : []
+      } catch (_) {
+        this.uploadedFilesByDeliverableId[deliverableId] = []
+      }
+    },
+    /**
+     * 函数级注释：本地同步摘要文件映射，避免整页刷新造成的闪烁
+     * - 将指定交付物的已上传文件映射到 `filesByDeliverableId` 与 `files`，
+     *   仅替换该交付物对应的片段，不影响其他内容。
+     * @param {number} deliverableId 交付物ID
+     */
+    applyUploadedFilesToSummary(deliverableId) {
+      try {
+        const list = this.uploadedFilesByDeliverableId[deliverableId] || []
+        // 更新映射
+        this.$set ? this.$set(this.filesByDeliverableId, deliverableId, list) : (this.filesByDeliverableId[deliverableId] = list)
+        // 更新平铺数组：先移除该交付物旧记录，再追加新记录
+        const prev = Array.isArray(this.files) ? this.files : []
+        const filtered = prev.filter(f => f && f.deliverableId !== deliverableId)
+        this.files = filtered.concat(list)
+      } catch (_) { /* 忽略局部同步错误 */ }
+    },
+    /**
+     * 函数级注释：删除已上传文件并刷新列表
+     * @param {number} fileId 文件记录ID
+     * @param {number} deliverableId 交付物ID（用于刷新列表）
+     */
+    async deleteUploadedFile(fileId, deliverableId) {
+      try {
+        const ok = this.$confirm ? await this.$confirm('确认删除该文件？') : window.confirm('确认删除该文件？')
+        if (!ok) return
+        await deleteConstructDeliverableFile(fileId)
+        this.$message && this.$message.success('删除成功')
+        await this.refreshUploadedFiles(deliverableId)
+      } catch (e) {
+        this.showError('删除失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：加载项目汇总数据
+     * - 根据路由参数 `projectId` 调用后端 `/api/projects/{id}/summary` 接口。
+     * - 成功时填充项目、步骤、里程碑、交付物与已上传文件。
+     * - 失败时优先显示后端返回的错误信息（如“项目不存在”），并停止加载状态。
+     */
     async loadSummary() {
       try {
         this.loading = true;
@@ -770,6 +1155,13 @@ export default {
           grouped[did].push(f);
         });
         this.filesByDeliverableId = grouped;
+        // 计算每个步骤是否在标准交付物模块中配置了交付物
+        const deliverableStepMap = {};
+        (this.deliverables || []).forEach(d => {
+          const sid = d && d.sstepId;
+          if (sid != null) deliverableStepMap[sid] = true;
+        });
+        this.hasDeliverablesBySstepId = deliverableStepMap;
         this.summaryLoaded = true;
         // 加载该项目下已保存的接口信息，用于展示接口块与对应步骤
         if (this.project && this.project.projectId) {
@@ -798,7 +1190,8 @@ export default {
           }
         }
       } catch (err) {
-        this.error = (err && err.message) ? err.message : '加载失败';
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.error;
+        this.error = backendMsg ? `加载失败：${backendMsg}` : (err?.message || '加载失败');
       } finally {
         this.loading = false;
       }
@@ -1030,6 +1423,20 @@ export default {
     downloadURL(fileId) {
       return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/download/${fileId}`;
     },
+    /**
+     * 函数级注释：获取后端 Office→PDF 预览端点URL
+     * - 统一将 doc/docx/ppt/pptx 转换为 PDF，供 PDFJS 渲染。
+     */
+    convertPreviewPdfURL(fileId) {
+      return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/preview/pdf/${fileId}`;
+    },
+    /**
+     * 函数级注释：获取后端 MP4 视频预览端点 URL
+     * - 返回 inline 的 mp4 资源，支持 Range 分段；用于 <video> src。
+     */
+    convertPreviewVideoURL(fileId) {
+      return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/preview/video/${fileId}`;
+    },
     fileBaseName(path) {
       if (!path) return '未知文件';
       const parts = path.split(/[\\/]/);
@@ -1052,6 +1459,210 @@ export default {
     goBack() {
       this.$router.push('/home/construction');
     },
+    /**
+     * 函数级注释：关闭文件预览弹窗并清理状态
+     */
+    closePreviewDialog() {
+      try {
+        // 释放图片/PDF Blob URL
+        if ((this.previewType === 'image' || this.previewType === 'pdf') && this.previewUrl) {
+          URL.revokeObjectURL(this.previewUrl)
+        }
+      } catch (_) {}
+      // 重置状态
+      this.showPreviewDialog = false
+      this.previewTitle = ''
+      this.previewType = ''
+      this.previewUrl = ''
+      this.previewHTML = ''
+      this.previewText = ''
+      this.previewLoading = false
+      this.previewError = ''
+      // 重置缩放
+      this.previewScale = 1.0
+    },
+    /**
+     * 函数级注释：点击文件进行预览
+     * 支持类型：图片、pdf、doc/docx、xls/xlsx、ppt/pptx、txt；
+     * - 非 PDF 的 Office 文档（Word/Excel/PPT）统一调用后端 Office→PDF 端点，iframe 全屏预览。
+     * 其余类型提示不支持预览。
+     * @param {{fileId:number,filePath:string}} file 文件记录
+     */
+    async onPreviewFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      // 类型判定
+      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      // MP4 视频：直接指向后端视频预览端点，实现在线播放与拖动
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = this.convertPreviewVideoURL(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      // Word 文档：优先后端转 PDF 统一预览，失败时 DOCX 回退为 HTML
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          // 优先调用后端 Office→PDF 预览端点
+          const pdfBlob = await this.fetchPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          // 回退方案：仅对 docx 使用 Mammoth 转为 HTML
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'docx'
+              this.previewHTML = result.value || '<div>该文档无法转换为HTML</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'xls' || ext === 'xlsx') {
+        try {
+          const pdfBlob = await this.fetchPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || 'Excel 预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      // ppt、pptx：统一走后端 Office→PDF 预览端点，iframe 内嵌展示
+      if (ext === 'ppt' || ext === 'pptx') {
+        try {
+          const pdfBlob = await this.fetchPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '演示文稿预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      // 其他未知格式
+      this.previewType = 'unsupported'
+      this.previewLoading = false
+    },
+    /**
+     * 函数级注释：PDF 放大
+     */
+    pdfZoomIn() {
+      this.previewScale = Math.min(this.previewScale + 0.1, 3.0)
+    },
+    /**
+     * 函数级注释：PDF 缩小
+     */
+    pdfZoomOut() {
+      this.previewScale = Math.max(this.previewScale - 0.1, 0.3)
+    },
+    /**
+     * 函数级注释：PDF 上一页
+     */
+    // 移除分页控制，使用浏览器内置 PDF 查看器的分页功能
+    /**
+     * 函数级注释：从后端下载接口获取文件 Blob
+     * 使用现有下载端点，不更改后端逻辑与响应头。
+     * @param {number} fileId 文件ID
+     * @returns {Promise<Blob>} 文件二进制
+     */
+    async fetchBlob(fileId) {
+      const url = this.downloadURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：获取后端 Office→PDF 预览的 PDF Blob
+     * - 统一将 Word 文档（doc/docx）转换为 PDF，供 iframe 内置查看器预览。
+     * - 保持与后端认证一致，携带凭证。
+     * @param {number} fileId 文件ID
+     * @returns {Promise<Blob>} PDF 二进制
+     */
+    async fetchPreviewPdfBlob(fileId) {
+      const url = this.convertPreviewPdfURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('预览转换失败：' + resp.status)
+      return await resp.blob()
+    },
+    
     // 接口新增弹窗控制
     openInterfaceDialog() {
       this.showInterfaceDialog = true
@@ -1272,6 +1883,7 @@ export default {
 .add-personal-btn:hover { background:#0f5fd6; }
 .dialog-mask { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .dialog { width:420px; background:#fff; border-radius:8px; border:1px solid #eee; padding:16px; }
+.dialog.upload-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
 .dialog h4 { margin:0 0 12px; }
 .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
 .form-row input, .form-row select { height:32px; padding:0 8px; border:1px solid #ddd; border-radius:4px; }
@@ -1279,17 +1891,26 @@ export default {
 .dialog-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 .btn { padding:6px 12px; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer; }
 .btn.ghost { background:#f5f7fa; }
+.btn.primary { background:#1677ff; border-color:#1677ff; color:#fff; }
+.btn.primary:hover { background:#0f5fd6; border-color:#0f5fd6; }
+.btn.disabled { opacity:.6; cursor:not-allowed; }
 /* 删除按钮颜色与名称文字颜色保持一致（接口与个性化信息行） */
 .interface-info-row .btn.ghost,
 .personal-info-row .btn.ghost {
   color: inherit;
 }
 /* 交付物管理列与图标按钮样式 */
-.deliverable-actions {
+.deliverable-actions { /* 保持表格单元格默认布局，避免高度不一致 */ }
+.deliverable-actions .actions-inner {
   display: flex;
   align-items: center;
   gap: 8px;
   justify-content: flex-start;
+}
+.table td.deliverable-actions:empty::before {
+  content: "";
+  display: block;
+  height: 28px; /* 与图标按钮高度一致，保证行高与下边线对齐 */
 }
 .icon-btn {
   width: 28px;
@@ -1317,6 +1938,19 @@ export default {
   height: 18px;
   fill: currentColor;
 }
+.upload-list { display:flex; flex-direction:column; gap:12px; }
+.upload-item { border:1px solid #eee; border-radius:8px; padding:12px; background:#fafafa; }
+.upload-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.upload-head .name { font-weight:600; color:#333; }
+.upload-head .hint { color:#888; font-size:12px; }
+.template-title { color:#666; font-size:12px; margin-bottom:6px; }
+.chip-group { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid #e5e7eb; border-radius:16px; background:#fff; font-size:12px; color:#374151; }
+.chip.clickable { cursor:pointer; }
+.chip.clickable:hover { background:#f9fafb; border-color:#d1d5db; }
+.chip .chip-name { font-weight:500; }
+.chip .chip-meta { color:#6b7280; }
+.upload-actions { display:flex; align-items:center; gap:12px; margin-top:8px; }
 .deliverable-list {
   list-style: none;
   padding: 0;
@@ -1331,4 +1965,27 @@ export default {
 }
 .deliverable-list .name { font-weight: 500; }
 .deliverable-list .type { color: #6b7280; font-size: 12px; }
+/* 上传进度条样式 */
+.progress { position: relative; height: 6px; background: #f0f0f0; border-radius: 4px; margin-top: 8px; }
+.progress .bar { height: 100%; background: #409eff; border-radius: 4px; width: 0%; transition: width .2s ease; }
+.progress .percent { position: absolute; top: -18px; right: 0; font-size: 12px; color: #666; }
+.file-list.compact .file-item { padding:2px 0; }
+/* 预览弹窗样式 */
+.preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; flex-direction: column; }
+.preview-header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: #111827; color: #fff; }
+.preview-header .title { font-size: 14px; font-weight: 600; color: #fff; }
+.preview-header .tools { display: flex; align-items: center; gap: 8px; }
+.preview-body { flex: 1; background: #0f172a; color: #fff; overflow: auto; padding: 12px; }
+.preview-content { display: inline-block; transform-origin: center top; }
+.preview-image { max-width: 100%; height: auto; display: block; }
+.pdf-embed { width: 100%; height: 100%; border: none; background: #0f172a; }
+.video-player { width: 100%; height: 100%; background: #000; }
+.pdf-viewer { display: inline-block; background: #fff; padding: 8px; border-radius: 6px; }
+.pdf-nav { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.html-view { background: #fff; color: #111; padding: 12px; border-radius: 6px; max-width: 100%; }
+.text-view { background: #111827; color: #e5e7eb; padding: 12px; border-radius: 6px; max-width: 100%; white-space: pre-wrap; }
+.loading { color: #e5e7eb; }
+.error { color: #fecaca; }
+.unsupported { color: #e5e7eb; }
+/* 已移除 Luckysheet 容器样式：统一使用 iframe 全屏预览 PDF */
 </style>

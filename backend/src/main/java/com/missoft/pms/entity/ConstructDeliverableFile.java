@@ -6,6 +6,18 @@ import java.time.LocalDateTime;
 /**
  * 项目交付物文件实体类
  * 对应数据库表：construct_deliverableFiles
+ *
+ * 字段说明：
+ * - fileId: 主键ID。
+ * - filePath: 文件相对路径，存储于项目根目录下的 deliverableFiles 子目录。
+ * - fileSize: 文件大小（字节）。
+ * - uploaderId: 上传人用户ID（外键 user.userId）。
+ * - deliverableId: 标准交付物ID（外键 standard_deliverable.deliverableId）。
+ * - projectId: 项目ID（外键 constructing_project.projectId）。
+ * - milestoneId: 标准里程碑ID（外键 construct_milestone.milestoneId）。
+ * - projectStepId: 项目-标准步骤关系ID（外键 project_sstep_relations.relationId）。
+ * - nstepId: 非标准步骤ID（外键 nonstandard_construct_step.nstepId）。
+ * - createTime/updateTime: 记录创建与更新时间，由 JPA 生命周期回调维护。
  */
 @Entity
 @Table(name = "construct_deliverableFiles")
@@ -50,10 +62,16 @@ public class ConstructDeliverableFile {
     private Long projectId;
 
     /**
-     * 标准步骤ID（外键 standard_construct_step.sstepId）
+     * 标准里程碑ID（外键 construct_milestone.milestoneId）
      */
-    @Column(name = "sstepId")
-    private Long sstepId;
+    @Column(name = "milestoneId")
+    private Long milestoneId;
+
+    /**
+     * 项目步骤关系ID（外键 project_sstep_relations.relationId）
+     */
+    @Column(name = "projectStepId")
+    private Long projectStepId;
 
     /**
      * 非标准步骤ID（外键 nonstandard_construct_step.nstepId）
@@ -94,8 +112,28 @@ public class ConstructDeliverableFile {
     public Long getProjectId() { return projectId; }
     public void setProjectId(Long projectId) { this.projectId = projectId; }
 
-    public Long getSstepId() { return sstepId; }
-    public void setSstepId(Long sstepId) { this.sstepId = sstepId; }
+    /**
+     * 获取标准里程碑ID
+     * @return 里程碑ID（construct_milestone.milestoneId）
+     */
+    public Long getMilestoneId() { return milestoneId; }
+
+    /**
+     * 设置标准里程碑ID
+     * @param milestoneId 里程碑ID
+     */
+    public void setMilestoneId(Long milestoneId) { this.milestoneId = milestoneId; }
+
+    /**
+     * 获取项目步骤关系ID
+     * @return 项目-标准步骤关系主键ID
+     */
+    public Long getProjectStepId() { return projectStepId; }
+    /**
+     * 设置项目步骤关系ID
+     * @param projectStepId 项目-标准步骤关系主键ID
+     */
+    public void setProjectStepId(Long projectStepId) { this.projectStepId = projectStepId; }
 
     public Long getNstepId() { return nstepId; }
     public void setNstepId(Long nstepId) { this.nstepId = nstepId; }
