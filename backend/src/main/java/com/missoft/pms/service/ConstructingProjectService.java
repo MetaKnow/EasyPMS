@@ -3,6 +3,7 @@ package com.missoft.pms.service;
 import com.missoft.pms.dto.ConstructingProjectDTO;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.repository.ConstructingProjectRepository;
+import com.missoft.pms.repository.ConstructDeliverableFileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Comparator;
+import java.util.Optional;
 
 /**
  * 在建项目服务类
@@ -33,6 +39,8 @@ public class ConstructingProjectService {
 
     @Autowired
     private ConstructingProjectRepository constructingProjectRepository;
+    @Autowired
+    private ConstructDeliverableFileRepository constructDeliverableFileRepository;
     @Autowired
     private ProjectSstepRelationService projectSstepRelationService;
     @Autowired
@@ -332,9 +340,37 @@ public class ConstructingProjectService {
      * @throws RuntimeException 如果项目不存在
      */
     public void deleteConstructingProject(Long projectId) {
-        if (!constructingProjectRepository.existsById(projectId)) {
-            throw new RuntimeException("项目不存在，ID: " + projectId);
+        // 函数级注释：删除在建项目，同时最佳努力清理该项目的交付物文件与记录。
+        // 处理顺序：
+        // 1. 获取项目信息以构建 deliverableFiles/<项目编号-项目名称>/ 路径前缀；
+        // 2. 删除该项目的交付物文件数据库记录（不阻塞主流程，异常忽略）；
+        // 3. 递归删除文件系统目录 deliverableFiles/<项目编号-项目名称>/（不阻塞主流程，异常忽略）；
+        // 4. 删除项目本身记录。
+
+        ConstructingProject project = constructingProjectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("项目不存在，ID: " + projectId));
+
+        // 删除交付物文件数据库记录
+        try {
+            var records = constructDeliverableFileRepository.findByProjectId(projectId);
+            if (records != null && !records.isEmpty()) {
+                constructDeliverableFileRepository.deleteAll(records);
+            }
+        } catch (Exception ignore) {
+            // 文件记录删除失败不阻塞项目删除
         }
+
+        // 删除物理目录 deliverableFiles/<项目编号-项目名称>/
+        try {
+            String projectKey = buildProjectKey(project);
+            Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+            Path projectDir = repoRoot.resolve("deliverableFiles").resolve(projectKey);
+            deleteDirectoryRecursively(projectDir);
+        } catch (Exception ignore) {
+            // 物理文件删除失败不阻塞项目删除
+        }
+
+        // 删除项目记录
         constructingProjectRepository.deleteById(projectId);
     }
 
@@ -354,6 +390,33 @@ public class ConstructingProjectService {
             }
         }
         
+        // 函数级注释：批量删除项目时，同时清理每个项目的交付物文件与记录（最佳努力）。
+        for (Long projectId : projectIds) {
+            try {
+                ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+                // 删除交付物文件数据库记录
+                try {
+                    var records = constructDeliverableFileRepository.findByProjectId(projectId);
+                    if (records != null && !records.isEmpty()) {
+                        constructDeliverableFileRepository.deleteAll(records);
+                    }
+                } catch (Exception ignore) {}
+
+                // 删除物理目录 deliverableFiles/<项目编号-项目名称>/
+                if (project != null) {
+                    try {
+                        String projectKey = buildProjectKey(project);
+                        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+                        Path projectDir = repoRoot.resolve("deliverableFiles").resolve(projectKey);
+                        deleteDirectoryRecursively(projectDir);
+                    } catch (Exception ignore) {}
+                }
+            } catch (Exception ignore) {
+                // 单个项目清理失败不阻塞整体批量删除
+            }
+        }
+
+        // 最后删除项目记录
         constructingProjectRepository.deleteAllById(projectIds);
     }
 
@@ -467,6 +530,45 @@ public class ConstructingProjectService {
     @Transactional(readOnly = true)
     public long countByProjectState(String projectState) {
         return constructingProjectRepository.countByProjectState(projectState);
+    }
+
+    /**
+     * 函数级注释：构建项目目录键 `<项目编号-项目名称>`，用于拼接 deliverableFiles 子目录。
+     * 规则与交付物上传路径保持一致，替换非法文件名字符为下划线。
+     *
+     * @param project 在建项目实体
+     * @return 目录键，如 `MS-20250101_0001-智慧政务平台`
+     */
+    private String buildProjectKey(ConstructingProject project) {
+        String projNum = Optional.ofNullable(project.getProjectNum()).orElse("unknown").trim();
+        String projName = Optional.ofNullable(project.getProjectName()).orElse("未命名项目").trim();
+        String safeProjNum = projNum.replaceAll("[\\\\/:*?\"<>|]", "_");
+        String safeProjName = projName.replaceAll("[\\\\/:*?\"<>|]", "_");
+        return safeProjNum + "-" + safeProjName;
+    }
+
+    /**
+     * 函数级注释：递归删除指定目录及其所有子文件/子目录。
+     * 若目录不存在则直接返回；删除过程中的异常被忽略以保证主流程。
+     *
+     * @param dir 需要删除的目录路径
+     */
+    private void deleteDirectoryRecursively(Path dir) {
+        try {
+            if (dir == null || !Files.exists(dir)) {
+                return;
+            }
+            // 先删文件，再删子目录，最后删根目录
+            Files.walk(dir)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (Exception ignore) {}
+                    });
+        } catch (Exception ignore) {
+            // 忽略清理异常
+        }
     }
 
     /**

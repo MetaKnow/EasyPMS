@@ -259,13 +259,33 @@ public class ConstructDeliverableFileService {
         return saved;
     }
 
+    /**
+     * 函数级注释：列出项目交付物文件
+     * 支持按步骤 relationId（projectStepId）过滤，用于“上传交付物”界面加载当前步骤已上传文件。
+     * 若未提供 projectStepId，则返回该项目下该交付物的全部记录。
+     * @param projectId 项目ID
+     * @param deliverableId 交付物ID
+     * @param projectStepId 项目-步骤关系ID（可选）
+     * @return 文件信息列表（包含 projectStepId、deliverableId、milestoneId、尺寸等）
+     */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listFiles(Long projectId, Long deliverableId) {
-        List<ConstructDeliverableFile> records = fileRepository.findByProjectIdAndDeliverableId(projectId, deliverableId);
+    public List<Map<String, Object>> listFiles(Long projectId, Long deliverableId, Long projectStepId) {
+        List<ConstructDeliverableFile> records;
+        if (projectStepId != null) {
+            records = fileRepository.findByProjectIdAndDeliverableIdAndProjectStepId(projectId, deliverableId, projectStepId);
+        } else {
+            records = fileRepository.findByProjectIdAndDeliverableId(projectId, deliverableId);
+        }
         List<Map<String, Object>> files = new ArrayList<>();
         Path projectRoot = Paths.get("").toAbsolutePath().getParent();
         for (ConstructDeliverableFile r : records) {
             Map<String, Object> info = new HashMap<>();
+            // 函数级注释：为前端查看弹窗提供必要的上下文字段
+            // - 返回 projectStepId：用于接口/个性化步骤的过滤（relationId）
+            // - 返回 deliverableId：前端映射到指定交付物的文件列表
+            // - 返回 milestoneId：用于里程碑查看过滤
+            info.put("projectStepId", r.getProjectStepId());
+            info.put("deliverableId", r.getDeliverableId());
             info.put("fileId", r.getFileId());
             info.put("filePath", r.getFilePath());
             info.put("fileSize", r.getFileSize());

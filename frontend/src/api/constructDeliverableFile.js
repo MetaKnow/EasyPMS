@@ -70,9 +70,18 @@ export async function uploadConstructDeliverableFiles(projectId, deliverableId, 
  * @param {number} deliverableId 标准交付物ID
  * @returns {Promise<Array>} 文件信息列表
  */
-export async function listConstructDeliverableFiles(projectId, deliverableId) {
+/**
+ * 函数级注释：列出项目交付物文件
+ * 支持按项目步骤关系ID（relationId）过滤：传入 options.projectStepId
+ * @param {number} projectId 项目ID
+ * @param {number} deliverableId 标准交付物ID
+ * @param {Object} [options] 可选项：{ projectStepId?: number }
+ * @returns {Promise<Array>} 文件信息列表
+ */
+export async function listConstructDeliverableFiles(projectId, deliverableId, options = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}/construct-deliverable-files/${projectId}/${deliverableId}`, {
+    const qs = (options && options.projectStepId != null) ? `?projectStepId=${encodeURIComponent(options.projectStepId)}` : ''
+    const response = await fetch(`${API_BASE_URL}/construct-deliverable-files/${projectId}/${deliverableId}${qs}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     })

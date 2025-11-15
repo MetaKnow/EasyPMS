@@ -39,6 +39,21 @@ public class ConstructDeliverableFileController {
     @Autowired
     private ConstructDeliverableFileService fileService;
 
+    @Autowired
+    private com.missoft.pms.repository.ConstructDeliverableFileRepository fileRepository;
+    @Autowired
+    private com.missoft.pms.repository.ProjectSstepRelationRepository relationRepository;
+    @Autowired
+    private com.missoft.pms.repository.StandardConstructStepRepository stepRepository;
+    @Autowired
+    private com.missoft.pms.repository.InterfaceRepository interfaceRepository;
+    @Autowired
+    private com.missoft.pms.repository.PersonalDevelopeRepository personalDevelopeRepository;
+    @Autowired
+    private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
+    @Autowired
+    private com.missoft.pms.repository.StandardDeliverableRepository standardDeliverableRepository;
+
 
     /**
      * 函数级注释：上传项目交付物文件。
@@ -77,14 +92,17 @@ public class ConstructDeliverableFileController {
     }
 
     /**
-     * 列出项目交付物文件
+     * 函数级注释：列出项目交付物文件
+     * 支持通过可选 query 参数 `projectStepId` 按步骤 relationId 过滤。
+     * 示例：GET /api/construct-deliverable-files/{projectId}/{deliverableId}?projectStepId=123
      */
     @GetMapping("/{projectId}/{deliverableId}")
     public ResponseEntity<Map<String, Object>> list(
             @PathVariable Long projectId,
-            @PathVariable Long deliverableId) {
+            @PathVariable Long deliverableId,
+            @RequestParam(value = "projectStepId", required = false) Long projectStepId) {
         try {
-            List<Map<String, Object>> files = fileService.listFiles(projectId, deliverableId);
+            List<Map<String, Object>> files = fileService.listFiles(projectId, deliverableId, projectStepId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("files", files);
             return ResponseEntity.ok(resp);
@@ -131,6 +149,226 @@ public class ConstructDeliverableFileController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 函数级注释：下载步骤交付物文件集合。
+     * 行为：
+     * - 若该步骤仅上传了一个文件，则直接回传该文件；
+     * - 若上传了多个文件，则打包为ZIP返回；ZIP名称为“步骤名称.zip”，
+     *   当为接口/个性化步骤时为“开发项名称-步骤名称.zip”。
+     * 压缩结构：平铺文件，不再按交付物分子目录。
+     */
+    @GetMapping("/download/step/{projectId}/{relationId}")
+    public ResponseEntity<StreamingResponseBody> downloadStepBundle(
+            @PathVariable Long projectId,
+            @PathVariable Long relationId) {
+        try {
+            var records = fileRepository.findByProjectIdAndProjectStepId(projectId, relationId);
+            if (records == null || records.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outputStream -> {});
+            }
+
+            // 解析步骤与开发项名称，用于压缩包命名
+            String stepName = "步骤";
+            String itemName = null;
+            var rel = relationRepository.findById(relationId).orElse(null);
+            if (rel != null && rel.getSstepId() != null) {
+                var step = stepRepository.findById(rel.getSstepId()).orElse(null);
+                if (step != null && step.getSstepName() != null) {
+                    stepName = step.getSstepName().trim();
+                }
+                if (rel.getInterfaceId() != null) {
+                    var iface = interfaceRepository.findById(rel.getInterfaceId()).orElse(null);
+                    if (iface != null && iface.getIntegrationSysName() != null) {
+                        itemName = iface.getIntegrationSysName().trim();
+                    }
+                } else if (rel.getPersonalDevId() != null) {
+                    var pdev = personalDevelopeRepository.findById(rel.getPersonalDevId()).orElse(null);
+                    if (pdev != null && pdev.getPersonalDevName() != null) {
+                        itemName = pdev.getPersonalDevName().trim();
+                    }
+                }
+            }
+            String zipName = (itemName != null && !itemName.isEmpty() ? (itemName + "-") : "") + stepName + ".zip";
+
+            // 单文件直接下载
+            if (records.size() == 1) {
+                var target = fileService.resolveFilePath(records.get(0).getFileId());
+                if (!java.nio.file.Files.exists(target)) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outputStream -> {});
+                }
+                org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(target.toUri());
+                String contentType = java.nio.file.Files.probeContentType(target);
+                if (contentType == null) contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+                String filename = target.getFileName().toString();
+                ContentDisposition cd = ContentDisposition.attachment().filename(filename, java.nio.charset.StandardCharsets.UTF_8).build();
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .body(outputStream -> {
+                            try (var in = resource.getInputStream()) {
+                                in.transferTo(outputStream);
+                            }
+                        });
+            }
+
+            // 多文件：压缩为ZIP
+            StreamingResponseBody srb = outputStream -> {
+                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(outputStream)) {
+                    for (var rec : records) {
+                        var path = fileService.resolveFilePath(rec.getFileId());
+                        if (!java.nio.file.Files.exists(path)) continue;
+                        String entryName = path.getFileName().toString();
+                        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
+                        zos.putNextEntry(entry);
+                        try (var in = java.nio.file.Files.newInputStream(path)) {
+                            in.transferTo(zos);
+                        }
+                        zos.closeEntry();
+                    }
+                }
+            };
+            ContentDisposition cd = ContentDisposition.attachment().filename(zipName, java.nio.charset.StandardCharsets.UTF_8).build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(srb);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(outputStream -> {
+                try {
+                    outputStream.write(("Failed: " + e.getMessage()).getBytes());
+                } catch (Exception ignore) {}
+            });
+        }
+    }
+
+    /**
+     * 函数级注释：下载里程碑交付物集合。
+     * 行为：
+     * - includeSteps=false：仅打包该里程碑的里程碑交付物；若仅一个文件则直接下载；
+     * - includeSteps=true：将里程碑交付物放入“里程碑名称/”文件夹，将该里程碑所属步骤的交付物按
+     *   “[开发项名称/]<步骤名称>/”分文件夹存放，统一打包为一个ZIP；若仅一个文件则直接下载。
+     * 压缩包名称：默认“里程碑名称.zip”。
+     */
+    @GetMapping("/download/milestone/{projectId}/{milestoneId}")
+    public ResponseEntity<StreamingResponseBody> downloadMilestoneBundle(
+            @PathVariable Long projectId,
+            @PathVariable Long milestoneId,
+            @RequestParam(name = "includeSteps", defaultValue = "false") boolean includeSteps) {
+        try {
+            var all = fileRepository.findByProjectIdAndMilestoneId(projectId, milestoneId);
+            if (all == null || all.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outputStream -> {});
+            }
+
+            // 解析里程碑名称
+            String milestoneName = constructMilestoneRepository.findById(milestoneId)
+                    .map(m -> m.getMilestoneName() != null ? m.getMilestoneName().trim() : "里程碑")
+                    .orElse("里程碑");
+
+            // 分类：里程碑交付物 vs 步骤交付物
+            java.util.Map<Long, String> typeByDeliverableId = new java.util.HashMap<>();
+            for (var rec : all) {
+                Long did = rec.getDeliverableId();
+                if (did == null || typeByDeliverableId.containsKey(did)) continue;
+                var d = standardDeliverableRepository.findById(did).orElse(null);
+                String tp = d != null ? d.getDeliverableType() : null;
+                typeByDeliverableId.put(did, tp);
+            }
+            java.util.List<com.missoft.pms.entity.ConstructDeliverableFile> milestoneFiles = new java.util.ArrayList<>();
+            java.util.List<com.missoft.pms.entity.ConstructDeliverableFile> stepFiles = new java.util.ArrayList<>();
+            for (var rec : all) {
+                String tp = typeByDeliverableId.get(rec.getDeliverableId());
+                if ("里程碑交付物".equals(tp)) milestoneFiles.add(rec); else stepFiles.add(rec);
+            }
+
+            java.util.List<com.missoft.pms.entity.ConstructDeliverableFile> working = includeSteps ? all : milestoneFiles;
+            if (working.size() == 1) {
+                var target = fileService.resolveFilePath(working.get(0).getFileId());
+                if (!java.nio.file.Files.exists(target)) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outputStream -> {});
+                }
+                org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(target.toUri());
+                String contentType = java.nio.file.Files.probeContentType(target);
+                if (contentType == null) contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+                String filename = target.getFileName().toString();
+                ContentDisposition cd = ContentDisposition.attachment().filename(filename, java.nio.charset.StandardCharsets.UTF_8).build();
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .body(outputStream -> {
+                            try (var in = resource.getInputStream()) {
+                                in.transferTo(outputStream);
+                            }
+                        });
+            }
+
+            // 多文件压缩：构建目录结构
+            String zipName = milestoneName + ".zip";
+            StreamingResponseBody srb = outputStream -> {
+                try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(outputStream)) {
+                    for (var rec : working) {
+                        var path = fileService.resolveFilePath(rec.getFileId());
+                        if (!java.nio.file.Files.exists(path)) continue;
+                        String base = path.getFileName().toString();
+                        String entryName;
+                        String tp = typeByDeliverableId.get(rec.getDeliverableId());
+                        if ("里程碑交付物".equals(tp)) {
+                            // 调整：当同时下载所属步骤时，里程碑交付物直接位于ZIP根目录
+                            entryName = includeSteps ? base : (milestoneName + "/" + base);
+                        } else {
+                            // 步骤文件：按 [开发项名称/]步骤名称/ 目录
+                            String stepFolder = "步骤";
+                            String itemFolder = null;
+                            Long relId = rec.getProjectStepId();
+                            if (relId != null) {
+                                var relx = relationRepository.findById(relId).orElse(null);
+                                if (relx != null && relx.getSstepId() != null) {
+                                    var step = stepRepository.findById(relx.getSstepId()).orElse(null);
+                                    if (step != null && step.getSstepName() != null) {
+                                        stepFolder = step.getSstepName().trim();
+                                    }
+                                }
+                                if (relx != null && relx.getInterfaceId() != null) {
+                                    var iface = interfaceRepository.findById(relx.getInterfaceId()).orElse(null);
+                                    if (iface != null && iface.getIntegrationSysName() != null) {
+                                        itemFolder = iface.getIntegrationSysName().trim();
+                                    }
+                                } else if (relx != null && relx.getPersonalDevId() != null) {
+                                    var pdev = personalDevelopeRepository.findById(relx.getPersonalDevId()).orElse(null);
+                                    if (pdev != null && pdev.getPersonalDevName() != null) {
+                                        itemFolder = pdev.getPersonalDevName().trim();
+                                    }
+                                }
+                            }
+                            if (itemFolder != null && !itemFolder.isEmpty()) {
+                                entryName = itemFolder + "/" + stepFolder + "/" + base;
+                            } else {
+                                entryName = stepFolder + "/" + base;
+                            }
+                        }
+                        java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(entryName);
+                        zos.putNextEntry(entry);
+                        try (var in = java.nio.file.Files.newInputStream(path)) {
+                            in.transferTo(zos);
+                        }
+                        zos.closeEntry();
+                    }
+                }
+            };
+            ContentDisposition cd = ContentDisposition.attachment().filename(zipName, java.nio.charset.StandardCharsets.UTF_8).build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(srb);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(outputStream -> {
+                try {
+                    outputStream.write(("Failed: " + e.getMessage()).getBytes());
+                } catch (Exception ignore) {}
+            });
         }
     }
 

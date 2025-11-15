@@ -108,10 +108,10 @@
                 <td class="deliverable-actions">
                   <template v-if="shouldShowDeliverableActions(row)">
                     <div class="actions-inner">
-                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
                         <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                       </button>
-                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
                         <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
                       </button>
                       <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
@@ -215,10 +215,10 @@
                 <td class="deliverable-actions">
                   <template v-if="shouldShowDeliverableActions(row)">
                     <div class="actions-inner">
-                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
                         <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                       </button>
-                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
                         <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
                       </button>
                       <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
@@ -288,10 +288,10 @@
                 <td class="deliverable-actions">
                   <template v-if="shouldShowDeliverableActions(row)">
                     <div class="actions-inner">
-                      <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
                         <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                       </button>
-                      <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
                         <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
                       </button>
                       <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
@@ -329,10 +329,10 @@
                 <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
                 <td class="deliverable-actions">
                   <div class="actions-inner">
-                    <button class="icon-btn" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
+                    <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
                       <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                     </button>
-                    <button class="icon-btn" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                    <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
                       <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
                     </button>
                     <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
@@ -392,28 +392,46 @@
         </div>
       </div>
 
-      <!-- 交付物查看弹窗（轻量版） -->
+      <!-- 交付物查看弹窗（结构化版本，去除上下文与模板功能） -->
       <div v-if="showDeliverableDialog" class="dialog-mask" @click.self="closeDeliverableDialog">
-        <div class="dialog">
+        <div class="dialog view-dialog">
           <h4>交付物列表</h4>
+          <!-- 去除上下文标签与模式切换 -->
+
           <div class="form-row">
             <div v-if="deliverableLoading">正在加载交付物...</div>
             <div v-else-if="deliverableError" class="state error">{{ deliverableError }}</div>
             <div v-else>
-              <div v-if="!deliverableList || deliverableList.length === 0" style="color:#999">当前未配置可查看的交付物</div>
-              <ul v-else class="deliverable-list">
-                <li v-for="d in deliverableList" :key="d.deliverableId || d.id">
-                  <span class="name">{{ d.deliverableName || d.name }}</span>
-                  <span class="type">{{ d.deliverableType || '-' }}</span>
-                  <template v-if="deliverableDialogMode === 'download'">
-                    <button class="icon-btn" title="下载模板" @click="downloadFirstTemplate(d)" aria-label="下载模板">
-                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                    </button>
-                  </template>
-                </li>
-              </ul>
+              <div v-if="!deliverableList || deliverableList.length === 0" class="empty">当前未配置可查看的交付物</div>
+              <div v-else class="deliverable-cards">
+                <div class="deliverable-card" v-for="d in deliverableList" :key="d.deliverableId || d.id">
+                  <div class="deliverable-head">
+                    <div class="deliverable-meta">
+                      <span class="deliverable-name">{{ d.deliverableName || d.name }}</span>
+                      <span class="deliverable-type">{{ d.deliverableType || '-' }}</span>
+                    </div>
+                  </div>
+                  <!-- 文件列表区域：查看模式下显示已上传文件 -->
+                  <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[(d.deliverableId || d.id)]?.length">
+                    <div class="template-title">已上传文件：</div>
+                    <ul class="file-list compact">
+                      <li v-for="f in uploadedFilesByDeliverableId[(d.deliverableId || d.id)]" :key="f.fileId" class="file-item">
+                        <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{ fileBaseName(f.filePath) }}</button>
+                        <span class="size">{{ prettySize(f.fileSize) }}</span>
+                        <a class="icon-btn" :href="downloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="uploaded-list" v-else>
+                    <div class="template-title" style="color:#999">该交付物暂无已上传文件</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
           <div class="dialog-actions">
             <button class="btn" @click="closeDeliverableDialog">关闭</button>
           </div>
@@ -460,9 +478,7 @@
                         <button class="icon-btn danger" title="删除" @click="deleteUploadedFile(f.fileId, d.deliverableId)">
                           <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
                         </button>
-                        <a class="icon-btn" :href="downloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                        </a>
+                        <!-- 已移除下载按钮：上传交付物界面不提供下载入口 -->
                       </li>
                     </ul>
                   </div>
@@ -476,7 +492,7 @@
         </div>
       </div>
 
-      <!-- 文件名点击进行预览，保留右侧下载图标 -->
+      <!-- 文件名点击进行预览；右侧下载图标已移除（按需保留预览与删除） -->
 
       <!-- 隐藏上传输入 -->
       <input ref="deliverableUploader" type="file" multiple style="display:none" @change="handleDeliverableFilesSelected" />
@@ -755,6 +771,98 @@ export default {
   },
   methods: {
     /**
+     * 函数级注释：获取与当前行关联的标准交付物列表
+     * 关联规则：
+     * - 步骤/接口步骤/个性化步骤：使用 `row.sstepId` 匹配 `deliverables[].sstepId`
+     * - 里程碑：优先使用 `row.milestoneId` 映射标准里程碑ID；若缺失则按 `row.milestoneName` 在已加载的标准里程碑中查找ID，匹配 `deliverables[].milestoneId`
+     * @param {Object} row 当前表格行对象
+     * @returns {Array<Object>} 与行关联的交付物列表
+     */
+    getDeliverablesForRow(row) {
+      if (!row || !Array.isArray(this.deliverables)) return []
+      if (row.rowType === 'step' || row.rowType === 'interface_step' || row.rowType === 'personal_step') {
+        const sid = row.sstepId
+        if (sid == null) return []
+        return this.deliverables.filter(d => d && d.sstepId === sid)
+      }
+      if (row.rowType === 'milestone') {
+        // 构造标准里程碑ID：项目里程碑ID与标准里程碑ID不同域，必须通过名称映射
+        // 为提高鲁棒性，名称匹配忽略大小写并去除首尾空格
+        let stdMid = null
+        if (this.standardMilestones && row.milestoneName) {
+          const targetName = String(row.milestoneName).trim().toLowerCase()
+          const m = this.standardMilestones.find(x => String(x?.milestoneName || '').trim().toLowerCase() === targetName)
+          stdMid = m ? m.milestoneId : null
+        }
+        if (stdMid == null) return []
+        // 仅返回关联到该标准里程碑的交付物
+        return (this.deliverables || []).filter(d => d && d.milestoneId === stdMid)
+      }
+      return []
+    },
+    /**
+     * 函数级注释：判断当前行是否存在必须上传的交付物
+     * 依据 `standard_deliverable.isMustLoad` 字段，若任一关联交付物为 true，则返回 true。
+     * @param {Object} row 当前表格行对象
+     * @returns {boolean} 是否存在必须上传的交付物
+     */
+    isMustUploadForRow(row) {
+      let list = this.getDeliverablesForRow(row)
+      // 里程碑行：仅考虑“里程碑交付物”，避免步骤交付物误标记
+      if (row?.rowType === 'milestone') {
+        list = list.filter(d => String(d?.deliverableType || '') === '里程碑交付物')
+      }
+      return list.some(d => d && (d.isMustLoad === true || d.isMustLoad === 1))
+    },
+    /**
+     * 函数级注释：判断当前行是否已有上传的交付物文件
+     * 逻辑：遍历关联交付物，若其 `deliverableId` 在 `filesByDeliverableId` 中存在非空文件列表，则视为已上传。
+     * @param {Object} row 当前表格行对象
+     * @returns {boolean} 是否存在已上传文件
+     */
+    hasUploadedForRow(row) {
+      // 修复：按当前行上下文过滤，避免不同接口/个性化的同名步骤互相“染色”
+      // 步骤/接口/个性化：按 relationId 过滤；里程碑：按项目里程碑ID过滤
+      const list = this.getDeliverablesForRow(row)
+      if (!Array.isArray(list) || list.length === 0) return false
+      const allFiles = Array.isArray(this.files) ? this.files : []
+      // 里程碑仅考虑“里程碑交付物”，避免步骤交付物影响按钮状态
+      const isMilestone = row?.rowType === 'milestone'
+      const projectStepId = row?.relationId || null
+      const milestoneId = row?.milestoneId || null
+      for (const d of list) {
+        const did = d && (d.deliverableId || d.id)
+        if (did == null) continue
+        if (isMilestone) {
+          if (String(d?.deliverableType || '') !== '里程碑交付物') continue
+          const hit = allFiles.some(f => f && f.deliverableId === did && f.milestoneId === milestoneId)
+          if (hit) return true
+        } else {
+          const hit = allFiles.some(f => f && f.deliverableId === did && f.projectStepId === projectStepId)
+          if (hit) return true
+        }
+      }
+      return false
+    },
+    /**
+     * 函数级注释：为“上传”按钮生成样式类
+     * 需求：若当前行存在必须上传的交付物（isMustLoad=true），则按钮应设置为红色（danger）。
+     * @param {Object} row 当前表格行对象
+     * @returns {string|Object|Array} 样式类：'danger' 或 空
+     */
+    uploadButtonClass(row) {
+      return this.isMustUploadForRow(row) ? 'danger' : ''
+    },
+    /**
+     * 函数级注释：为“查看”按钮生成样式类
+     * 需求：若当前行已经上传了交付物文件，则查看按钮设置为绿色（success）。
+     * @param {Object} row 当前表格行对象
+     * @returns {string|Object|Array} 样式类：'success' 或 空
+     */
+    viewButtonClass(row) {
+      return this.hasUploadedForRow(row) ? 'success' : ''
+    },
+    /**
      * 函数级注释：
      * 打开交付物查看弹窗并加载与当前行关联的交付物。
      * 行关联规则：
@@ -773,6 +881,10 @@ export default {
         if (row.rowType === 'step' && row.sstepId) {
           const resp = await getStandardDeliverablesByStepId(row.sstepId)
           list = resp?.deliverables || resp?.items || resp || []
+        } else if ((row.rowType === 'interface_step' || row.rowType === 'personal_step') && row.sstepId) {
+          // 新增：接口/个性化步骤也支持查看交付物（与标准步骤同源）
+          const resp = await getStandardDeliverablesByStepId(row.sstepId)
+          list = resp?.deliverables || resp?.items || resp || []
         } else if (row.rowType === 'milestone') {
           // 优先使用里程碑ID，其次根据名称在已加载的标准里程碑中映射ID
           let mid = row.milestoneId || null
@@ -780,15 +892,47 @@ export default {
             const m = this.standardMilestones.find(x => x.milestoneName === row.milestoneName)
             mid = m ? m.milestoneId : null
           }
+          const projectIdForMilestone = this.project?.projectId
           if (mid) {
             const resp = await getStandardDeliverables({ milestoneId: mid, page: 0, size: 100 })
             list = resp?.deliverables || resp?.items || resp || []
+          }
+          // 如果找不到标准里程碑ID，或按ID查询为空，则按【项目ID + 里程碑名称】回退查询
+          if ((!mid || (Array.isArray(list) && list.length === 0)) && projectIdForMilestone && row.milestoneName) {
+            const byName = await getStandardDeliverablesByProjectAndMilestoneName(projectIdForMilestone, row.milestoneName)
+            list = Array.isArray(byName) ? byName : []
           }
         } else {
           // 接口/个性化信息及其步骤暂不直接关联标准交付物，保留占位
           list = []
         }
         this.deliverableList = Array.isArray(list) ? list : []
+
+        // 拉取并填充每个交付物的已上传文件，供查看弹窗展示
+        const projectId = this.project?.projectId
+        if (projectId && this.deliverableList.length > 0) {
+          for (const d of this.deliverableList) {
+            const did = d?.deliverableId || d?.id
+            if (!did) continue
+            try {
+              // 拉取该交付物在项目下的文件；步骤/接口/个性化行携带 relationId 进行后端精确过滤
+              const rid = (row && row.rowType !== 'milestone') ? (row?.relationId || null) : null
+              const files = await listConstructDeliverableFiles(projectId, did, rid != null ? { projectStepId: rid } : {})
+              const raw = Array.isArray(files) ? files : []
+              if (row?.rowType === 'milestone') {
+                // 仅保留属于当前项目里程碑的文件
+                const mid = row?.milestoneId || null
+                this.uploadedFilesByDeliverableId[did] = raw.filter(f => f && f.milestoneId === mid)
+              } else {
+                // 步骤/接口/个性化：按 relationId 过滤
+                const rid = row?.relationId || null
+                this.uploadedFilesByDeliverableId[did] = raw.filter(f => f && f.projectStepId === rid)
+              }
+            } catch (_) {
+              this.uploadedFilesByDeliverableId[did] = []
+            }
+          }
+        }
       } catch (e) {
         this.deliverableError = e?.message || '交付物加载失败'
       } finally {
@@ -847,8 +991,103 @@ export default {
      * 当前实现为打开“交付物列表”弹窗并切换为下载模式，
      * 在列表中可为每个交付物拉取模板并下载首个文件。
      */
+    /**
+     * 函数级注释：下载交付物文件
+     * 规则实现：
+     * - 步骤交付物：若仅一个文件则直接下载；多个文件则后端打包ZIP，压缩包以步骤名称命名；接口/个性化步骤为“开发项名称-步骤名称”。
+     * - 里程碑交付物：点击后弹窗询问是否同时下载该里程碑所属步骤的交付物；
+     *   - 选择否：仅打包该里程碑交付物（单文件直接下，多文件ZIP，压缩包以里程碑名称命名；若存在接口/个性化上下文则在ZIP中按“开发项名称/”分目录）。
+     *   - 选择是：将里程碑交付物放到“里程碑名称/”目录，其所属步骤的交付物按“[开发项名称/]步骤名称/”分目录，统一ZIP下载（压缩包以里程碑名称命名）。
+     * 后端接口：
+     * - GET `/api/construct-deliverable-files/download/step/{projectId}/{relationId}`
+     * - GET `/api/construct-deliverable-files/download/milestone/{projectId}/{milestoneId}?includeSteps={true|false}`
+     */
     async onDownloadDeliverables(row) {
-      await this.onViewDeliverables(row, 'download')
+      try {
+        const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8081'
+        const projectId = this.project?.projectId
+        if (!projectId) return this.showError('项目ID缺失，无法下载')
+
+        if (row.rowType === 'step' || row.rowType === 'interface_step' || row.rowType === 'personal_step') {
+          const relationId = row?.relationId
+          if (!relationId) return this.showError('步骤关系ID缺失，无法下载')
+          const url = `${API_BASE}/api/construct-deliverable-files/download/step/${projectId}/${relationId}`
+          this.downloadBinary(url)
+          return
+        }
+
+        if (row.rowType === 'milestone') {
+          // 解析项目里程碑ID（construct_milestone.milestoneId）。占位行需按名称映射。
+          let mid = typeof row.milestoneId === 'number' ? row.milestoneId : null
+          if (!mid && row.milestoneName && Array.isArray(this.milestones)) {
+            const m = this.milestones.find(x => x.milestoneName === row.milestoneName)
+            mid = m ? m.milestoneId : null
+          }
+          if (!mid) return this.showError('未找到该里程碑，无法下载')
+          const ok = this.$confirm ? await this.$confirm('是否同时下载该里程碑所属步骤的交付物？') : window.confirm('是否同时下载该里程碑所属步骤的交付物？')
+          const url = `${API_BASE}/api/construct-deliverable-files/download/milestone/${projectId}/${mid}?includeSteps=${ok ? 'true' : 'false'}`
+          this.downloadBinary(url)
+          return
+        }
+
+        this.showError('当前行不支持下载交付物')
+      } catch (e) {
+        this.showError('下载发起失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：触发浏览器下载（后端流式返回）
+     * @param {string} url 下载链接
+     */
+    downloadBinary(url) {
+      try {
+        const a = document.createElement('a')
+        a.href = url
+        a.style.display = 'none'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } catch (_) {
+        window.open(url, '_blank')
+      }
+    },
+    /**
+     * 函数级注释：切换交付物查看弹窗模式
+     * 用于在“查看文件”与“下载模板”之间切换，保持界面结构稳定。
+     * @param {'view'|'download'} mode 模式
+     */
+    setDeliverableDialogMode(mode) {
+      this.deliverableDialogMode = mode === 'download' ? 'download' : 'view'
+    },
+    /**
+     * 函数级注释：生成查看弹窗的上下文名称
+     * 步骤优先使用 `sstepName` 或 `nstepName`，里程碑使用 `milestoneName`。
+     * @param {Object|null} row 当前弹窗绑定的行对象
+     * @returns {string} 用于展示的名称
+     */
+    viewDialogContextName(row) {
+      if (!row) return '-'
+      if (row.rowType === 'step' || row.rowType === 'interface_step' || row.rowType === 'personal_step') {
+        return row.sstepName || row.nstepName || '-'
+      }
+      if (row.rowType === 'milestone') {
+        return row.milestoneName || '-'
+      }
+      return row.sstepName || row.nstepName || row.milestoneName || '-'
+    },
+    /**
+     * 函数级注释：将行类型映射为中文标签
+     * @param {string} rowType 行类型：step | milestone | interface_step | personal_step
+     * @returns {string} 中文标签
+     */
+    labelForRowType(rowType) {
+      switch (rowType) {
+        case 'step': return '步骤'
+        case 'milestone': return '里程碑'
+        case 'interface_step': return '接口步骤'
+        case 'personal_step': return '个性化步骤'
+        default: return '未知类型'
+      }
     },
     /**
      * 函数级注释：
@@ -982,18 +1221,35 @@ export default {
           } catch (_) {
             this.uploadTemplatesByDeliverableId[did] = []
           }
-          // 已上传文件列表
+          // 已上传文件列表（按当前行上下文过滤）
           try {
             if (projectId) {
-              const files = await listConstructDeliverableFiles(projectId, did)
-              this.uploadedFilesByDeliverableId[did] = Array.isArray(files) ? files : []
+              const files = await listConstructDeliverableFiles(projectId, did, { projectStepId: row?.relationId || null })
+              const raw = Array.isArray(files) ? files : []
+              if (row?.rowType === 'milestone') {
+                // 里程碑行：仅保留属于当前项目里程碑的文件
+                const mid = row?.milestoneId || null
+                this.uploadedFilesByDeliverableId[did] = raw.filter(f => f && f.milestoneId === mid)
+              } else {
+                // 步骤/接口/个性化：按 relationId 过滤
+                const rid = row?.relationId || null
+                this.uploadedFilesByDeliverableId[did] = raw.filter(f => f && f.projectStepId === rid)
+              }
             } else {
               this.uploadedFilesByDeliverableId[did] = []
             }
           } catch (_) { /* 忽略单个失败 */ }
           // 无论是否有模板，都允许上传
-          // 注入当前行的项目步骤关系ID以供上传接口使用（projectStepId）
-          result.push({ deliverableId: did, deliverableName: d.deliverableName, sstepId: d.sstepId, milestoneId: d.milestoneId, projectStepId: row.relationId || null })
+          // 注入当前行的项目步骤关系ID或里程碑ID以供上传/刷新时使用
+          const isMilestoneRow = row?.rowType === 'milestone'
+          result.push({
+            deliverableId: did,
+            deliverableName: d.deliverableName,
+            sstepId: d.sstepId,
+            // 里程碑上下文应保存项目里程碑ID（row.milestoneId），而非标准里程碑ID
+            milestoneId: isMilestoneRow ? (row?.milestoneId || null) : (d?.milestoneId || null),
+            projectStepId: isMilestoneRow ? null : (row?.relationId || null)
+          })
         }
         this.uploadDeliverables = result
       } catch (e) {
@@ -1090,8 +1346,21 @@ export default {
       try {
         const projectId = this.project?.projectId
         if (!projectId || !deliverableId) return
-        const files = await listConstructDeliverableFiles(projectId, deliverableId)
-        this.uploadedFilesByDeliverableId[deliverableId] = Array.isArray(files) ? files : []
+        // 先解析当前上传弹窗中的该交付物上下文（步骤或里程碑）
+        const ctx = (this.uploadDeliverables || []).find(x => x && x.deliverableId === deliverableId)
+        // 步骤上传界面：按当前步骤 relationId 过滤（后端直查，避免跨步骤混入）
+        const files = await listConstructDeliverableFiles(projectId, deliverableId, {
+          projectStepId: (ctx && ctx.projectStepId != null) ? ctx.projectStepId : null
+        })
+        const raw = Array.isArray(files) ? files : []
+        // 根据当前上传弹窗中该交付物的上下文进行二次保障过滤
+        if (ctx && ctx.projectStepId != null) {
+          this.uploadedFilesByDeliverableId[deliverableId] = raw.filter(f => f && f.projectStepId === ctx.projectStepId)
+        } else if (ctx && ctx.milestoneId != null) {
+          this.uploadedFilesByDeliverableId[deliverableId] = raw.filter(f => f && f.milestoneId === ctx.milestoneId)
+        } else {
+          this.uploadedFilesByDeliverableId[deliverableId] = raw
+        }
       } catch (_) {
         this.uploadedFilesByDeliverableId[deliverableId] = []
       }
@@ -1105,12 +1374,24 @@ export default {
     applyUploadedFilesToSummary(deliverableId) {
       try {
         const list = this.uploadedFilesByDeliverableId[deliverableId] || []
-        // 更新映射
-        this.$set ? this.$set(this.filesByDeliverableId, deliverableId, list) : (this.filesByDeliverableId[deliverableId] = list)
-        // 更新平铺数组：先移除该交付物旧记录，再追加新记录
+        // 当前上下文（步骤或里程碑），用于仅替换当前上下文下的文件，避免同名步骤互相影响
+        const ctx = (this.uploadDeliverables || []).find(x => x && x.deliverableId === deliverableId)
         const prev = Array.isArray(this.files) ? this.files : []
-        const filtered = prev.filter(f => f && f.deliverableId !== deliverableId)
+        let filtered
+        if (ctx && ctx.projectStepId != null) {
+          // 仅移除当前步骤下该交付物的旧记录，保留其他步骤的记录
+          filtered = prev.filter(f => !(f && f.deliverableId === deliverableId && f.projectStepId === ctx.projectStepId))
+        } else if (ctx && ctx.milestoneId != null) {
+          // 仅移除当前里程碑下该交付物的旧记录
+          filtered = prev.filter(f => !(f && f.deliverableId === deliverableId && f.milestoneId === ctx.milestoneId))
+        } else {
+          // 无上下文信息时，保持原样（仅追加，避免误删其他上下文的数据）
+          filtered = prev
+        }
+        // 重新拼接：追加当前上下文下的新记录
         this.files = filtered.concat(list)
+        // 映射按交付物ID更新供局部展示使用（上传弹窗）；全局颜色判断依赖 this.files
+        this.$set ? this.$set(this.filesByDeliverableId, deliverableId, list) : (this.filesByDeliverableId[deliverableId] = list)
       } catch (_) { /* 忽略局部同步错误 */ }
     },
     /**
@@ -1124,7 +1405,9 @@ export default {
         if (!ok) return
         await deleteConstructDeliverableFile(fileId)
         this.$message && this.$message.success('删除成功')
+        // 刷新当前交付物的列表并同步到摘要，确保“查看”按钮颜色即时更新
         await this.refreshUploadedFiles(deliverableId)
+        this.applyUploadedFilesToSummary(deliverableId)
       } catch (e) {
         this.showError('删除失败：' + (e?.message || '未知错误'))
       }
@@ -1884,7 +2167,15 @@ export default {
 .dialog-mask { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .dialog { width:420px; background:#fff; border-radius:8px; border:1px solid #eee; padding:16px; }
 .dialog.upload-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.dialog.view-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
 .dialog h4 { margin:0 0 12px; }
+.dialog-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.context-chips { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.chip.primary { background:#eef2ff; border-color:#c7d2fe; color:#1d4ed8; }
+.segmented { display:inline-flex; align-items:center; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+.segmented .seg-btn { padding:6px 12px; background:#fff; border:none; border-right:1px solid #e5e7eb; cursor:pointer; font-size:12px; color:#374151; }
+.segmented .seg-btn:last-child { border-right:none; }
+.segmented .seg-btn.active { background:#1677ff; color:#fff; }
 .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
 .form-row input, .form-row select { height:32px; padding:0 8px; border:1px solid #ddd; border-radius:4px; }
 .required { color:#c00; }
@@ -1930,13 +2221,22 @@ export default {
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 .icon-btn.danger {
-  border-color: #fca5a5;
-  color: #b91c1c;
+  /* 类级注释：危险状态（必须上传）——红色背景更醒目，图标保持黑色 */
+  border-color: #ef4444; /* red-500 */
+  background: #fee2e2;   /* red-200 */
 }
+.icon-btn.danger:hover { background: #fecaca; border-color: #ef4444; }
+.icon-btn.success {
+  /* 类级注释：成功状态（已有上传）——绿色背景更醒目，图标保持黑色 */
+  border-color: #22c55e; /* green-500 */
+  background: #dcfce7;  /* green-200 */
+}
+.icon-btn.success:hover { background: #bbf7d0; border-color: #22c55e; }
 .icon-btn svg {
   width: 18px;
   height: 18px;
-  fill: currentColor;
+  /* 保持图标黑色，不受按钮颜色影响 */
+  fill: #000;
 }
 .upload-list { display:flex; flex-direction:column; gap:12px; }
 .upload-item { border:1px solid #eee; border-radius:8px; padding:12px; background:#fafafa; }
@@ -1956,6 +2256,12 @@ export default {
   padding: 0;
   margin: 0;
 }
+.deliverable-cards { display:flex; flex-direction:column; gap:10px; }
+.deliverable-card { border:1px solid #eee; border-radius:8px; padding:10px; background:#fafafa; }
+.deliverable-head { display:flex; align-items:center; justify-content:space-between; }
+.deliverable-meta { display:flex; align-items:center; gap:8px; }
+.deliverable-name { font-weight:600; color:#333; }
+.deliverable-type { color:#666; font-size:12px; background:#f5f5f5; border-radius:12px; padding:2px 8px; }
 .deliverable-list li {
   display: flex;
   align-items: center;
