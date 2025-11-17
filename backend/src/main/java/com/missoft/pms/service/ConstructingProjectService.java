@@ -42,9 +42,17 @@ public class ConstructingProjectService {
     @Autowired
     private ConstructDeliverableFileRepository constructDeliverableFileRepository;
     @Autowired
+    private ConstructDeliverableFileService constructDeliverableFileService;
+    @Autowired
     private ProjectSstepRelationService projectSstepRelationService;
     @Autowired
+    private com.missoft.pms.repository.ProjectSstepRelationRepository projectSstepRelationRepository;
+    @Autowired
     private ConstructMilestoneService constructMilestoneService;
+    @Autowired
+    private com.missoft.pms.repository.StandardConstructStepRepository standardConstructStepRepository;
+    @Autowired
+    private com.missoft.pms.repository.StandardMilestoneRepository standardMilestoneRepository;
     @Autowired
     private InterfaceService interfaceService;
     @Autowired
@@ -258,6 +266,21 @@ public class ConstructingProjectService {
         // 保存更新
         ConstructingProject saved = constructingProjectRepository.save(existingProject);
 
+        // 计算取消勾选的建设内容类型，用于删除对应步骤与里程碑的交付物文件
+        // 函数级注释：在调整里程碑与步骤关系前执行删除，以避免FK置空后难以定位关联文件
+        try {
+            Set<String> oldTypes = parseTypes(oldConstructContent);
+            Set<String> newTypes = parseTypes(saved.getConstructContent());
+            // 计算被移除的所有建设内容类型
+            java.util.Set<String> removedTypes = new java.util.HashSet<>(oldTypes);
+            removedTypes.removeAll(newTypes);
+            if (!removedTypes.isEmpty()) {
+                deleteDeliverableFilesForRemovedTypes(saved.getProjectId(), removedTypes);
+            }
+        } catch (Exception ignore) {
+            // 文件删除失败不影响项目更新；可按需记录日志
+        }
+
         // 先调整里程碑，再调整步骤关系，避免新增步骤无法正确回填 milestoneId
         // 编辑时根据“接口开发”建设内容的勾选状态，增删对应里程碑（函数级注释：确保未勾选时不显示接口开发里程碑）
         try {
@@ -331,6 +354,104 @@ public class ConstructingProjectService {
         }
 
         return saved;
+    }
+
+    /**
+     * 函数级注释：当编辑项目取消勾选建设内容时，删除该内容对应的步骤与里程碑上传的交付物文件。
+     * 删除范围：
+     * - 步骤交付物：按项目-步骤关系ID（relationId）定位文件并删除；
+     * - 里程碑交付物：按项目里程碑ID定位文件并删除（保守按名称匹配：接口开发→“05完成接口开发集成”，个性化→“06完成个性化功能开发”）。
+     * 执行时机：应在调整里程碑/步骤关系之前执行，以避免FK置空导致无法定位关联文件。
+     *
+     * @param projectId           项目ID
+     * @param removedInterfaceDev 是否取消勾选“接口开发”
+     * @param removedPersonalDev  是否取消勾选“个性化功能开发”
+     */
+    private void deleteDeliverableFilesForRemovedTypes(Long projectId,
+                                                       java.util.Set<String> removedTypes) {
+        if (projectId == null || removedTypes == null || removedTypes.isEmpty()) return;
+
+        // 将目标里程碑名称与ID分离收集，避免重复IO
+        java.util.Set<String> targetMilestoneNames = new java.util.LinkedHashSet<>();
+        java.util.Set<Long> targetMilestoneIds = new java.util.LinkedHashSet<>();
+
+        // 1) 步骤交付物删除：按项目-步骤关系中过滤类型属于 removedTypes 的关系，清理其文件
+        try {
+            java.util.List<com.missoft.pms.entity.ProjectSstepRelation> relations = projectSstepRelationRepository.findByProjectId(projectId);
+            if (relations != null && !relations.isEmpty()) {
+                for (com.missoft.pms.entity.ProjectSstepRelation rel : relations) {
+                    if (rel == null || rel.getRelationId() == null) continue;
+
+                    boolean match = false;
+                    com.missoft.pms.entity.StandardConstructStep step = null;
+                    if (rel.getSstepId() != null) {
+                        step = standardConstructStepRepository.findById(rel.getSstepId()).orElse(null);
+                        String type = step != null ? step.getType() : null;
+                        if (type != null && removedTypes.contains(type)) match = true;
+                    }
+                    // 兜底：接口/个性化开发的专属关系
+                    if (!match) {
+                        if (removedTypes.contains("接口开发") && rel.getInterfaceId() != null) match = true;
+                        if (removedTypes.contains("个性化功能开发") && rel.getPersonalDevId() != null) match = true;
+                    }
+
+                    if (match) {
+                        // 删除与该关系关联的步骤级文件
+                        java.util.List<com.missoft.pms.entity.ConstructDeliverableFile> files = constructDeliverableFileRepository
+                                .findByProjectIdAndProjectStepId(projectId, rel.getRelationId());
+                        if (files != null) {
+                            for (com.missoft.pms.entity.ConstructDeliverableFile f : files) {
+                                try { constructDeliverableFileService.deleteFile(f.getFileId()); } catch (Exception ignore) {}
+                            }
+                        }
+
+                        // 收集对应的项目里程碑，用于后续里程碑级文件清理
+                        if (rel.getMilestoneId() != null) {
+                            targetMilestoneIds.add(rel.getMilestoneId());
+                        } else if (step != null && step.getSmilestoneId() != null) {
+                            com.missoft.pms.entity.StandardMilestone sm =
+                                    standardMilestoneRepository.findById(step.getSmilestoneId()).orElse(null);
+                            String name = sm != null ? sm.getMilestoneName() : null;
+                            if (name != null && !name.trim().isEmpty()) {
+                                targetMilestoneNames.add(name.trim());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+
+        // 入口里程碑名称（可能缺少关联步骤，但仍需清理上传文件）
+        if (removedTypes.contains("接口开发")) {
+            targetMilestoneNames.add("05完成接口开发集成");
+        }
+        if (removedTypes.contains("个性化功能开发")) {
+            targetMilestoneNames.add("06完成个性化功能开发");
+        }
+
+        // 2) 里程碑交付物删除：按已收集的项目里程碑ID与名称定位并清理其文件
+        try {
+            if (!targetMilestoneNames.isEmpty()) {
+                java.util.List<com.missoft.pms.entity.ConstructMilestone> milestones = constructMilestoneService.getMilestonesByProjectId(projectId);
+                for (com.missoft.pms.entity.ConstructMilestone m : milestones) {
+                    if (m == null || m.getMilestoneId() == null) continue;
+                    String name = m.getMilestoneName();
+                    if (name != null && targetMilestoneNames.contains(name.trim())) {
+                        targetMilestoneIds.add(m.getMilestoneId());
+                    }
+                }
+            }
+
+            for (Long mid : targetMilestoneIds) {
+                java.util.List<com.missoft.pms.entity.ConstructDeliverableFile> files =
+                        constructDeliverableFileRepository.findByProjectIdAndMilestoneId(projectId, mid);
+                if (files != null) {
+                    for (com.missoft.pms.entity.ConstructDeliverableFile f : files) {
+                        try { constructDeliverableFileService.deleteFile(f.getFileId()); } catch (Exception ignore) {}
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
     }
 
     /**

@@ -20,8 +20,10 @@
 
 
       <section class="card wide">
-        <h3>步骤与里程碑</h3>
-        <table class="table">
+        <!-- 类级注释：移除“步骤与里程碑”区域标题，保持页面其他部分不变；
+             为步骤表格添加滚动容器以实现表头固定、仅内容滚动。 -->
+        <div class="table-scroll">
+          <table class="table">
           <thead>
             <tr>
               <th width="60">序号</th>
@@ -343,7 +345,8 @@
               </tr>
             </template>
           </tbody>
-        </table>
+          </table>
+        </div>
       </section>
 
       <!-- 新增接口弹窗 -->
@@ -2103,7 +2106,8 @@ export default {
 </script>
 
 <style scoped>
-.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow-y:auto; padding:12px; box-sizing:border-box; }
+/* 类级注释：页面容器调整为内部滚动，仅内容区滚动，避免底部空白 */
+.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow:hidden; padding:12px; box-sizing:border-box; }
 .topbar { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
 .back-btn { padding:6px 12px; border:1px solid #ddd; border-radius:4px; background:#fff; cursor:pointer; }
 .title { flex:1; display:flex; align-items:baseline; gap:12px; font-size:18px; font-weight:600; }
@@ -2112,9 +2116,9 @@ export default {
 .chip { padding:4px 8px; background:#f5f5f5; border-radius:12px; font-size:12px; }
 .state { padding:24px; color:#333; }
 .state.error { color:#c00; }
-.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; padding-top:12px; overflow-x:auto; }
+.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; padding-top:12px; overflow-x:auto; flex: 1; min-height: 0; }
 .card { background:#fff; border:1px solid #eee; border-radius:8px; padding:12px; }
-.card.wide { grid-column: 1 / -1; }
+.card.wide { grid-column: 1 / -1; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
 .info-grid label { color:#888; font-size:12px; }
 .list { list-style:none; padding:0; margin:0; }
@@ -2132,10 +2136,16 @@ export default {
 .empty { color:#888; padding:8px 0; }
 
 /* 表格样式 */
-.table { width:100%; border-collapse:collapse; }
+/* 兼容粘性表头：使用分离边框以提高浏览器兼容性 */
+.table { width:100%; border-collapse:separate; border-spacing:0; }
 .table th, .table td { padding:8px; border-bottom:1px dashed #eee; font-size:14px; text-align:left; }
 .table td { position: relative; }
 .table thead th { background:#fafafa; font-weight:600; color:#333; }
+/* 固定表头与滚动容器（仅本组件生效） */
+.table-scroll { flex: 1; min-height: 0; overflow: auto; }
+/* 同时对 thead 设为粘性，避免某些浏览器对 th 粘性支持不一致 */
+.table-scroll thead { position: sticky; top: 0; z-index: 4; background: #fafafa; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 5; background: #fafafa; }
 .cell-input {
   position: absolute;
   left: 8px;
