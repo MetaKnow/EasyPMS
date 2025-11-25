@@ -147,8 +147,9 @@
                       </span>
                     </td>
                     <td>
-                      <button class="btn-small btn-primary" @click.stop="editDeliverable(deliverable)">
+                      <button class="btn-small btn-primary edit-btn" @click.stop="editDeliverable(deliverable)">
                         编辑
+                        <span v-if="hasTemplatesForDeliverable(deliverable)" class="t-badge">T</span>
                       </button>
                       <button class="btn-small btn-danger" @click.stop="deleteDeliverable(deliverable)">
                         删除
@@ -443,7 +444,9 @@ export default {
       templateUploading: false,
       dropActive: false,
       templateAccept: '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.zip,.rar,.7z,.txt',
-      maxUploadSizeMB: 20
+      maxUploadSizeMB: 20,
+      // 列表中交付物是否存在已上传模板的缓存映射：{ [deliverableId]: boolean }
+      hasTemplatesByDeliverableId: {}
     }
   },
   computed: {
@@ -548,6 +551,13 @@ export default {
         
         // 清除选中状态
         this.selectedDeliverables = []
+
+        // 预拉取模板存在性以在“编辑”按钮右上角显示“T”标识
+        if (this.deliverables && this.deliverables.length > 0) {
+          this.prefetchTemplatesPresence()
+        } else {
+          this.hasTemplatesByDeliverableId = {}
+        }
         
       } catch (error) {
         console.error('加载交付物列表失败:', error)
@@ -580,6 +590,54 @@ export default {
       if (this.selectedProduct) {
         this.loadDeliverables()
       }
+    },
+
+    /**
+     * 预拉取交付物的模板存在性
+     * 用途：在交付物列表的“编辑”按钮右上角显示“T”标识
+     * 实现：对当前列表中的每个交付物调用后端模板列表接口并缓存结果，限制并发以避免压测后端
+     */
+    async prefetchTemplatesPresence() {
+      try {
+        const ids = (this.deliverables || []).map(d => d && d.deliverableId).filter(Boolean)
+        // 清空旧缓存
+        this.hasTemplatesByDeliverableId = {}
+        if (ids.length === 0) return
+        const maxConcurrency = 4
+        let idx = 0
+        const worker = async () => {
+          while (idx < ids.length) {
+            const id = ids[idx++]
+            try {
+              const list = await listDeliverableTemplates(id)
+              const files = Array.isArray(list) ? list : (list && list.files) || []
+              if (this.$set) {
+                this.$set(this.hasTemplatesByDeliverableId, id, Array.isArray(files) ? files.length > 0 : false)
+              } else {
+                this.hasTemplatesByDeliverableId[id] = Array.isArray(files) ? files.length > 0 : false
+              }
+            } catch (_) {
+              if (this.$set) {
+                this.$set(this.hasTemplatesByDeliverableId, id, false)
+              } else {
+                this.hasTemplatesByDeliverableId[id] = false
+              }
+            }
+          }
+        }
+        await Promise.all(Array.from({ length: Math.min(maxConcurrency, ids.length) }, () => worker()))
+      } catch (error) {
+        console.error('预拉取模板存在性失败:', error)
+      }
+    },
+
+    /**
+     * 判断交付物是否存在模板（供模板中显示“T”标识）
+     * 返回：true 表示存在已上传的模板文件
+     */
+    hasTemplatesForDeliverable(deliverable) {
+      const did = deliverable && deliverable.deliverableId
+      return did ? this.hasTemplatesByDeliverableId[did] === true : false
     },
     
     /**
@@ -1582,6 +1640,13 @@ export default {
         this.templateFiles = []
         if (this.$refs.templateUploadInput) this.$refs.templateUploadInput.value = ''
         await this.loadDeliverableTemplates(this.editingDeliverable.deliverableId)
+        // 更新列表缓存以显示“T”标识
+        const id = this.editingDeliverable.deliverableId
+        if (this.$set) {
+          this.$set(this.hasTemplatesByDeliverableId, id, true)
+        } else {
+          this.hasTemplatesByDeliverableId[id] = true
+        }
       } catch (error) {
         console.error('模板上传失败:', error)
         this.$message?.error('模板上传失败: ' + (error.message || error))
@@ -1614,6 +1679,14 @@ export default {
         this.$message?.success('模板删除成功')
         await this.loadDeliverableTemplates(this.editingDeliverable.deliverableId)
         this.showForm = true
+        // 同步更新列表缓存中的模板存在性
+        const id = this.editingDeliverable.deliverableId
+        const has = Array.isArray(this.existingTemplates) ? this.existingTemplates.length > 0 : false
+        if (this.$set) {
+          this.$set(this.hasTemplatesByDeliverableId, id, has)
+        } else {
+          this.hasTemplatesByDeliverableId[id] = has
+        }
       } catch (error) {
         console.error('删除模板失败:', error)
         this.$message?.error('删除模板失败: ' + (error.message || error))
@@ -2100,6 +2173,26 @@ export default {
   padding: 4px 8px;
   font-size: 12px;
   margin-right: 4px;
+}
+
+/* 编辑按钮右上角“T”标识 */
+.edit-btn {
+  position: relative;
+}
+.t-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fa8c16;
+  color: #fff;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
 }
 
 .btn-success {

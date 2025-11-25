@@ -622,6 +622,9 @@ export default {
       uploadError: '',
       hasDeliverablesBySstepId: {}
       ,
+      // 模板存在性缓存：{ [deliverableId]: boolean }
+      hasTemplatesByDeliverableId: {}
+      ,
       // 文件预览弹窗状态
       showPreviewDialog: false,
       previewTitle: '',
@@ -818,6 +821,50 @@ export default {
       return list.some(d => d && (d.isMustLoad === true || d.isMustLoad === 1))
     },
     /**
+     * 函数级注释：判断当前行是否存在“交付物模板”
+     * 规则：若与该行关联的任一交付物存在模板文件（长度>0），则返回 true。
+     * - 步骤/接口/个性化：按 sstepId 关联交付物；
+     * - 里程碑：仅考虑 deliverableType === '里程碑交付物' 的交付物。
+     * 为避免频繁请求，使用 hasTemplatesByDeliverableId 进行缓存；
+     * 若缓存缺失，会在后台异步补充，完成后自动触发视图更新。
+     * @param {Object} row 当前表格行对象
+     * @returns {boolean} 是否存在模板
+     */
+    hasTemplatesForRow(row) {
+      let list = this.getDeliverablesForRow(row)
+      if (row?.rowType === 'milestone') {
+        list = list.filter(d => String(d?.deliverableType || '') === '里程碑交付物')
+      }
+      if (!Array.isArray(list) || list.length === 0) return false
+      let hit = false
+      for (const d of list) {
+        const did = d && (d.deliverableId || d.id)
+        if (did == null) continue
+        const cached = this.hasTemplatesByDeliverableId[did]
+        if (cached === true) {
+          hit = true
+        } else if (cached === undefined) {
+          // 异步补充缓存，不阻塞当前渲染
+          this.ensureTemplateFlagForDeliverable(did)
+        }
+      }
+      return hit
+    },
+    /**
+     * 函数级注释：确保某交付物的模板存在性已写入缓存
+     * 若尚未查询，则调用后端获取模板列表并写入 hasTemplatesByDeliverableId。
+     * @param {number} deliverableId 交付物ID
+     */
+    async ensureTemplateFlagForDeliverable(deliverableId) {
+      try {
+        if (this.hasTemplatesByDeliverableId[deliverableId] !== undefined) return
+        const files = await listDeliverableTemplates(deliverableId)
+        this.hasTemplatesByDeliverableId[deliverableId] = Array.isArray(files) ? files.length > 0 : false
+      } catch (_) {
+        this.hasTemplatesByDeliverableId[deliverableId] = false
+      }
+    },
+    /**
      * 函数级注释：判断当前行是否已有上传的交付物文件
      * 逻辑：遍历关联交付物，若其 `deliverableId` 在 `filesByDeliverableId` 中存在非空文件列表，则视为已上传。
      * @param {Object} row 当前表格行对象
@@ -849,12 +896,17 @@ export default {
     },
     /**
      * 函数级注释：为“上传”按钮生成样式类
-     * 需求：若当前行存在必须上传的交付物（isMustLoad=true），则按钮应设置为红色（danger）。
+     * 需求：
+     * - 若当前行存在必须上传的交付物（isMustLoad=true），添加红色（danger）。
+     * - 若存在交付物模板，添加模板标记（has-template）。
      * @param {Object} row 当前表格行对象
-     * @returns {string|Object|Array} 样式类：'danger' 或 空
+     * @returns {Object} 样式类对象
      */
     uploadButtonClass(row) {
-      return this.isMustUploadForRow(row) ? 'danger' : ''
+      return {
+        danger: this.isMustUploadForRow(row),
+        'has-template': this.hasTemplatesForRow(row)
+      }
     },
     /**
      * 函数级注释：为“查看”按钮生成样式类
@@ -1036,6 +1088,33 @@ export default {
         this.showError('当前行不支持下载交付物')
       } catch (e) {
         this.showError('下载发起失败：' + (e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：根据项目步骤关系ID批量删除交付物文件
+     * - 通过 `this.files`（项目汇总中的交付物文件）定位属于指定 relationIds 的文件记录；
+     * - 并发调用后端删除接口，删除物理文件及 construct_deliverablefiles 表记录；
+     * - 返回删除的文件数量，便于上层提示。
+     * @param {number[]} relationIds 项目-步骤关系ID数组
+     * @returns {Promise<number>} 实际删除的文件数量
+     */
+    async deleteFilesByRelationIds(relationIds) {
+      try {
+        const relSet = new Set((relationIds || []).filter(id => id != null))
+        if (relSet.size === 0) return 0
+        const all = Array.isArray(this.files) ? this.files : []
+        const fileIds = all
+          .filter(f => f && relSet.has(f.projectStepId))
+          .map(f => f.fileId)
+          .filter(id => id != null)
+        if (fileIds.length === 0) return 0
+        const tasks = fileIds.map(id => (async () => {
+          try { await deleteConstructDeliverableFile(id) } catch (_) { /* 单个失败不阻断 */ }
+        })())
+        await Promise.allSettled(tasks)
+        return fileIds.length
+      } catch (_) {
+        return 0
       }
     },
     /**
@@ -1448,6 +1527,10 @@ export default {
           if (sid != null) deliverableStepMap[sid] = true;
         });
         this.hasDeliverablesBySstepId = deliverableStepMap;
+        // 预拉取所有交付物的“模板存在性”，用于在主表中标记上传按钮
+        try {
+          await this.prefetchTemplatesForDeliverables(this.deliverables)
+        } catch (_) { /* 忽略模板预取失败，不影响主流程 */ }
         this.summaryLoaded = true;
         // 加载该项目下已保存的接口信息，用于展示接口块与对应步骤
         if (this.project && this.project.projectId) {
@@ -1481,6 +1564,23 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    /**
+     * 函数级注释：预拉取交付物模板存在性
+     * 为当前项目涉及的所有标准交付物并发查询模板列表，填充缓存映射。
+     * @param {Array<Object>} list 交付物列表
+     */
+    async prefetchTemplatesForDeliverables(list) {
+      const ids = Array.from(new Set((Array.isArray(list) ? list : []).map(d => d && (d.deliverableId || d.id)).filter(id => id != null)))
+      const tasks = ids.map(id => (async () => {
+        try {
+          const files = await listDeliverableTemplates(id)
+          this.hasTemplatesByDeliverableId[id] = Array.isArray(files) ? files.length > 0 : false
+        } catch (_) {
+          this.hasTemplatesByDeliverableId[id] = false
+        }
+      })())
+      await Promise.allSettled(tasks)
     },
     async loadStandardMilestones() {
       try {
@@ -2076,10 +2176,20 @@ export default {
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该接口及其生成的步骤关系？') : window.confirm('确认删除该接口及其生成的步骤关系？')
         if (!ok) return
+        // 级联删除：先删除该接口生成的步骤下已上传的交付物文件
+        const relIds = (this.steps || [])
+          .filter(s => s && s.type === '接口开发' && s.interfaceId === interfaceId)
+          .map(s => s.relationId)
+          .filter(id => id != null)
+        const removedCount = await this.deleteFilesByRelationIds(relIds)
         await deleteInterface(interfaceId)
         // 本地移除并刷新摘要
         this.interfaceBlocks = (this.interfaceBlocks || []).filter(b => b.id !== interfaceId)
-        this.$message && this.$message.success('接口已删除')
+        if (this.$message && removedCount > 0) {
+          this.$message.success(`接口已删除，同时清理交付物文件 ${removedCount} 个`)
+        } else {
+          this.$message && this.$message.success('接口已删除')
+        }
         await this.loadSummary()
       } catch (e) {
         this.showError('删除接口失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
@@ -2093,9 +2203,19 @@ export default {
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该个性化需求及其生成的步骤关系？') : window.confirm('确认删除该个性化需求及其生成的步骤关系？')
         if (!ok) return
+        // 级联删除：先删除该个性化需求生成的步骤下已上传的交付物文件
+        const relIds = (this.steps || [])
+          .filter(s => s && s.type === '个性化功能开发' && s.personalDevId === personalDevId)
+          .map(s => s.relationId)
+          .filter(id => id != null)
+        const removedCount = await this.deleteFilesByRelationIds(relIds)
         await deletePersonalDevelope(personalDevId)
         this.personalBlocks = (this.personalBlocks || []).filter(b => b.id !== personalDevId)
-        this.$message && this.$message.success('个性化需求已删除')
+        if (this.$message && removedCount > 0) {
+          this.$message.success(`个性化需求已删除，同时清理交付物文件 ${removedCount} 个`)
+        } else {
+          this.$message && this.$message.success('个性化需求已删除')
+        }
         await this.loadSummary()
       } catch (e) {
         this.showError('删除个性化需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
@@ -2225,6 +2345,7 @@ export default {
   cursor: pointer;
   transition: all .15s ease;
   color: #374151;
+  position: relative; /* 为模板标记定位 */
 }
 .icon-btn:hover {
   background: #f9fafb;
@@ -2247,6 +2368,25 @@ export default {
   height: 18px;
   /* 保持图标黑色，不受按钮颜色影响 */
   fill: #000;
+}
+/* 类级注释：上传按钮“模板”标记样式 —— 在右上角显示一个醒目的星标 */
+.icon-btn.has-template::after {
+  content: '\2605'; /* ★ 星号，表示存在模板 */
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #f59e0b; /* amber-500 */
+  background: #fff;
+  border-radius: 50%;
+  border: 1px solid #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
 .upload-list { display:flex; flex-direction:column; gap:12px; }
 .upload-item { border:1px solid #eee; border-radius:8px; padding:12px; background:#fafafa; }
@@ -2304,4 +2444,6 @@ export default {
 .error { color: #fecaca; }
 .unsupported { color: #e5e7eb; }
 /* 已移除 Luckysheet 容器样式：统一使用 iframe 全屏预览 PDF */
+/* 类级注释：上传按钮模板标记改为字母 T（覆盖旧星标） */
+.icon-btn.has-template::after { content: 'T'; font-weight: 700; }
 </style>
