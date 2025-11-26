@@ -16,7 +16,24 @@
 
     <div v-if="loading" class="state">正在加载...</div>
     <div v-else-if="error" class="state error">{{ error }}</div>
-    <div v-else class="content-grid">
+    <div v-else class="content-wrapper">
+      <!-- 顶部标签区域（横向切换） -->
+      <div class="top-tabs">
+        <div 
+          v-for="tab in tabs" 
+          :key="tab.id" 
+          class="tab-item"
+          :class="{ active: activeTab === tab.id }"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.name }}
+        </div>
+      </div>
+
+      <!-- 下方内容区域 -->
+      <div class="main-content">
+        <!-- 合同内建设内容（原页面内容） -->
+        <div v-show="activeTab === 'contract'" class="content-grid">
 
 
       <section class="card wide">
@@ -533,6 +550,17 @@
 
       
 
+        </div>
+        
+        <!-- 其他标签页空白占位 -->
+        <div v-show="activeTab !== 'contract'" class="empty-tab">
+           <div class="empty-state">
+             <div class="empty-icon">📂</div>
+             <h3>{{ getTabName(activeTab) }}</h3>
+             <p>该模块正在建设中...</p>
+           </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -567,6 +595,17 @@ export default {
    */
   data() {
     return {
+      // 标签页状态
+      activeTab: 'contract',
+      tabs: [
+        { id: 'contract', name: '合同内建设内容' },
+        { id: 'out_contract', name: '合同外需求' },
+        { id: 'risk', name: '项目风险' },
+        { id: 'warning', name: '项目预警' },
+        { id: 'statistics', name: '项目统计' },
+        { id: 'daily_report', name: '项目日报' },
+        { id: 'modification_record', name: '修改记录' }
+      ],
       loading: true,
       error: '',
       project: null,
@@ -776,6 +815,10 @@ export default {
     document.removeEventListener('click', this.onDocumentClick);
   },
   methods: {
+    getTabName(id) {
+      const tab = this.tabs.find(t => t.id === id);
+      return tab ? tab.name : '';
+    },
     /**
      * 函数级注释：获取与当前行关联的标准交付物列表
      * 关联规则：
@@ -2227,16 +2270,16 @@ export default {
 
 <style scoped>
 /* 类级注释：页面容器调整为内部滚动，仅内容区滚动，避免底部空白 */
-.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow:hidden; padding:12px; box-sizing:border-box; }
-.topbar { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid #eee; }
+.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow:hidden; padding:8px; box-sizing:border-box; }
+.topbar { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eee; }
 .back-btn { padding:6px 12px; border:1px solid #ddd; border-radius:4px; background:#fff; cursor:pointer; }
-.title { flex:1; display:flex; align-items:baseline; gap:12px; font-size:18px; font-weight:600; }
+.title { flex:1; display:flex; align-items:baseline; gap:8px; font-size:18px; font-weight:600; }
 .title .num { color:#666; font-size:13px; font-weight:400; }
-.stats { display:flex; gap:8px; }
+.stats { display:flex; gap:6px; }
 .chip { padding:4px 8px; background:#f5f5f5; border-radius:12px; font-size:12px; }
 .state { padding:24px; color:#333; }
 .state.error { color:#c00; }
-.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; padding-top:12px; overflow-x:auto; flex: 1; min-height: 0; }
+.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; overflow-x:auto; flex: 1; min-height: 0; }
 .card { background:#fff; border:1px solid #eee; border-radius:8px; padding:12px; }
 .card.wide { grid-column: 1 / -1; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
@@ -2446,4 +2489,91 @@ export default {
 /* 已移除 Luckysheet 容器样式：统一使用 iframe 全屏预览 PDF */
 /* 类级注释：上传按钮模板标记改为字母 T（覆盖旧星标） */
 .icon-btn.has-template::after { content: 'T'; font-weight: 700; }
+/* 布局容器调整 */
+.content-wrapper {
+  display: flex;
+  flex-direction: column; /* 改为垂直排列 */
+  gap: 2px; /* 进一步减小标签栏与内容区的间距 */
+  flex: 1;
+  min-height: 0;
+}
+
+/* 顶部横向标签栏样式 */
+.top-tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-item {
+  padding: 8px 16px; /* 减小内边距以降低高度 */
+  cursor: pointer;
+  border-bottom: 2px solid transparent; /* 底部边框指示选中状态 */
+  border-left: none; /* 移除左侧边框 */
+  transition: all 0.2s;
+  color: #4b5563;
+  font-weight: 500;
+  font-size: 13px; /* 稍微减小字体 */
+  white-space: nowrap;
+}
+
+.tab-item:hover {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+.tab-item.active {
+  background-color: #fff;
+  color: #2563eb;
+  border-bottom-color: #2563eb; /* 底部高亮 */
+  border-left-color: transparent;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 关键：允许flex子项收缩 */
+}
+
+.empty-tab {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 60px;
+  text-align: center;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.empty-state p {
+  margin: 0;
+}
 </style>
