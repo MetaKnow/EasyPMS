@@ -80,6 +80,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/projects/**").permitAll()
                 // 允许访问项目-标准步骤关系编辑接口（临时开放）
                 .requestMatchers("/api/project-relations/**").permitAll()
+                // 允许访问运维项目管理接口（临时开放）
+                .requestMatchers("/api/afterservice-projects/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

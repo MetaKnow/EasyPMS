@@ -66,6 +66,12 @@ public class Customer {
     private String customerRank;
 
     /**
+     * 销售负责人ID
+     */
+    @Column(name = "saleLeader")
+    private Long saleLeader;
+
+    /**
      * 创建时间
      */
     @CreationTimestamp
@@ -150,6 +156,14 @@ public class Customer {
 
     public void setCustomerRank(String customerRank) {
         this.customerRank = customerRank;
+    }
+
+    public Long getSaleLeader() {
+        return saleLeader;
+    }
+
+    public void setSaleLeader(Long saleLeader) {
+        this.saleLeader = saleLeader;
     }
 
     public LocalDateTime getCreateTime() {

@@ -82,6 +82,26 @@
         </div>
 
         <div class="form-row">
+          <div class="form-group">
+            <label for="saleLeader" class="required">销售负责人</label>
+            <select
+              id="saleLeader"
+              v-model="formData.saleLeader"
+              class="form-select"
+              :class="{ error: errors.saleLeader }"
+            >
+              <option :value="null">请选择销售负责人</option>
+              <option v-for="user in userList" :key="user.userId" :value="user.userId">
+                {{ user.name }}
+              </option>
+            </select>
+            <span v-if="errors.saleLeader" class="error-message">
+              {{ errors.saleLeader }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group full-width">
             <label for="customerRank" class="required">客户等级</label>
             <div class="radio-group">
@@ -162,6 +182,8 @@
 
 <script>
 import { checkCustomerNameAvailable } from '@/api/customer.js'
+import { getAllUsers } from '@/api/user.js'
+
 export default {
   name: 'CustomerForm',
   props: {
@@ -190,9 +212,13 @@ export default {
         phoneNumber: '',
         province: '',
         customerRank: '',
-        createTime: null
+        createTime: null,
+        saleLeader: null
       },
       
+      // 用户列表
+      userList: [],
+
       // 表单验证错误
       errors: {},
       
@@ -233,8 +259,20 @@ export default {
     if (this.visible) {
       this.initForm()
     }
+    this.fetchUserList()
   },
   methods: {
+    /**
+     * 获取用户列表
+     */
+    async fetchUserList() {
+      try {
+        this.userList = await getAllUsers()
+      } catch (error) {
+        console.error('获取用户列表失败', error)
+      }
+    },
+
     /**
      * 初始化表单数据
      */
@@ -248,7 +286,8 @@ export default {
           phoneNumber: this.customer.phoneNumber || '',
           province: this.customer.province || '',
           customerRank: this.customer.customerRank || '',
-          createTime: this.customer.createTime
+          createTime: this.customer.createTime,
+          saleLeader: this.customer.saleLeader || null
         }
       } else {
         // 新增模式，重置表单
@@ -259,7 +298,8 @@ export default {
           phoneNumber: '',
           province: '',
           customerRank: '',
-          createTime: null
+          createTime: null,
+          saleLeader: null
         }
       }
       
@@ -304,6 +344,11 @@ export default {
       // 省份验证
       if (!this.formData.province) {
         errors.province = '请选择省份'
+      }
+
+      // 销售负责人验证
+      if (!this.formData.saleLeader) {
+        errors.saleLeader = '请选择销售负责人'
       }
 
       // 客户等级验证
@@ -405,7 +450,8 @@ export default {
           contact: this.formData.contact.trim(),
           phoneNumber: this.formData.phoneNumber.trim(),
           province: this.formData.province,
-          customerRank: this.formData.customerRank
+          customerRank: this.formData.customerRank,
+          saleLeader: this.formData.saleLeader
         }
 
         // 如果是编辑模式，添加ID

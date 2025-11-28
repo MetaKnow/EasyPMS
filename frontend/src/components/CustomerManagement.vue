@@ -71,6 +71,7 @@
               <th>客户名称</th>
               <th>联系人</th>
               <th>联系方式</th>
+              <th>销售负责人</th>
               <th>省份</th>
               <th>客户等级</th>
               <th>创建时间</th>
@@ -95,6 +96,7 @@
               <td>{{ customer.customerName }}</td>
               <td>{{ customer.contact || '-' }}</td>
               <td>{{ customer.phoneNumber || '-' }}</td>
+              <td>{{ getUserName(customer.saleLeader) }}</td>
               <td>{{ customer.province || '-' }}</td>
               <td>
                 <span class="rank-badge" :class="getRankClass(customer.customerRank)">
@@ -187,6 +189,7 @@
 <script>
 import CustomerForm from './CustomerForm.vue'
 import { getCustomerList, createCustomer, updateCustomer, deleteCustomer, batchDeleteCustomers, checkCustomerNameAvailable } from '../api/customer.js'
+import { getAllUsers } from '../api/user.js'
 
 export default {
   name: 'CustomerManagement',
@@ -197,6 +200,8 @@ export default {
     return {
       // 客户列表数据
       customers: [],
+      // 用户映射表 (userId -> userName)
+      userMap: {},
       selectedCustomers: [], // 改为数组，支持多选
       
       // 搜索表单
@@ -248,9 +253,34 @@ export default {
     }
   },
   mounted() {
-    this.loadCustomers()
+    this.fetchUsers().then(() => {
+      this.loadCustomers()
+    })
   },
   methods: {
+    /**
+     * 获取所有用户并建立映射
+     */
+    async fetchUsers() {
+      try {
+        const users = await getAllUsers()
+        this.userMap = users.reduce((map, user) => {
+          map[user.userId] = user.name
+          return map
+        }, {})
+      } catch (error) {
+        console.error('获取用户列表失败:', error)
+      }
+    },
+
+    /**
+     * 获取用户姓名
+     */
+    getUserName(userId) {
+      if (!userId) return '-'
+      return this.userMap[userId] || userId
+    },
+
     /**
      * 加载客户列表
      */

@@ -21,22 +21,31 @@
           </div>
 
           <div class="form-group full-width">
+            <label for="customerId">客户名称</label>
+            <select id="customerId" v-model="form.customerId">
+              <option value="">请选择客户</option>
+              <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
+                {{ customer.customerName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
             <label for="arcSystem">档案系统 <span class="required">*</span></label>
-            <input 
-              type="text" 
-              id="arcSystem" 
-              v-model="form.arcSystem" 
-              required 
-              placeholder="请输入档案系统"
-            />
+            <select id="arcSystem" v-model="form.arcSystem" required>
+              <option value="">请选择档案系统</option>
+              <option v-for="product in products" :key="product.softId" :value="product.softName">
+                {{ product.softName }}
+              </option>
+            </select>
           </div>
 
           <div class="form-group">
-            <label for="director">负责人 <span class="required">*</span></label>
-            <select id="director" v-model="form.director" required>
-              <option value="">请选择负责人</option>
+            <label for="director">销售负责人 <span class="required">*</span></label>
+            <select id="director" v-model="form.saleDirector" required>
+              <option value="">请选择销售负责人</option>
               <option v-for="user in users" :key="user.userId" :value="user.userId">
-                {{ user.username }}
+                {{ user.name || user.userName }}
               </option>
             </select>
           </div>
@@ -126,10 +135,13 @@ export default {
     return {
       isSubmitting: false,
       users: [],
+      customers: [],
+      products: [],
       form: {
         projectName: '',
+        customerId: '',
         arcSystem: '',
-        director: '',
+        saleDirector: '',
         serviceYear: '',
         startDate: '',
         endDate: '',
@@ -151,6 +163,8 @@ export default {
       if (newVal) {
         this.loadFormData()
         this.loadUsers()
+        this.loadCustomers()
+        this.loadProducts()
       }
     },
     projectData: {
@@ -184,8 +198,9 @@ export default {
     resetForm() {
       this.form = {
         projectName: '',
+        customerId: '',
         arcSystem: '',
-        director: '',
+        saleDirector: '',
         serviceYear: '',
         startDate: '',
         endDate: '',
@@ -199,12 +214,40 @@ export default {
      */
     async loadUsers() {
       try {
-        const response = await axios.get('http://localhost:8081/api/users')
-        if (response.data.success) {
-          this.users = response.data.data
+        const response = await axios.get('http://localhost:8081/api/users?size=1000')
+        if (response.data && response.data.users) {
+          this.users = response.data.users
         }
       } catch (error) {
         console.error('加载用户列表失败:', error)
+      }
+    },
+
+    /**
+     * 加载客户列表
+     */
+    async loadCustomers() {
+      try {
+        const response = await axios.get('http://localhost:8081/api/customers?size=1000')
+        if (response.data && response.data.customers) {
+          this.customers = response.data.customers
+        }
+      } catch (error) {
+        console.error('加载客户列表失败:', error)
+      }
+    },
+
+    /**
+     * 加载产品列表
+     */
+    async loadProducts() {
+      try {
+        const response = await axios.get('http://localhost:8081/api/products?size=1000')
+        if (response.data && response.data.products) {
+          this.products = response.data.products
+        }
+      } catch (error) {
+        console.error('加载产品列表失败:', error)
       }
     },
 

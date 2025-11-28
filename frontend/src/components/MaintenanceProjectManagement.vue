@@ -3,17 +3,13 @@
     <div class="page-header">
       <h2 class="page-title">运维项目管理</h2>
       <div class="action-buttons">
-        <button @click="showCreateForm" class="btn btn-primary">
+        <button class="btn btn-primary" @click="showCreateForm">
           <i class="icon-plus"></i>
-          新增
+          新建项目
         </button>
-        <button @click="editSelected" :disabled="!selectedProject" class="btn btn-warning">
-          <i class="icon-edit"></i>
-          修改
-        </button>
-        <button @click="deleteProject(selectedProject)" :disabled="!selectedProject" class="btn btn-danger">
+        <button class="btn btn-danger" @click="batchDelete" :disabled="selectedProjects.length === 0">
           <i class="icon-delete"></i>
-          删除
+          删除项目
         </button>
       </div>
     </div>
@@ -37,8 +33,8 @@
         </select>
         <input 
           type="text" 
-          v-model="searchForm.director" 
-          placeholder="负责人"
+          v-model="searchForm.saleDirector" 
+          placeholder="销售负责人"
           class="search-input"
         />
         <button @click="searchProjects" class="btn btn-primary">搜索</button>
@@ -61,13 +57,14 @@
               </th>
               <th width="60">序号</th>
               <th>项目名称</th>
+              <th>客户名称</th>
               <th>档案系统</th>
-              <th>负责人</th>
+              <th>销售负责人</th>
               <th>项目状态</th>
               <th>开始日期</th>
               <th>结束日期</th>
               <th>创建时间</th>
-              <th width="200">操作</th>
+              <th width="120">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -86,8 +83,9 @@
               </td>
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ project.projectName }}</td>
+              <td>{{ project.customerName || '-' }}</td>
               <td>{{ project.arcSystem }}</td>
-              <td>{{ project.directorName || '-' }}</td>
+              <td>{{ project.saleDirectorName || '-' }}</td>
               <td>
                 <span :class="getStatusClass(project.status)">
                   {{ project.status }}
@@ -96,10 +94,9 @@
               <td>{{ formatDate(project.startDate) }}</td>
               <td>{{ formatDate(project.endDate) }}</td>
               <td>{{ formatDate(project.createTime) }}</td>
-              <td class="action-buttons">
-                <button @click.stop="viewProject(project)" class="btn btn-sm btn-info">查看</button>
-                <button @click.stop="editProject(project)" class="btn btn-sm btn-warning">编辑</button>
-                <button @click.stop="deleteProject(project)" class="btn btn-sm btn-danger">删除</button>
+              <td>
+                <button class="btn-small btn-primary" @click.stop="editProject(project)">编辑</button>
+                <button class="btn-small btn-danger" @click.stop="deleteProject(project)">删除</button>
               </td>
             </tr>
           </tbody>
@@ -147,7 +144,7 @@ export default {
       searchForm: {
         projectName: '',
         status: '',
-        director: ''
+        saleDirector: ''
       },
       // 分页信息
       currentPage: 1,
@@ -220,7 +217,7 @@ export default {
       this.searchForm = {
         projectName: '',
         status: '',
-        director: ''
+        saleDirector: ''
       }
       this.searchProjects()
     },
@@ -568,19 +565,26 @@ export default {
   border-color: #ff7875;
 }
 
-.btn-info {
-  background: #17a2b8;
-  color: white;
-}
+  .btn-info {
+    background: #17a2b8;
+    color: white;
+  }
 
-.btn-info:hover {
-  background: #138496;
-}
+  .btn-info:hover {
+    background: #138496;
+  }
 
-.btn-sm {
-  padding: 3px 6px;
-  font-size: 11px;
-}
+  .btn-sm {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  /* 与在建项目管理一致的小号按钮样式 */
+  .btn-small {
+    padding: 3px 6px;
+    font-size: 11px;
+    margin-right: 3px;
+  }
 
 .btn:disabled {
   opacity: 0.5;
@@ -646,13 +650,17 @@ export default {
 
 
 /* 图标 */
-.icon-plus::before {
-  content: '+';
-}
+  .icon-plus::before {
+    content: '+';
+  }
 
-.icon-refresh::before {
-  content: '↻';
-}
+  .icon-refresh::before {
+    content: '↻';
+  }
+
+  .icon-delete::before {
+    content: '🗑';
+  }
 
 /* 响应式设计 */
 @media (max-width: 768px) {

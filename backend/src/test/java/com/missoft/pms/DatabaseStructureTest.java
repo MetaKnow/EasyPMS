@@ -75,14 +75,18 @@ public class DatabaseStructureTest {
             verifySpecificForeignKey(metaData, "standard_construct_step", "director", "user", "userId");
             verifySpecificForeignKey(metaData, "standard_construct_step", "afterServiceProjectId", "afterservice_project", "projectId");
             
+            // 验证afterService_project表的外键
+            verifySpecificForeignKey(metaData, "afterservice_project", "saleDirector", "user", "userId");
+            
+            // 验证afterService_event表的外键
+            verifySpecificForeignKey(metaData, "afterservice_event", "afterServiceProjectId", "afterservice_project", "projectId");
+            verifySpecificForeignKey(metaData, "afterservice_event", "director", "user", "userId");
+            
             // 验证construct_deliverable表的外键
             verifySpecificForeignKey(metaData, "construct_deliverable", "uploadUser", "user", "userId");
             
             // 验证nonstandard_construct_step表的外键
             verifySpecificForeignKey(metaData, "nonstandard_construct_step", "director", "user", "userId");
-            
-            // 验证afterService_project表的外键
-            verifySpecificForeignKey(metaData, "afterservice_project", "director", "user", "userId");
             
             // 验证afterService_event表的外键
             verifySpecificForeignKey(metaData, "afterservice_event", "director", "user", "userId");
@@ -119,7 +123,7 @@ public class DatabaseStructureTest {
             
             // 验证afterService_project表字段
             verifyTableColumns(metaData, "afterservice_project", new String[]{
-                "projectId", "projectName", "arcSystem", "director", "ServiceYear", 
+                "projectId", "projectName", "arcSystem", "saleDirector", "ServiceYear", 
                 "startDate", "endDate", "serviceState", "totalHours"
             });
             

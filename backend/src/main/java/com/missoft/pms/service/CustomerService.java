@@ -123,6 +123,7 @@ public class CustomerService {
         existingCustomer.setPhoneNumber(customer.getPhoneNumber());
         existingCustomer.setProvince(customer.getProvince());
         existingCustomer.setCustomerRank(customer.getCustomerRank());
+        existingCustomer.setSaleLeader(customer.getSaleLeader());
 
         return customerRepository.save(existingCustomer);
     }
