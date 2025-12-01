@@ -2,12 +2,25 @@
   <div class="modal-overlay" v-if="visible">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h3>{{ isEdit ? '编辑运维项目' : '创建运维项目' }}</h3>
+        <h3>{{ isViewMode ? '查看运维项目' : (isEdit ? '编辑运维项目' : '创建运维项目') }}</h3>
         <button class="close-btn" @click="closeModal">&times;</button>
       </div>
       
-      <form @submit.prevent="submitForm" class="project-form">
-        <div class="form-grid">
+      <div class="modal-body">
+        <form @submit.prevent="submitForm" class="project-form">
+          <div class="form-grid">
+            <!-- 只读项目编号 -->
+          <div class="form-group full-width">
+            <label for="projectNum">项目编号 <span class="required">*</span></label>
+            <input
+              type="text"
+              id="projectNum"
+              v-model="form.projectNum"
+              readonly
+              placeholder="系统自动生成"
+            />
+          </div>
+
           <!-- 基本信息 -->
           <div class="form-group full-width">
             <label for="projectName">项目名称 <span class="required">*</span></label>
@@ -16,13 +29,14 @@
               id="projectName" 
               v-model="form.projectName" 
               required 
+              :disabled="isViewMode"
               placeholder="请输入项目名称"
             />
           </div>
 
           <div class="form-group full-width">
             <label for="customerId">客户名称</label>
-            <select id="customerId" v-model="form.customerId">
+            <select id="customerId" v-model="form.customerId" :disabled="isViewMode">
               <option value="">请选择客户</option>
               <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
                 {{ customer.customerName }}
@@ -32,7 +46,7 @@
 
           <div class="form-group full-width">
             <label for="arcSystem">档案系统 <span class="required">*</span></label>
-            <select id="arcSystem" v-model="form.arcSystem" required>
+            <select id="arcSystem" v-model="form.arcSystem" required :disabled="isViewMode">
               <option value="">请选择档案系统</option>
               <option v-for="product in products" :key="product.softId" :value="product.softName">
                 {{ product.softName }}
@@ -42,7 +56,7 @@
 
           <div class="form-group">
             <label for="director">销售负责人 <span class="required">*</span></label>
-            <select id="director" v-model="form.saleDirector" required>
+            <select id="director" v-model="form.saleDirector" required :disabled="isViewMode">
               <option value="">请选择销售负责人</option>
               <option v-for="user in users" :key="user.userId" :value="user.userId">
                 {{ user.name || user.userName }}
@@ -51,8 +65,27 @@
           </div>
 
           <div class="form-group">
+            <label for="serviceDirector">运维负责人 <span class="required">*</span></label>
+            <select id="serviceDirector" v-model="form.serviceDirector" required :disabled="isViewMode">
+              <option value="">请选择运维负责人</option>
+              <option v-for="user in users" :key="user.userId" :value="user.userId">
+                {{ user.name || user.userName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="serviceType">运维类型 <span class="required">*</span></label>
+            <select id="serviceType" v-model="form.serviceType" required :disabled="isViewMode">
+              <option value="">请选择运维类型</option>
+              <option value="我公司全权运维">我公司全权运维</option>
+              <option value="我公司配合远程运维">我公司配合远程运维</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label for="serviceState">运维状态 <span class="required">*</span></label>
-            <select id="serviceState" v-model="form.serviceState" required>
+            <select id="serviceState" v-model="form.serviceState" required :disabled="isViewMode">
               <option value="">请选择运维状态</option>
               <option value="免费运维期">免费运维期</option>
               <option value="付费运维">付费运维</option>
@@ -62,13 +95,15 @@
           </div>
 
           <div class="form-group">
-            <label for="serviceYear">运维年数</label>
+            <label for="serviceYear">运维年数 <span class="required">*</span></label>
             <input 
               type="number" 
               id="serviceYear" 
               v-model="form.serviceYear" 
               min="1"
               max="10"
+              required
+              :disabled="isViewMode"
               placeholder="请输入运维年数"
             />
           </div>
@@ -81,54 +116,67 @@
               v-model="form.totalHours" 
               step="0.5"
               min="0"
+              :disabled="isViewMode"
               placeholder="请输入总工时"
             />
           </div>
 
           <!-- 日期信息 -->
           <div class="form-group">
-            <label for="startDate">开始日期</label>
+            <label for="startDate">开始日期 <span class="required">*</span></label>
             <input 
               type="date" 
               id="startDate" 
               v-model="form.startDate"
+              required
+              :disabled="isViewMode"
             />
           </div>
 
           <div class="form-group">
-            <label for="endDate">结束日期</label>
+            <label for="endDate">结束日期 <span class="required">*</span></label>
             <input 
               type="date" 
               id="endDate" 
               v-model="form.endDate"
+              required
+              :disabled="isViewMode"
             />
           </div>
         </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
-          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-            {{ isSubmitting ? '保存中...' : '保存' }}
-          </button>
-        </div>
       </form>
     </div>
+    
+    <div class="modal-footer">
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @click="closeModal">{{ isViewMode ? '关闭' : '取消' }}</button>
+        <button v-if="!isViewMode" type="button" class="btn btn-primary" @click="submitForm" :disabled="isSubmitting">
+          {{ isSubmitting ? '提交中...' : '确定' }}
+        </button>
+      </div>
+    </div>
+  </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import { createAfterserviceProject, updateAfterserviceProject } from '../api/afterserviceProject'
 
 export default {
   name: 'AfterserviceProjectForm',
   props: {
     visible: {
       type: Boolean,
-      default: false
+      required: true
     },
     projectData: {
       type: Object,
       default: null
+    },
+    isViewMode: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -138,6 +186,7 @@ export default {
       customers: [],
       products: [],
       form: {
+        projectNum: '',
         projectName: '',
         customerId: '',
         arcSystem: '',
@@ -146,7 +195,9 @@ export default {
         startDate: '',
         endDate: '',
         serviceState: '',
-        totalHours: ''
+        totalHours: '',
+        serviceType: '',
+        serviceDirector: ''
       }
     }
   },
@@ -165,6 +216,10 @@ export default {
         this.loadUsers()
         this.loadCustomers()
         this.loadProducts()
+        // 新建模式时获取一个新的项目编号用于展示
+        if (!this.isEdit) {
+          this.loadProjectNum()
+        }
       }
     },
     projectData: {
@@ -193,10 +248,26 @@ export default {
     },
 
     /**
+     * 加载新项目编号（仅新建时）
+     */
+    async loadProjectNum() {
+      try {
+        const resp = await axios.get('http://localhost:8081/api/afterservice-projects/new-project-num')
+        const num = resp?.data?.data?.projectNum
+        if (num) {
+          this.form.projectNum = num
+        }
+      } catch (e) {
+        console.error('加载项目编号失败:', e)
+      }
+    },
+
+    /**
      * 重置表单
      */
     resetForm() {
       this.form = {
+        projectNum: '',
         projectName: '',
         customerId: '',
         arcSystem: '',
@@ -205,7 +276,9 @@ export default {
         startDate: '',
         endDate: '',
         serviceState: '',
-        totalHours: ''
+        totalHours: '',
+        serviceType: '',
+        serviceDirector: ''
       }
     },
 
@@ -299,48 +372,50 @@ export default {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
 .modal-content {
   background: white;
-  border-radius: 6px;
+  border-radius: 12px;
   width: 90%;
-  max-width: 800px;
+  max-width: 900px;
   max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e8e8;
   background: #fafafa;
-  border-radius: 6px 6px 0 0;
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
-  font-size: 16px;
-  font-weight: 500;
-  color: #262626;
   margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
-  color: #8c8c8c;
-  padding: 4px;
-  width: 28px;
-  height: 28px;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,8 +424,22 @@ export default {
 }
 
 .close-btn:hover {
-  color: #595959;
-  background: #f5f5f5;
+  background: #f0f0f0;
+  color: #666;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
 }
 
 .project-form {
@@ -359,9 +448,8 @@ export default {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
 }
 
 .form-group {
@@ -406,13 +494,19 @@ export default {
   border-color: #40a9ff;
 }
 
+.form-group input:disabled,
+.form-group select:disabled {
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+  background-color: #f5f5f5;
+  cursor: default;
+  opacity: 1;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
-  margin-top: 8px;
+  gap: 12px;
 }
 
 .btn {

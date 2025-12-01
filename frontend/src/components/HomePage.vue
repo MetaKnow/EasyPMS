@@ -65,6 +65,7 @@
     <ConstructingProjectForm 
       :visible="constructingProjectFormVisible"
       :project-data="selectedConstructingProject"
+      :is-view-mode="constructingProjectIsViewMode"
       @close="closeConstructingProjectForm"
       @success="onConstructingProjectSuccess"
     />
@@ -73,6 +74,7 @@
     <AfterserviceProjectForm 
       :visible="afterserviceProjectFormVisible"
       :project-data="selectedAfterserviceProject"
+      :is-view-mode="afterserviceProjectIsViewMode"
       @close="closeAfterserviceProjectForm"
       @success="onAfterserviceProjectSuccess"
     />
@@ -120,7 +122,9 @@ export default {
       ],
       // 表单显示状态
       constructingProjectFormVisible: false,
+      constructingProjectIsViewMode: false,
       afterserviceProjectFormVisible: false,
+      afterserviceProjectIsViewMode: false,
       // 选中的项目数据
       selectedConstructingProject: null,
       selectedAfterserviceProject: null,
@@ -168,7 +172,8 @@ export default {
     /**
      * 显示在建项目表单
      */
-    async showConstructingProjectForm(projectData = null) {
+    async showConstructingProjectForm(projectData = null, isViewMode = false) {
+      this.constructingProjectIsViewMode = isViewMode;
       if (projectData && projectData.projectId) {
         // 编辑模式：获取完整的项目详情
         try {
@@ -215,8 +220,9 @@ export default {
     /**
      * 显示运维项目表单
      */
-    showAfterserviceProjectForm(projectData = null) {
+    showAfterserviceProjectForm(projectData = null, isViewMode = false) {
       this.selectedAfterserviceProject = projectData;
+      this.afterserviceProjectIsViewMode = isViewMode;
       this.afterserviceProjectFormVisible = true;
     },
 
@@ -226,6 +232,7 @@ export default {
     closeAfterserviceProjectForm() {
       this.afterserviceProjectFormVisible = false;
       this.selectedAfterserviceProject = null;
+      this.afterserviceProjectIsViewMode = false;
     },
 
     /**

@@ -1,6 +1,7 @@
 package com.missoft.pms.controller;
 
 import com.missoft.pms.dto.AfterServiceProjectDTO;
+import com.missoft.pms.dto.HandoverRequest;
 import com.missoft.pms.service.AfterServiceProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -63,6 +64,20 @@ public class AfterServiceProjectController {
     }
 
     /**
+     * 获取一个新的唯一项目编号（用于新建表单展示）
+     */
+    @GetMapping("/new-project-num")
+    public ResponseEntity<Map<String, Object>> getNewProjectNum() {
+        String num = afterServiceProjectService.generateNewProjectNum();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        Map<String, Object> data = new HashMap<>();
+        data.put("projectNum", num);
+        response.put("data", data);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 创建项目
      */
     @PostMapping
@@ -73,6 +88,20 @@ public class AfterServiceProjectController {
         response.put("success", true);
         response.put("data", created);
         response.put("message", "创建成功");
+        
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 从在建项目移交
+     */
+    @PostMapping("/handover")
+    public ResponseEntity<Map<String, Object>> handoverProject(@RequestBody HandoverRequest request) {
+        afterServiceProjectService.handoverProject(request);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "移交成功");
         
         return ResponseEntity.ok(response);
     }

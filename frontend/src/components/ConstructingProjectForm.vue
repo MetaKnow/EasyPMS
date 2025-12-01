@@ -3,13 +3,14 @@
     <div class="modal-content" @click.stop>
       <!-- 固定标题区域 -->
       <div class="modal-header">
-        <h3>{{ isEdit ? '编辑在建项目' : '新建在建项目' }}</h3>
+        <h3>{{ isViewMode ? '查看在建项目' : (isEdit ? '编辑在建项目' : '新建在建项目') }}</h3>
         <button class="close-btn" @click="closeModal">&times;</button>
       </div>
       
       <!-- 可滚动内容区域 -->
       <div class="modal-body">
         <form @submit.prevent="submitForm" class="project-form">
+        <fieldset :disabled="isViewMode" class="form-fieldset">
         <!-- 项目基本信息分组 -->
         <div class="form-section">
           <h4 class="section-title">项目基本信息</h4>
@@ -301,19 +302,30 @@
           </div>
         </div>
 
+        </fieldset>
         </form>
       </div>
       
       <!-- 固定按钮区域 -->
       <div class="modal-footer">
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
-          <button type="submit" class="btn btn-primary" :disabled="isSubmitting" @click="submitForm">
+          <button v-if="isEdit && !isViewMode && form.projectState !== '已完成'" type="button" class="btn btn-warning" @click="showHandoverForm" style="margin-right: 8px;">移交运维</button>
+          <button type="button" class="btn btn-secondary" @click="closeModal">{{ isViewMode ? '关闭' : '取消' }}</button>
+          <button v-if="!isViewMode" type="submit" class="btn btn-primary" :disabled="isSubmitting" @click="submitForm">
             {{ isSubmitting ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存' : '创建项目') }}
           </button>
         </div>
       </div>
     </div>
+
+    <!-- 移交运维表单 -->
+    <ProjectHandoverForm 
+      :visible="handoverFormVisible"
+      :project-data="projectData"
+      :users="users"
+      @close="closeHandoverForm"
+      @success="onHandoverSuccess"
+    />
   </div>
 </template>
 
@@ -323,9 +335,13 @@ import { getAllCustomers } from '../api/customer.js'
 import { getAllUsers } from '../api/user.js'
 import { getAllProducts } from '../api/product.js'
 import { getAllChannelDistributors } from '../api/channelDistributor.js'
+import ProjectHandoverForm from './ProjectHandoverForm.vue'
 
 export default {
   name: 'ConstructingProjectForm',
+  components: {
+    ProjectHandoverForm
+  },
   props: {
     visible: {
       type: Boolean,
@@ -334,6 +350,10 @@ export default {
     projectData: {
       type: Object,
       default: null
+    },
+    isViewMode: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -343,6 +363,7 @@ export default {
       users: [],
       products: [],
       channels: [],
+      handoverFormVisible: false,
       form: {
         projectNum: '',
         year: new Date().getFullYear(),
@@ -427,6 +448,29 @@ export default {
     }
   },
   methods: {
+    /**
+     * 显示移交运维表单
+     */
+    showHandoverForm() {
+      this.handoverFormVisible = true
+    },
+
+    /**
+     * 关闭移交运维表单
+     */
+    closeHandoverForm() {
+      this.handoverFormVisible = false
+    },
+
+    /**
+     * 移交成功回调
+     */
+    onHandoverSuccess() {
+      this.closeHandoverForm()
+      this.$emit('success')
+      this.closeModal()
+    },
+
     /**
      * 加载表单数据
      */
@@ -539,6 +583,7 @@ export default {
     async loadUsers() {
       try {
         this.users = await getAllUsers()
+        console.log('ConstructingProjectForm loaded users:', this.users ? this.users.length : 0)
       } catch (error) {
         console.error('加载用户列表失败:', error)
         this.users = []
@@ -1001,6 +1046,35 @@ export default {
   background: #e6f7ff;
   border-color: #1890ff;
   color: #1890ff;
+}
+
+.btn-warning {
+  background: #fa8c16;
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #ffa940;
+}
+
+/* Fieldset styles */
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+/* Disabled inputs in view mode */
+fieldset[disabled] input,
+fieldset[disabled] select,
+fieldset[disabled] textarea {
+  background-color: #f5f5f5 !important;
+  color: #000000 !important;
+  cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: #000000;
+  border-color: #d9d9d9;
 }
 
 /* 响应式设计 */

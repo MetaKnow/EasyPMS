@@ -31,6 +31,8 @@ public class ConstructingProjectDTO {
     private String softName;
     private String softVersion;
 
+    private Boolean isCommitAfterSale;
+
     // 构造函数
     public ConstructingProjectDTO() {}
 
@@ -38,7 +40,7 @@ public class ConstructingProjectDTO {
                                 String projectType, String projectState, Long projectLeader, 
                                 String projectLeaderName, LocalDate startDate, LocalDate planEndDate, 
                                 BigDecimal value, Integer year, Long customerId, String customerName,
-                                Long softId, String softName, String softVersion) {
+                                Long softId, String softName, String softVersion, Boolean isCommitAfterSale) {
         this.projectId = projectId;
         this.projectNum = projectNum;
         this.projectName = projectName;
@@ -55,6 +57,7 @@ public class ConstructingProjectDTO {
         this.softId = softId;
         this.softName = softName;
         this.softVersion = softVersion;
+        this.isCommitAfterSale = isCommitAfterSale;
     }
 
     // Getter和Setter方法
@@ -184,5 +187,13 @@ public class ConstructingProjectDTO {
 
     public void setSoftVersion(String softVersion) {
         this.softVersion = softVersion;
+    }
+
+    public Boolean getIsCommitAfterSale() {
+        return isCommitAfterSale;
+    }
+
+    public void setIsCommitAfterSale(Boolean isCommitAfterSale) {
+        this.isCommitAfterSale = isCommitAfterSale;
     }
 }

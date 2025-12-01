@@ -151,6 +151,12 @@ public class ConstructingProject {
     private String constructContent;
 
     /**
+     * 是否移交运维（0-未移交，1-已移交）
+     */
+    @Column(name = "isCommitAfterSale", nullable = false)
+    private Boolean isCommitAfterSale = false;
+
+    /**
      * 创建时间
      */
     @Column(name = "createTime", updatable = false)
@@ -371,6 +377,14 @@ public class ConstructingProject {
 
     public void setConstructContent(String constructContent) {
         this.constructContent = constructContent;
+    }
+
+    public Boolean getIsCommitAfterSale() {
+        return isCommitAfterSale;
+    }
+
+    public void setIsCommitAfterSale(Boolean isCommitAfterSale) {
+        this.isCommitAfterSale = isCommitAfterSale;
     }
 
     public LocalDateTime getCreateTime() {

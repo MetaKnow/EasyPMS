@@ -13,6 +13,7 @@ import StandardDeliverableManagement from '../components/StandardDeliverableMana
 import ProductManagement from '../components/ProductManagement.vue'
 import ChannelDistributorManagement from '../components/ChannelDistributorManagement.vue'
 import ProjectDetail from '../components/ProjectDetail.vue'
+import MaintenanceRecord from '../components/MaintenanceRecord.vue'
 
 /**
  * 路由配置
@@ -62,6 +63,12 @@ const routes = [
         name: 'MaintenanceProjects',
         component: MaintenanceProjectManagement,
         meta: { title: '运维项目管理' }
+      },
+      {
+        path: 'maintenance/:projectId',
+        name: 'MaintenanceRecord',
+        component: MaintenanceRecord,
+        meta: { title: '运维记录', fullscreen: true }
       },
       {
         path: 'system/organization',

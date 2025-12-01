@@ -58,7 +58,7 @@ export async function getUserList(params = {}) {
  */
 export async function getAllUsers() {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/all`, {
+    const response = await fetch(`${API_BASE_URL}/users/all?_t=${new Date().getTime()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'

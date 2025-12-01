@@ -57,6 +57,30 @@ export function updateAfterserviceProject(id, data) {
 }
 
 /**
+ * 生成新的运维项目编号
+ * @returns {Promise} 响应数据
+ */
+export function generateAfterserviceProjectNum() {
+  return request({
+    url: '/api/afterservice-projects/generate-num',
+    method: 'get'
+  })
+}
+
+/**
+ * 移交运维项目
+ * @param {Object} data 移交数据
+ * @returns {Promise} 响应数据
+ */
+export function handoverProject(data) {
+  return request({
+    url: '/api/afterservice-projects/handover',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 删除运维项目
  * @param {number} id 项目ID
  * @returns {Promise} 响应数据

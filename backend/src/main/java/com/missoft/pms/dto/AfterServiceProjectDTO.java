@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class AfterServiceProjectDTO {
 
     private Long projectId;
+    private String projectNum;
     private String projectName;
     private Long customerId;
     private String customerName;
@@ -20,6 +21,10 @@ public class AfterServiceProjectDTO {
     private LocalDate startDate;
     private LocalDate endDate;
     private String serviceState;
+    private String serviceType;
+    private Long serviceDirector;
+    private String serviceDirectorName;
+    private Long constructingProjectId;
     private BigDecimal totalHours;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
@@ -30,6 +35,14 @@ public class AfterServiceProjectDTO {
 
     public void setProjectId(Long projectId) {
         this.projectId = projectId;
+    }
+
+    public String getProjectNum() {
+        return projectNum;
+    }
+
+    public void setProjectNum(String projectNum) {
+        this.projectNum = projectNum;
     }
 
     public String getProjectName() {
@@ -110,6 +123,38 @@ public class AfterServiceProjectDTO {
 
     public void setServiceState(String serviceState) {
         this.serviceState = serviceState;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    public Long getServiceDirector() {
+        return serviceDirector;
+    }
+
+    public void setServiceDirector(Long serviceDirector) {
+        this.serviceDirector = serviceDirector;
+    }
+
+    public String getServiceDirectorName() {
+        return serviceDirectorName;
+    }
+
+    public void setServiceDirectorName(String serviceDirectorName) {
+        this.serviceDirectorName = serviceDirectorName;
+    }
+
+    public Long getConstructingProjectId() {
+        return constructingProjectId;
+    }
+
+    public void setConstructingProjectId(Long constructingProjectId) {
+        this.constructingProjectId = constructingProjectId;
     }
 
     public BigDecimal getTotalHours() {

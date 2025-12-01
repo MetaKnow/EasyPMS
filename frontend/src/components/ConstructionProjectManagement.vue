@@ -61,12 +61,12 @@
                <col style="width: 40px" />
                <col style="width: 60px" />
                <col style="width: 170px" />
-               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
-               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
-               <col style="width: calc((100% - var(--fixed-total)) / 3)" />
+               <col style="width: calc((100% - var(--fixed-total)) / 2)" />
+               <col style="width: 250px" />
+               <col style="width: calc((100% - var(--fixed-total)) / 2)" />
                <col style="width: 100px" />
                <col style="width: 100px" />
-               <col style="width: 120px" />
+               <col style="width: 170px" />
              </colgroup>
           <thead>
               <tr>
@@ -114,6 +114,9 @@
                   </span>
                 </td>
                 <td>
+                  <button class="btn-small btn-info" @click.stop="viewProject(project)">
+                    查看
+                  </button>
                   <button class="btn-small btn-primary" @click.stop="editProject(project)">
                     编辑
                   </button>
@@ -367,15 +370,14 @@ export default {
      * 查看项目
      */
     viewProject(project) {
-      // TODO: 实现查看项目详情
-      console.log('查看项目:', project)
+      this.$emit('show-constructing-project-form', project, true)
     },
 
     /**
      * 编辑项目
      */
     editProject(project) {
-      this.$emit('show-constructing-project-form', project)
+      this.$emit('show-constructing-project-form', project, false)
     },
 
     /**

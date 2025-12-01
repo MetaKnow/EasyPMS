@@ -113,7 +113,7 @@ public interface ConstructingProjectRepository extends JpaRepository<Constructin
     @Query("SELECT new com.missoft.pms.dto.ConstructingProjectDTO(" +
            "cp.projectId, cp.projectNum, cp.projectName, cp.projectType, cp.projectState, " +
            "cp.projectLeader, COALESCE(u.name, u.userName, ''), cp.startDate, cp.planEndDate, cp.value, cp.year, " +
-           "cp.customerId, COALESCE(c.customerName, ''), cp.softId, COALESCE(a.softName, ''), COALESCE(a.softVersion, '')) " +
+           "cp.customerId, COALESCE(c.customerName, ''), cp.softId, COALESCE(a.softName, ''), COALESCE(a.softVersion, ''), cp.isCommitAfterSale) " +
            "FROM ConstructingProject cp " +
            "LEFT JOIN Customer c ON cp.customerId = c.customerId " +
            "LEFT JOIN User u ON cp.projectLeader = u.userId " +

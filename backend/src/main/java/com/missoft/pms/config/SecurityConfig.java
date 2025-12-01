@@ -82,6 +82,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/project-relations/**").permitAll()
                 // 允许访问运维项目管理接口（临时开放）
                 .requestMatchers("/api/afterservice-projects/**").permitAll()
+                // 允许访问运维事件接口（临时开放，后续可加认证）
+                .requestMatchers("/api/afterservice-events/**").permitAll()
+                // 允许访问运维事件附件上传/下载/预览接口（临时开放）
+                .requestMatchers("/api/afterservice-deliverable-files/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

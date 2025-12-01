@@ -10,4 +10,5 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface AfterServiceProjectRepository extends JpaRepository<AfterServiceProject, Long>, JpaSpecificationExecutor<AfterServiceProject> {
+    boolean existsByProjectNum(String projectNum);
 }

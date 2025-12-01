@@ -25,11 +25,11 @@
           @keyup.enter="searchProjects"
         />
         <select v-model="searchForm.status" class="search-select">
-          <option value="">全部状态</option>
-          <option value="运行中">运行中</option>
-          <option value="维护中">维护中</option>
-          <option value="已暂停">已暂停</option>
-          <option value="已结束">已结束</option>
+          <option value="">全部运维状态</option>
+          <option value="免费运维期">免费运维期</option>
+          <option value="付费运维">付费运维</option>
+          <option value="无付费运维">无付费运维</option>
+          <option value="暂停运维">暂停运维</option>
         </select>
         <input 
           type="text" 
@@ -44,8 +44,21 @@
 
     <!-- 项目列表 -->
     <div class="table-section">
-      <div class="table-container">
+      <div class="table-container" @mouseover="onTableMouseOver" @mousemove="onTableMouseMove" @mouseout="onTableMouseOut" @scroll="onTableScroll">
         <table class="maintenance-table">
+          <colgroup>
+            <col style="width: 50px" />
+            <col style="width: 60px" />
+            <col style="width: 170px" />
+            <col style="width: calc((100% - var(--fixed-total)) / 3)" />
+            <col style="width: 160px" />
+            <col style="width: 160px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
+            <col style="width: 120px" />
+            <col style="width: 100px" />
+            <col style="width: 160px" />
+          </colgroup>
           <thead>
             <tr>
               <th width="50">
@@ -56,15 +69,15 @@
                 />
               </th>
               <th width="60">序号</th>
+              <th width="160">项目编号</th>
               <th>项目名称</th>
               <th>客户名称</th>
               <th>档案系统</th>
-              <th>销售负责人</th>
-              <th>项目状态</th>
-              <th>开始日期</th>
-              <th>结束日期</th>
-              <th>创建时间</th>
-              <th width="120">操作</th>
+              <th width="100">销售负责人</th>
+              <th width="100">运维状态</th>
+              <th width="120">运维类型</th>
+              <th width="100">运维负责人</th>
+              <th width="160">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -72,6 +85,7 @@
               v-for="(project, index) in projectList" 
               :key="project.projectId"
               @click="selectProject(project)"
+              @dblclick="openMaintenanceRecord(project)"
               :class="{ selected: selectedProject && selectedProject.projectId === project.projectId }"
             >
               <td>
@@ -79,28 +93,31 @@
                   type="checkbox" 
                   :value="project.projectId"
                   v-model="selectedProjects"
+                  @click.stop
                 />
               </td>
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td>{{ project.projectNum }}</td>
               <td>{{ project.projectName }}</td>
               <td>{{ project.customerName || '-' }}</td>
               <td>{{ project.arcSystem }}</td>
               <td>{{ project.saleDirectorName || '-' }}</td>
               <td>
-                <span :class="getStatusClass(project.status)">
-                  {{ project.status }}
+                <span :class="getStatusClass(project.serviceState)">
+                  {{ project.serviceState || '-' }}
                 </span>
               </td>
-              <td>{{ formatDate(project.startDate) }}</td>
-              <td>{{ formatDate(project.endDate) }}</td>
-              <td>{{ formatDate(project.createTime) }}</td>
+              <td>{{ project.serviceType || '-' }}</td>
+              <td>{{ project.serviceDirectorName || '-' }}</td>
               <td>
+                <button class="btn-small btn-info" @click.stop="viewProject(project)" style="margin-right: 5px;">查看</button>
                 <button class="btn-small btn-primary" @click.stop="editProject(project)">编辑</button>
                 <button class="btn-small btn-danger" @click.stop="deleteProject(project)">删除</button>
               </td>
             </tr>
           </tbody>
         </table>
+        <div v-if="tooltipVisible" class="cell-tooltip" :style="tooltipStyle" ref="cellTooltip">{{ tooltipText }}</div>
       </div>
 
       <!-- 分页 -->
@@ -155,7 +172,12 @@ export default {
       // 当前选中的单个项目
       selectedProject: null,
       // 加载状态
-      loading: false
+      loading: false,
+      // 单元格悬浮提示
+      tooltipVisible: false,
+      tooltipText: '',
+      tooltipStyle: { top: '0px', left: '0px' },
+      tooltipCell: null
     }
   },
   computed: {
@@ -273,11 +295,11 @@ export default {
     },
 
     /**
-     * 查看项目
+     * 双击打开运维记录界面
      */
-    viewProject(project) {
-      // TODO: 实现查看项目详情
-      console.log('查看项目:', project)
+    openMaintenanceRecord(project) {
+      if (!project?.projectId) return
+      this.$router.push({ name: 'MaintenanceRecord', params: { projectId: project.projectId } })
     },
 
     /**
@@ -338,6 +360,50 @@ export default {
     },
 
     /**
+     * 查看项目
+     */
+    viewProject(project) {
+      this.$emit('show-afterservice-project-form', project, true)
+    },
+
+    /**
+     * 编辑项目
+     */
+    editProject(project) {
+      this.$emit('show-afterservice-project-form', project)
+    },
+
+    /**
+     * 删除项目
+     */
+    async deleteProject(project) {
+      if (!confirm(`确定要删除项目"${project.projectName}"吗？`)) {
+        return
+      }
+
+      try {
+        const response = await deleteAfterserviceProject(project.projectId)
+        if (response.data.success) {
+          alert('删除成功')
+          this.loadProjects()
+        } else {
+          alert(response.data.message || '删除失败')
+        }
+      } catch (error) {
+        console.error('删除项目失败:', error)
+        alert('删除失败')
+      }
+    },
+
+    /**
+     * 双击打开运维记录界面
+     */
+    openMaintenanceRecord(project) {
+      if (!project?.projectId) return
+      this.$router.push({ name: 'MaintenanceRecord', params: { projectId: project.projectId } })
+    },
+
+    /**
      * 全选/取消全选
      */
     selectAll(event) {
@@ -363,10 +429,10 @@ export default {
      */
     getStatusClass(status) {
       const statusMap = {
-        '运行中': 'status-active',
-        '维护中': 'status-maintenance',
-        '已暂停': 'status-paused',
-        '已结束': 'status-completed'
+        '免费运维期': 'status-free',
+        '付费运维': 'status-paid',
+        '无付费运维': 'status-none',
+        '暂停运维': 'status-paused'
       }
       return statusMap[status] || ''
     },
@@ -377,6 +443,58 @@ export default {
     formatDate(date) {
       if (!date) return '-'
       return new Date(date).toLocaleDateString()
+    },
+
+    // 悬浮提示事件与定位（与在建项目管理模块一致）
+    onTableMouseOver(e) {
+      const cell = e.target.closest('td')
+      if (!cell) return
+      if (cell.querySelector('button')) return
+      if (!this.isOverflowed(cell)) {
+        this.tooltipVisible = false
+        this.tooltipCell = null
+        return
+      }
+      this.tooltipText = (cell.textContent || '').trim()
+      this.tooltipVisible = true
+      this.tooltipCell = cell
+      this.positionTooltip(cell, e)
+    },
+    onTableMouseMove(e) {
+      if (!this.tooltipVisible || !this.tooltipCell) return
+      this.positionTooltip(this.tooltipCell, e)
+    },
+    onTableMouseOut(e) {
+      const toEl = e.relatedTarget
+      if (toEl && this.tooltipCell && this.tooltipCell.contains(toEl)) return
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    onTableScroll() {
+      this.tooltipVisible = false
+      this.tooltipCell = null
+    },
+    isOverflowed(el) {
+      if (!el) return false
+      const style = getComputedStyle(el)
+      if (style.whiteSpace !== 'nowrap') return false
+      return el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight
+    },
+    positionTooltip(cell, e) {
+      const rect = cell.getBoundingClientRect()
+      this.tooltipStyle = { top: '0px', left: '0px' }
+      this.$nextTick(() => {
+        const tip = this.$refs.cellTooltip
+        const tipRect = tip ? tip.getBoundingClientRect() : { width: 300, height: 80 }
+        const margin = 8
+        const showAbove = rect.bottom + tipRect.height + margin > window.innerHeight
+        const top = showAbove ? rect.top - tipRect.height - margin : rect.bottom + margin
+        let left = e.clientX + 12
+        const maxLeft = window.innerWidth - tipRect.width - margin
+        if (left > maxLeft) left = maxLeft
+        if (left < margin) left = margin
+        this.tooltipStyle = { top: `${top}px`, left: `${left}px` }
+      })
     }
   }
 }
@@ -466,6 +584,8 @@ export default {
 .maintenance-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+  --fixed-total: 900px;
 }
 
 .maintenance-table th,
@@ -474,6 +594,9 @@ export default {
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .maintenance-table th {
@@ -567,11 +690,13 @@ export default {
 
   .btn-info {
     background: #17a2b8;
+    border-color: #17a2b8;
     color: white;
   }
 
   .btn-info:hover {
     background: #138496;
+    border-color: #117a8b;
   }
 
   .btn-sm {
@@ -602,10 +727,10 @@ export default {
   font-weight: 500;
 }
 
-.status-maintenance {
-  color: #fa8c16;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
+.status-free {
+  color: #52c41a; /* 绿色，表示免费期 */
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -622,10 +747,20 @@ export default {
   font-weight: 500;
 }
 
-.status-completed {
-  color: #1890ff;
+.status-paid {
+  color: #1890ff; /* 蓝色，表示付费运维 */
   background: #f0f5ff;
   border: 1px solid #91d5ff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-none {
+  color: #8c8c8c; /* 灰色，表示无付费运维 */
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -698,5 +833,20 @@ export default {
     gap: 8px;
     padding: 8px 12px;
   }
+}
+
+/* 单元格悬浮提示样式 */
+.cell-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: 600px;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 </style>

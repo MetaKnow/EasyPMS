@@ -23,6 +23,9 @@ public class AfterServiceProject {
     @Column(name = "projectName", nullable = false, length = 200)
     private String projectName;
 
+    @Column(name = "projectNum", nullable = false, unique = true, length = 32)
+    private String projectNum;
+
     @Column(name = "customerId")
     private Long customerId;
 
@@ -43,6 +46,25 @@ public class AfterServiceProject {
 
     @Column(name = "serviceState", nullable = false, length = 50)
     private String serviceState;
+
+    /**
+     * 运维类型
+     * 值域：我公司全权运维、我公司配合远程运维
+     */
+    @Column(name = "serviceType", length = 50)
+    private String serviceType;
+
+    /**
+     * 运维负责人ID
+     */
+    @Column(name = "serviceDirector")
+    private Long serviceDirector;
+
+    /**
+     * 关联的在建项目ID
+     */
+    @Column(name = "constructingProjectId")
+    private Long constructingProjectId;
 
     @Column(name = "totalHours", precision = 10, scale = 1)
     private BigDecimal totalHours;
@@ -71,6 +93,14 @@ public class AfterServiceProject {
 
     public void setProjectName(String projectName) {
         this.projectName = projectName;
+    }
+
+    public String getProjectNum() {
+        return projectNum;
+    }
+
+    public void setProjectNum(String projectNum) {
+        this.projectNum = projectNum;
     }
 
     public Long getCustomerId() {
@@ -127,6 +157,30 @@ public class AfterServiceProject {
 
     public void setServiceState(String serviceState) {
         this.serviceState = serviceState;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    public Long getServiceDirector() {
+        return serviceDirector;
+    }
+
+    public void setServiceDirector(Long serviceDirector) {
+        this.serviceDirector = serviceDirector;
+    }
+
+    public Long getConstructingProjectId() {
+        return constructingProjectId;
+    }
+
+    public void setConstructingProjectId(Long constructingProjectId) {
+        this.constructingProjectId = constructingProjectId;
     }
 
     public BigDecimal getTotalHours() {
