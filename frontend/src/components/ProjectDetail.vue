@@ -153,7 +153,7 @@
                 <td></td>
                 <td></td>
                 <td>
-                  <button class="btn ghost" @click="onDeleteInterface(row.blockId)">删除</button>
+                  <button class="btn ghost" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="onDeleteInterface(row.blockId)">删除</button>
                 </td>
                 <td class="deliverable-actions"></td>
               </tr>
@@ -170,7 +170,7 @@
                 <td></td>
                 <td></td>
                 <td>
-                  <button class="btn ghost" @click="onDeletePersonal(row.blockId)">删除</button>
+                  <button class="btn ghost" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="onDeletePersonal(row.blockId)">删除</button>
                 </td>
                 <td class="deliverable-actions"></td>
               </tr>
@@ -324,14 +324,14 @@
               <tr v-else-if="row.rowType === 'add_interface'" class="add-interface-row">
                 <td>{{ idx + 1 }}</td>
                 <td colspan="11">
-                  <button class="add-interface-btn" @click="openInterfaceDialog">添加接口</button>
+                  <button class="add-interface-btn" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="openInterfaceDialog">添加接口</button>
                 </td>
               </tr>
               <!-- 添加个性化需求按钮行（位于目标里程碑上一行） -->
               <tr v-else-if="row.rowType === 'add_personal'" class="add-personal-row">
                 <td>{{ idx + 1 }}</td>
                 <td colspan="11">
-                  <button class="add-personal-btn" @click="openPersonalDialog">添加个性化需求</button>
+                  <button class="add-personal-btn" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="openPersonalDialog">添加个性化需求</button>
                 </td>
               </tr>
               <tr v-else class="milestone-row">
@@ -495,7 +495,7 @@
                       <li v-for="f in uploadedFilesByDeliverableId[d.deliverableId]" :key="f.fileId" class="file-item">
                         <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{ fileBaseName(f.filePath) }}</button>
                         <span class="size">{{ prettySize(f.fileSize) }}</span>
-                        <button class="icon-btn danger" title="删除" @click="deleteUploadedFile(f.fileId, d.deliverableId)">
+                        <button class="icon-btn danger" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" title="删除" @click="deleteUploadedFile(f.fileId, d.deliverableId)">
                           <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
                         </button>
                         <!-- 已移除下载按钮：上传交付物界面不提供下载入口 -->
@@ -578,6 +578,7 @@ import request from '../api/request'
 import mammoth from 'mammoth/mammoth.browser'
 // 已移除 Luckysheet/XLSX 前端预览，统一走后端转 PDF
 import { uploadConstructDeliverableFiles, listConstructDeliverableFiles, deleteConstructDeliverableFile } from '../api/constructDeliverableFile';
+import { ElMessageBox } from 'element-plus'
 export default {
   name: 'ProjectDetail',
   /**
@@ -678,6 +679,10 @@ export default {
     };
   },
   computed: {
+    // 函数级注释：判断项目是否为“已完成”状态，用于前端禁用新增/删除入口
+    isProjectCompleted() {
+      return this.project && this.project.projectState === '已完成'
+    },
     // 将步骤与里程碑合并后用于渲染的行
     /*
      * 函数级注释：
@@ -790,12 +795,15 @@ export default {
           .filter(v => v !== null)
         const sumActual = actualVals.length > 0 ? actualVals.reduce((a, b) => a + b, 0) : null
 
+        // 计算里程碑完成状态：存在步骤且全部为“已完成”
+        const allCompleted = (list && list.length > 0) ? list.every(s => (s.isCompleted === true) || ((s.stepStatus || s.status) === '已完成')) : false
+
         // 里程碑行（若未生成则插入占位）
         const pm = (this.milestones || []).find(m => m.milestoneName === name)
         if (pm) {
-          rows.push({ ...pm, milestoneName: name, milestonePeriod: sumActual, rowType: 'milestone' })
+          rows.push({ ...pm, milestoneName: name, milestonePeriod: sumActual, iscomplete: allCompleted, rowType: 'milestone' })
         } else {
-          rows.push({ milestoneName: name, milestoneId: `placeholder-${name}`, milestonePeriod: sumActual, rowType: 'milestone' })
+          rows.push({ milestoneName: name, milestoneId: `placeholder-${name}`, milestonePeriod: sumActual, iscomplete: allCompleted, rowType: 'milestone' })
         }
       }
 
@@ -1109,6 +1117,13 @@ export default {
         if (row.rowType === 'step' || row.rowType === 'interface_step' || row.rowType === 'personal_step') {
           const relationId = row?.relationId
           if (!relationId) return this.showError('步骤关系ID缺失，无法下载')
+          const allFiles = Array.isArray(this.files) ? this.files : []
+          const hasFiles = allFiles.some(f => f && f.projectStepId === relationId && (f.exists === true || f.fileId != null))
+          if (!hasFiles) {
+            if (this.$message && this.$message.warning) this.$message.warning('当前步骤未上传交付物')
+            else alert('当前步骤未上传交付物')
+            return
+          }
           const url = `${API_BASE}/api/construct-deliverable-files/download/step/${projectId}/${relationId}`
           this.downloadBinary(url)
           return
@@ -1122,7 +1137,24 @@ export default {
             mid = m ? m.milestoneId : null
           }
           if (!mid) return this.showError('未找到该里程碑，无法下载')
-          const ok = this.$confirm ? await this.$confirm('是否同时下载该里程碑所属步骤的交付物？') : window.confirm('是否同时下载该里程碑所属步骤的交付物？')
+          const allFiles = Array.isArray(this.files) ? this.files : []
+          const hasAny = allFiles.some(f => f && f.milestoneId === mid && (f.exists === true || f.fileId != null))
+          if (!hasAny) {
+            if (this.$message && this.$message.warning) this.$message.warning('当前里程碑未上传交付物')
+            else alert('当前里程碑未上传交付物')
+            return
+          }
+          let ok = false
+          try {
+            await ElMessageBox.confirm(
+              '是否同时下载该里程碑所属步骤的交付物？',
+              '提示',
+              { confirmButtonText: '是', cancelButtonText: '否' }
+            )
+            ok = true
+          } catch (_) {
+            ok = false
+          }
           const url = `${API_BASE}/api/construct-deliverable-files/download/milestone/${projectId}/${mid}?includeSteps=${ok ? 'true' : 'false'}`
           this.downloadBinary(url)
           return
@@ -1525,6 +1557,10 @@ export default {
      * @param {number} deliverableId 交付物ID（用于刷新列表）
      */
     async deleteUploadedFile(fileId, deliverableId) {
+      if (this.isProjectCompleted) {
+        this.showError('已完成项目不能删除交付物文件');
+        return;
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该文件？') : window.confirm('确认删除该文件？')
         if (!ok) return
@@ -1649,6 +1685,10 @@ export default {
       return this.editing.relationId === step.relationId && this.editing.field === field;
     },
     startEdit(step, field) {
+      if (this.isProjectCompleted) {
+        this.showError('已完成项目不能修改步骤字段');
+        return;
+      }
       if (!step.relationId) return;
       // 规则3：当计划开始日期为空时，不允许填写计划结束日期
       if (field === 'planEndDate' && (!step.planStartDate || step.planStartDate === '')) {
@@ -1689,6 +1729,10 @@ export default {
     },
     async commitEdit(step, field) {
       if (!this.isEditing(step, field)) return;
+      if (this.isProjectCompleted) {
+        this.showError('已完成项目不能修改步骤字段');
+        return this.cancelEdit();
+      }
       try {
         const relationId = step.relationId;
         const payload = {};
@@ -2094,6 +2138,10 @@ export default {
     
     // 接口新增弹窗控制
     openInterfaceDialog() {
+      if (this.isProjectCompleted) {
+        this.showError('已完成项目不能新增接口需求')
+        return
+      }
       this.showInterfaceDialog = true
       this.interfaceForm.integrationSysName = ''
       this.interfaceForm.integrationSysManufacturer = ''
@@ -2105,6 +2153,10 @@ export default {
     },
     // 个性化新增弹窗控制
     openPersonalDialog() {
+      if (this.isProjectCompleted) {
+        this.showError('已完成项目不能新增个性化功能需求')
+        return
+      }
       this.showPersonalDialog = true
       this.personalForm.personalDevName = ''
     },
@@ -2119,6 +2171,9 @@ export default {
      * - 保证新增接口生成的标准开发步骤在“步骤与里程碑”表格中即时展示。
      */
     async confirmInterface() {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能新增接口需求')
+      }
       const name = (this.interfaceForm.integrationSysName || '').trim()
       const manufacturer = (this.interfaceForm.integrationSysManufacturer || '').trim()
       const typeSel = this.interfaceForm.interfaceType
@@ -2177,6 +2232,9 @@ export default {
      * - 保证新增个性化需求生成的标准开发步骤在“步骤与里程碑”表格中即时展示。
      */
     async confirmPersonal() {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能新增个性化功能需求')
+      }
       const name = (this.personalForm.personalDevName || '').trim()
       if (!name) {
         return this.showError('请输入个性化需求名称')
@@ -2216,6 +2274,9 @@ export default {
      * @param {number} interfaceId 接口ID
      */
     async onDeleteInterface(interfaceId) {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能删除接口需求')
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该接口及其生成的步骤关系？') : window.confirm('确认删除该接口及其生成的步骤关系？')
         if (!ok) return
@@ -2243,6 +2304,9 @@ export default {
      * @param {number} personalDevId 个性化开发ID
      */
     async onDeletePersonal(personalDevId) {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能删除个性化功能需求')
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该个性化需求及其生成的步骤关系？') : window.confirm('确认删除该个性化需求及其生成的步骤关系？')
         if (!ok) return
@@ -2332,11 +2396,13 @@ export default {
 .add-interface-row { background:#f7fbff; }
 .add-interface-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
 .add-interface-btn:hover { background:#0f5fd6; }
+.add-interface-btn.disabled { opacity:.6; cursor:not-allowed; filter: grayscale(40%); }
 .personal-info-row { background:#f7fbff; color:#0a65c2; }
 .personal-step-row { background:#fafdff; }
 .add-personal-row { background:#f7fbff; }
 .add-personal-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
 .add-personal-btn:hover { background:#0f5fd6; }
+.add-personal-btn.disabled { opacity:.6; cursor:not-allowed; filter: grayscale(40%); }
 .dialog-mask { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:1000; }
 .dialog { width:420px; background:#fff; border-radius:8px; border:1px solid #eee; padding:16px; }
 .dialog.upload-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }

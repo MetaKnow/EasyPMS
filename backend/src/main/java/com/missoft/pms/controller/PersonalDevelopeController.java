@@ -29,11 +29,22 @@ public class PersonalDevelopeController {
      */
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(@RequestBody PersonalDevelope payload) {
-        PersonalDevelope saved = personalDevelopeService.create(payload);
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("success", true);
-        resp.put("personalDevelope", saved);
-        return ResponseEntity.ok(resp);
+        try {
+            PersonalDevelope saved = personalDevelopeService.create(payload);
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("success", true);
+            resp.put("personalDevelope", saved);
+            return ResponseEntity.ok(resp);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "创建个性化开发失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
@@ -66,6 +77,9 @@ public class PersonalDevelopeController {
             resp.put("message", "deleted");
             resp.put("personalDevId", personalDevId);
             return ResponseEntity.ok(resp);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "删除个性化开发失败", "message", e.getMessage()));

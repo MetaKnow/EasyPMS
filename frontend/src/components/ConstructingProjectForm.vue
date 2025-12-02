@@ -65,11 +65,8 @@
 
             <div class="form-group">
               <label for="projectState">项目状态</label>
-              <select id="projectState" v-model="form.projectState">
-                <option value="待开始">待开始</option>
-                <option value="进行中">进行中</option>
-                <option value="已完成">已完成</option>
-                <option value="已暂停">已暂停</option>
+              <select id="projectState" v-model="form.projectState" :disabled="isStateLocked">
+                <option v-for="state in statusOptions" :key="state" :value="state">{{ state }}</option>
               </select>
             </div>
 
@@ -250,6 +247,7 @@
                   type="checkbox" 
                   id="standardProduct" 
                   v-model="constructionContent.standardProduct"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="standardProduct">标准产品</label>
               </div>
@@ -259,6 +257,7 @@
                   type="checkbox" 
                   id="interfaceDevelopment" 
                   v-model="constructionContent.interfaceDevelopment"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="interfaceDevelopment">接口开发</label>
               </div>
@@ -268,6 +267,7 @@
                   type="checkbox" 
                   id="dataMigration" 
                   v-model="constructionContent.dataMigration"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="dataMigration">数据迁移</label>
               </div>
@@ -277,6 +277,7 @@
                   type="checkbox" 
                   id="customDevelopment" 
                   v-model="constructionContent.customDevelopment"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="customDevelopment">个性化功能开发</label>
               </div>
@@ -286,6 +287,7 @@
                   type="checkbox"
                   id="userTraining"
                   v-model="constructionContent.userTraining"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="userTraining">用户培训</label>
               </div>
@@ -295,6 +297,7 @@
                   type="checkbox"
                   id="systemTrialRun"
                   v-model="constructionContent.systemTrialRun"
+                  :disabled="isConstructionLocked"
                 />
                 <label for="systemTrialRun">系统上线试运行</label>
               </div>
@@ -309,7 +312,7 @@
       <!-- 固定按钮区域 -->
       <div class="modal-footer">
         <div class="form-actions">
-          <button v-if="isEdit && !isViewMode && form.projectState !== '已完成'" type="button" class="btn btn-warning" @click="showHandoverForm" style="margin-right: 8px;">移交运维</button>
+          <button v-if="isEdit && !isViewMode && form.projectState === '进行中'" type="button" class="btn btn-warning" @click="showHandoverForm" style="margin-right: 8px;">移交运维</button>
           <button type="button" class="btn btn-secondary" @click="closeModal">{{ isViewMode ? '关闭' : '取消' }}</button>
           <button v-if="!isViewMode" type="submit" class="btn btn-primary" :disabled="isSubmitting" @click="submitForm">
             {{ isSubmitting ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存' : '创建项目') }}
@@ -402,6 +405,24 @@ export default {
      */
     isEdit() {
       return this.projectData && this.projectData.projectId
+    },
+    /**
+     * 函数级注释：状态是否锁定（已移交或状态为“已完成”时禁用下拉）
+     */
+    isStateLocked() {
+      return this.isEdit && ((this.projectData && this.projectData.isCommitAfterSale) || this.form.projectState === '已完成')
+    },
+    /**
+     * 函数级注释：项目状态下拉选项（新建/编辑不含“已完成”；移交后仅显示“已完成”）
+     */
+    statusOptions() {
+      return this.isStateLocked ? ['已完成'] : ['待开始', '进行中', '已暂停']
+    },
+    /**
+     * 函数级注释：建设内容是否锁定（项目状态“已完成”或已移交时禁用复选框）
+     */
+    isConstructionLocked() {
+      return this.isEdit && ((this.projectData && this.projectData.isCommitAfterSale) || this.form.projectState === '已完成')
     }
   },
   watch: {

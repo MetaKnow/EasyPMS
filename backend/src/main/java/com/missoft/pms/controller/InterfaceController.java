@@ -38,12 +38,19 @@ public class InterfaceController {
         if (payload.getMilestoneId() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "milestoneId为必填"));
         }
-
-        InterfaceEntity saved = service.create(payload);
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("message", "created");
-        resp.put("interface", saved);
-        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
+        try {
+            InterfaceEntity saved = service.create(payload);
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("message", "created");
+            resp.put("interface", saved);
+            return ResponseEntity.status(HttpStatus.CREATED).body(resp);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "创建接口失败", "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/by-project/{projectId}")
@@ -67,6 +74,9 @@ public class InterfaceController {
             resp.put("message", "deleted");
             resp.put("interfaceId", interfaceId);
             return ResponseEntity.ok(resp);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "删除接口失败", "message", e.getMessage()));

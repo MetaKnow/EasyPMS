@@ -27,6 +27,9 @@ public class ProjectSstepRelationController {
     @Autowired
     private ConstructMilestoneService constructMilestoneService;
 
+    @Autowired
+    private com.missoft.pms.repository.ConstructingProjectRepository constructingProjectRepository;
+
     /**
      * 更新项目步骤关系的字段（支持部分字段）
      * PUT /api/project-relations/{relationId}
@@ -44,6 +47,16 @@ public class ProjectSstepRelationController {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "关系不存在");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            Long projectId = rel.getProjectId();
+            if (projectId != null) {
+                var project = constructingProjectRepository.findById(projectId).orElse(null);
+                if (project != null && "已完成".equals(project.getProjectState())) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("error", "已完成项目不允许修改步骤字段");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+                }
             }
 
             // 负责人

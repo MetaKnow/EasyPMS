@@ -12,6 +12,10 @@
           <i class="icon-delete"></i>
           删除项目
         </button>
+        <button class="btn btn-warning" @click="openHandover" :disabled="!handoverEnabled">
+          <i class="icon-transfer"></i>
+          移交运维
+        </button>
       </div>
     </div>
 
@@ -159,20 +163,31 @@
     @close="closeCreateForm"
     @success="onCreateSuccess"
   />
+  <ProjectHandoverForm
+    :visible="handoverFormVisible"
+    :project-data="handoverProject"
+    :users="users"
+    @close="closeHandover"
+    @success="onHandoverSuccess"
+  />
 </template>
 
 <script>
 import { 
   getConstructingProjects, 
   deleteConstructingProject, 
-  batchDeleteConstructingProjects 
+  batchDeleteConstructingProjects,
+  getProjectSummary
 } from '../api/constructingProject'
 import ProjectCreateForm from './ProjectCreateForm.vue'
+import ProjectHandoverForm from './ProjectHandoverForm.vue'
+import { getAllUsers } from '../api/user'
 
 export default {
   name: 'ConstructionProjectManagement',
   components: {
-    ProjectCreateForm
+    ProjectCreateForm,
+    ProjectHandoverForm
   },
   data() {
     return {
@@ -198,6 +213,9 @@ export default {
       yearOptions: [],
       // 表单显示状态
       createFormVisible: false,
+      handoverFormVisible: false,
+      handoverProject: null,
+      users: [],
       // 单元格悬浮提示
       tooltipVisible: false,
       tooltipText: '',
@@ -218,6 +236,13 @@ export default {
     isAllSelected() {
       return this.projectList.length > 0 && 
              this.selectedProjects.length === this.projectList.length
+    },
+    /**
+     * 函数级注释：移交按钮是否可用（仅选中且状态为“进行中”的项目）
+     */
+    handoverEnabled() {
+      const p = this.selectedProject || (this.selectedProjects.length === 1 ? this.projectList.find(x => x.projectId === this.selectedProjects[0]) : null)
+      return !!p && p.projectState === '进行中'
     }
   },
   mounted() {
@@ -306,6 +331,52 @@ export default {
       } else {
         this.selectedProjects.push(projectId)
       }
+    },
+
+    /**
+     * 函数级注释：打开移交运维弹窗
+     */
+    async openHandover() {
+      if (!this.handoverEnabled) return
+      const p = this.selectedProject || (this.selectedProjects.length === 1 ? this.projectList.find(x => x.projectId === this.selectedProjects[0]) : null)
+      if (!p) return
+      try {
+        const resp = await getProjectSummary(p.projectId)
+        const data = resp?.data?.data || {}
+        const milestones = Array.isArray(data.milestones) ? data.milestones : []
+        const allCompleted = milestones.length === 0 ? true : milestones.every(m => m && (m.iscomplete === true))
+        if (!allCompleted) {
+          alert('该项目有未完成的里程碑，请查看项目步骤及里程碑数据')
+          return
+        }
+        this.handoverProject = p
+        try {
+          this.users = await getAllUsers()
+        } catch (e) {
+          this.users = []
+        }
+        this.handoverFormVisible = true
+      } catch (e) {
+        alert('无法加载项目里程碑数据，请稍后再试')
+      }
+    },
+
+    /**
+     * 函数级注释：关闭移交运维弹窗
+     */
+    closeHandover() {
+      this.handoverFormVisible = false
+      this.handoverProject = null
+    },
+
+    /**
+     * 函数级注释：移交成功后刷新列表并重置选择
+     */
+    onHandoverSuccess() {
+      this.closeHandover()
+      this.selectedProjects = []
+      this.selectedProject = null
+      this.loadProjects()
     },
 
     /**

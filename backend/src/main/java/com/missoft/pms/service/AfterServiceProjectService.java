@@ -7,6 +7,7 @@ import com.missoft.pms.entity.AfterServiceEvent;
 import com.missoft.pms.entity.ArchieveSoft;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.entity.User;
+import com.missoft.pms.entity.ConstructMilestone;
 import com.missoft.pms.repository.AfterServiceProjectRepository;
 import com.missoft.pms.repository.AfterServiceEventRepository;
 import com.missoft.pms.repository.ArchieveSoftRepository;
@@ -62,6 +63,9 @@ public class AfterServiceProjectService {
     @Autowired
     private AfterServiceEventService afterServiceEventService;
 
+    @Autowired
+    private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
+
     /**
      * 分页查询项目列表
      */
@@ -98,23 +102,32 @@ public class AfterServiceProjectService {
     }
 
     /**
-     * 从在建项目移交
+     * 从在建项目移交（校验：仅允许“进行中”且里程碑全部完成的项目）
      */
     public void handoverProject(HandoverRequest request) {
         ConstructingProject cp = constructingProjectRepository.findById(request.getConstructingProjectId())
                 .orElseThrow(() -> new RuntimeException("在建项目不存在"));
 
+        if (!"进行中".equals(cp.getProjectState())) {
+            throw new RuntimeException("项目状态不符合移交条件：仅允许进行中");
+        }
+
+        List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(cp.getProjectId());
+        boolean allCompleted = milestones.stream().allMatch(m -> Boolean.TRUE.equals(m.getIscomplete()));
+        if (!allCompleted) {
+            throw new RuntimeException("里程碑未全部完成，不可移交");
+        }
+
         AfterServiceProject asp = new AfterServiceProject();
         asp.setProjectName(cp.getProjectName());
         asp.setCustomerId(cp.getCustomerId());
         asp.setSaleDirector(cp.getSaleLeader());
-        
-        // Map Archieve System
+
         if (cp.getSoftId() != null) {
             archieveSoftRepository.findById(cp.getSoftId())
                     .ifPresent(soft -> asp.setArcSystem(soft.getSoftName()));
         } else {
-             asp.setArcSystem("未知系统");
+            asp.setArcSystem("未知系统");
         }
 
         asp.setConstructingProjectId(cp.getProjectId());
@@ -124,16 +137,12 @@ public class AfterServiceProjectService {
         asp.setServiceYear(request.getServiceYear());
         asp.setStartDate(request.getStartDate());
         asp.setEndDate(request.getEndDate());
-        
-        // Auto generate Project Num
+
         asp.setProjectNum(generateUniqueProjectNum());
-        
-        // Total Hours empty
         asp.setTotalHours(null);
-        
+
         afterServiceProjectRepository.save(asp);
-        
-        // Update Constructing Project Status and Commit Flag
+
         cp.setIsCommitAfterSale(true);
         if (!"已完成".equals(cp.getProjectState())) {
             cp.setProjectState("已完成");

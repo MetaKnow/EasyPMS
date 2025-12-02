@@ -315,6 +315,14 @@ public class ConstructDeliverableFileService {
     public void deleteFile(Long fileId) {
         ConstructDeliverableFile r = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("文件记录不存在，ID: " + fileId));
+        // 函数级注释：禁止在“已完成”项目下删除交付物文件
+        Long projectId = r.getProjectId();
+        if (projectId != null) {
+            ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+            if (project != null && "已完成".equals(project.getProjectState())) {
+                throw new RuntimeException("已完成项目不允许删除交付物文件");
+            }
+        }
         Path target = resolveFilePath(fileId);
         try {
             if (Files.exists(target)) {

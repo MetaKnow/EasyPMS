@@ -65,10 +65,7 @@
             <div class="form-group">
               <label for="projectState">项目状态</label>
               <select id="projectState" v-model="form.projectState">
-                <option value="待开始">待开始</option>
-                <option value="进行中">进行中</option>
-                <option value="已完成">已完成</option>
-                <option value="已暂停">已暂停</option>
+                <option v-for="state in statusOptions" :key="state" :value="state">{{ state }}</option>
               </select>
             </div>
 
@@ -327,6 +324,14 @@ export default {
     visible: {
       type: Boolean,
       default: false
+    }
+  },
+  computed: {
+    /**
+     * 函数级注释：项目状态下拉选项（新建不含“已完成”）
+     */
+    statusOptions() {
+      return ['待开始', '进行中', '已暂停']
     }
   },
   data() {

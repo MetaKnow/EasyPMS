@@ -50,6 +50,18 @@ public class InterfaceService {
      * @return 保存后的接口实体
      */
     public InterfaceEntity create(InterfaceEntity entity) {
+        // 函数级注释：禁止在“已完成”项目下新增接口需求
+        if (entity == null || entity.getProjectId() == null) {
+            throw new IllegalArgumentException("缺少项目ID，无法创建接口");
+        }
+        ConstructingProject project = constructingProjectRepository.findById(entity.getProjectId()).orElse(null);
+        if (project == null) {
+            throw new IllegalArgumentException("项目不存在，无法创建接口");
+        }
+        String state = project.getProjectState();
+        if ("已完成".equals(state)) {
+            throw new IllegalStateException("已完成项目不可新增接口需求");
+        }
         InterfaceEntity saved = repository.save(entity);
         // 接口创建成功后，生成对应的四个步骤关系
         relationService.generateRelationsForInterface(saved);
@@ -113,6 +125,13 @@ public class InterfaceService {
             return false;
         }
         Long projectId = iface.getProjectId();
+        // 函数级注释：禁止在“已完成”项目下删除接口需求
+        if (projectId != null) {
+            ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+            if (project != null && "已完成".equals(project.getProjectState())) {
+                throw new IllegalStateException("已完成项目不可删除接口需求");
+            }
+        }
         // 删除该接口关联的项目-步骤关系
         if (projectId != null) {
             List<ProjectSstepRelation> rels = relationRepository.findByProjectIdAndInterfaceId(projectId, interfaceId);

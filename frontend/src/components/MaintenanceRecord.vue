@@ -464,13 +464,13 @@
             </div>
           </div>
 
-          <div class="modal-footer">
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" @click="closeEdit" :disabled="editSubmitting">取消</button>
-              <button type="submit" class="btn btn-primary" @click="saveEdit" :disabled="editSubmitting">保存</button>
-            </div>
-          </div>
         </form>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeEdit" :disabled="editSubmitting">取消</button>
+          <button type="submit" class="btn btn-primary" @click="saveEdit" :disabled="editSubmitting">保存</button>
+        </div>
       </div>
     </div>
   </div>

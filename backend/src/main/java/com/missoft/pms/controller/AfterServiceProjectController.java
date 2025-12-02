@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -97,13 +98,25 @@ public class AfterServiceProjectController {
      */
     @PostMapping("/handover")
     public ResponseEntity<Map<String, Object>> handoverProject(@RequestBody HandoverRequest request) {
-        afterServiceProjectService.handoverProject(request);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "移交成功");
-        
-        return ResponseEntity.ok(response);
+        try {
+            afterServiceProjectService.handoverProject(request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "移交成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "移交失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "移交失败");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**

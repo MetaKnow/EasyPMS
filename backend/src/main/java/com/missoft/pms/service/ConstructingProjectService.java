@@ -165,6 +165,10 @@ public class ConstructingProjectService {
         if (constructingProject.getProjectState() == null) {
             constructingProject.setProjectState("待开始");
         }
+        // 函数级注释：新建在建项目不允许直接设置为“已完成”，需通过移交运维流程自动变更
+        if ("已完成".equals(constructingProject.getProjectState())) {
+            throw new RuntimeException("新建项目不可设置为已完成，请通过移交售后运维完成");
+        }
         if (constructingProject.getIsAgent() == null) {
             constructingProject.setIsAgent(0);
         }
@@ -246,7 +250,22 @@ public class ConstructingProjectService {
         existingProject.setProjectLeader(constructingProject.getProjectLeader());
         existingProject.setSaleLeader(constructingProject.getSaleLeader());
         existingProject.setCustomerId(constructingProject.getCustomerId());
-        existingProject.setProjectState(constructingProject.getProjectState());
+        // 函数级注释：状态更新规则
+        // 1) 已移交售后运维的项目，状态不可编辑；
+        // 2) 未移交项目不可直接设置为“已完成”（必须通过移交流程）。
+        String incomingState = constructingProject.getProjectState();
+        String currentState = existingProject.getProjectState();
+        Boolean committed = existingProject.getIsCommitAfterSale() != null ? existingProject.getIsCommitAfterSale() : false;
+        if (committed) {
+            if (incomingState != null && !incomingState.equals(currentState)) {
+                throw new RuntimeException("项目已移交售后运维，状态不可编辑");
+            }
+        } else {
+            if ("已完成".equals(incomingState)) {
+                throw new RuntimeException("项目状态不可设置为已完成，请通过移交售后运维完成");
+            }
+            existingProject.setProjectState(incomingState);
+        }
         existingProject.setSoftId(constructingProject.getSoftId());
         existingProject.setStartDate(constructingProject.getStartDate());
         existingProject.setPlanEndDate(constructingProject.getPlanEndDate());
@@ -258,7 +277,18 @@ public class ConstructingProjectService {
         existingProject.setValue(constructingProject.getValue());
         existingProject.setReceivedMoney(constructingProject.getReceivedMoney());
         existingProject.setAcceptanceDate(constructingProject.getAcceptanceDate());
-        existingProject.setConstructContent(constructingProject.getConstructContent());
+        // 函数级注释：建设内容更新规则
+        // 已完成或已移交的项目，不允许修改建设内容；否则按提交值更新。
+        String incomingContent = constructingProject.getConstructContent();
+        if (committed || "已完成".equals(currentState)) {
+            String currentContent = existingProject.getConstructContent();
+            if (StringUtils.hasText(incomingContent) && (currentContent == null || !incomingContent.equals(currentContent))) {
+                throw new RuntimeException("已完成项目不能修改建设内容");
+            }
+            // 保持原建设内容不变
+        } else {
+            existingProject.setConstructContent(incomingContent);
+        }
 
         // 计算未回款金额
         calculateUnreceiveMoney(existingProject);

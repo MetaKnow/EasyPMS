@@ -47,6 +47,14 @@ public class PersonalDevelopeService {
         if (!StringUtils.hasText(entity.getPersonalDevName())) {
             throw new IllegalArgumentException("个性化开发名称不能为空");
         }
+        // 函数级注释：禁止在“已完成”项目下新增个性化功能需求
+        ConstructingProject project = constructingProjectRepository.findById(entity.getProjectId()).orElse(null);
+        if (project == null) {
+            throw new IllegalArgumentException("项目不存在，无法创建个性化功能需求");
+        }
+        if ("已完成".equals(project.getProjectState())) {
+            throw new IllegalStateException("已完成项目不可新增个性化功能需求");
+        }
         PersonalDevelope saved = personalDevelopeRepository.save(entity);
         // 生成对应的个性化开发步骤关系（按产品 + 里程碑筛选）
         projectSstepRelationService.generateRelationsForPersonalDevelope(saved);
@@ -120,6 +128,13 @@ public class PersonalDevelopeService {
             return false;
         }
         Long projectId = p.getProjectId();
+        // 函数级注释：禁止在“已完成”项目下删除个性化功能需求
+        if (projectId != null) {
+            ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+            if (project != null && "已完成".equals(project.getProjectState())) {
+                throw new IllegalStateException("已完成项目不可删除个性化功能需求");
+            }
+        }
         // 删除该个性化开发关联的项目-步骤关系
         if (projectId != null) {
             var rels = projectSstepRelationRepository.findByProjectIdAndPersonalDevId(projectId, personalDevId);
