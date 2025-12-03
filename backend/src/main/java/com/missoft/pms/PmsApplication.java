@@ -20,6 +20,16 @@ public class PmsApplication {
     public static void main(String[] args) {
         System.out.println("🚀 启动软件项目管理系统...");
         System.out.println("📦 扫描包路径: com.missoft.pms");
+        try {
+            String cwd = System.getProperty("user.dir");
+            var base = Paths.get(cwd);
+            var logDirPath = base.resolve("backend").resolve("logs");
+            if (base.getFileName() != null && base.getFileName().toString().equalsIgnoreCase("backend")) {
+                logDirPath = base.resolve("logs");
+            }
+            System.setProperty("pms.log.dir", logDirPath.toString());
+        } catch (Exception ignored) {
+        }
         
         // 尝试加载 pms-config.json
         try {

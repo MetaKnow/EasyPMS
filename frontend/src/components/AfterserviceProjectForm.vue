@@ -116,7 +116,8 @@
               v-model="form.totalHours" 
               step="0.5"
               min="0"
-              :disabled="isViewMode"
+              :disabled="true"
+              readonly
               placeholder="请输入总工时"
             />
           </div>
@@ -283,7 +284,7 @@ export default {
     },
 
     /**
-     * 加载用户列表
+     * 加载用户列表，并在新建时默认设置运维负责人为当前用户
      */
     async loadUsers() {
       try {
@@ -291,6 +292,15 @@ export default {
         if (response.data && response.data.users) {
           this.users = response.data.users
         }
+        // 新建模式默认将运维负责人设置为当前登录用户
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const uid = info && (info.userId ?? info.id)
+          if (!this.isEdit && uid != null) {
+            this.form.serviceDirector = Number(uid)
+          }
+        } catch (_) {}
       } catch (error) {
         console.error('加载用户列表失败:', error)
       }
@@ -335,8 +345,10 @@ export default {
           : 'http://localhost:8081/api/afterservice-projects'
         
         const method = this.isEdit ? 'put' : 'post'
-        
-        const response = await axios[method](url, this.form)
+        // 函数级注释：提交时排除 totalHours，防止用户修改统计值
+        const payload = { ...this.form }
+        delete payload.totalHours
+        const response = await axios[method](url, payload)
         
         if (response.data.success) {
           this.$emit('success', response.data.data)

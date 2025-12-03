@@ -98,16 +98,22 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      * @param pageable     分页参数
      * @return 客户分页列表
      */
+    /**
+     * 函数级注释：多条件查询客户（支持销售负责人过滤）
+     * - 当 saleLeader 不为 null 时，仅返回销售负责人为该用户的客户数据
+     */
     @Query("SELECT c FROM Customer c WHERE " +
             "(:customerName IS NULL OR LOWER(c.customerName) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
             "(:contact IS NULL OR LOWER(c.contact) LIKE LOWER(CONCAT('%', :contact, '%'))) AND " +
             "(:province IS NULL OR c.province = :province) AND " +
-            "(:customerRank IS NULL OR c.customerRank = :customerRank)")
+            "(:customerRank IS NULL OR c.customerRank = :customerRank) AND " +
+            "(:saleLeader IS NULL OR c.saleLeader = :saleLeader)")
     Page<Customer> findByMultipleConditions(
             @Param("customerName") String customerName,
             @Param("contact") String contact,
             @Param("province") String province,
             @Param("customerRank") String customerRank,
+            @Param("saleLeader") Long saleLeader,
             Pageable pageable
     );
 

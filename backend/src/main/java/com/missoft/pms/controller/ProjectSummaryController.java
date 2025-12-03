@@ -201,8 +201,9 @@ public class ProjectSummaryController {
         stepViews.add(m);
       }
 
-      // 根据最新步骤实际工期，刷新项目里程碑的工期汇总并持久化
+      // 根据最新步骤实际工期与完成状态，刷新项目里程碑的汇总与完成标记
       constructMilestoneService.updateMilestonePeriodsForProject(projectId);
+      constructMilestoneService.updateMilestoneCompletionForProject(projectId);
 
       // 里程碑（项目专属）
       List<ConstructMilestone> milestones = constructMilestoneService.getMilestonesByProjectId(projectId);

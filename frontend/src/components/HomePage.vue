@@ -1,55 +1,76 @@
 <template>
   <div class="home-page">
     <!-- 顶部Banner -->
-    <header class="top-banner" v-if="!$route.meta.fullscreen">
-      <div class="banner-left">
-        <img src="/favicon.ico" alt="Logo" class="logo" />
-        <h1 class="system-title">MissoftPMS</h1>
+  <header class="top-banner" v-if="!$route.meta.fullscreen">
+    <div class="banner-left">
+      <img src="/favicon.ico" alt="Logo" class="logo" />
+      <h1 class="system-title">MissoftPMS</h1>
+    </div>
+    <div class="banner-right">
+      <div class="user-box">
+        <el-avatar :size="28" class="user-avatar">{{ avatarInitial }}</el-avatar>
+        <el-dropdown>
+          <span class="dropdown-trigger">
+            <span class="user-name">{{ userDisplayName }}</span>
+            <el-icon class="arrow-icon"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="openChangePasswordDialog">
+                <el-icon><Lock /></el-icon>
+                修改密码
+              </el-dropdown-item>
+              <el-dropdown-item divided @click="logout">
+                <el-icon><SwitchButton /></el-icon>
+                退出
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
-      <div class="banner-right">
-        <span class="welcome-text">欢迎，{{ userInfo.username }}</span>
-        <button @click="logout" class="logout-btn">退出</button>
-      </div>
-    </header>
+    </div>
+  </header>
 
     <div class="main-container" :class="{ fullscreen: $route.meta.fullscreen }">
       <!-- 左侧功能菜单 -->
-      <aside class="sidebar" v-if="!$route.meta.fullscreen">
-        <nav class="menu">
-          <template v-for="item in menuItems" :key="item.id">
-            <!-- 普通菜单项 -->
-            <div v-if="!item.isGroup" 
-                 class="menu-item" 
-                 :class="{ active: $route.path === item.path }"
-                 @click="navigateToModule(item.path)">
+    <aside class="sidebar" v-if="!$route.meta.fullscreen">
+      <el-scrollbar height="100%">
+      <nav class="menu">
+        <template v-for="item in visibleMenuItems" :key="item.id">
+          <!-- 普通菜单项 -->
+          <div v-if="!item.isGroup" 
+               class="menu-item" 
+               :class="{ active: $route.path === item.path }"
+               @click="navigateToModule(item.path)">
+            <i :class="item.icon"></i>
+            <span>{{ item.name }}</span>
+          </div>
+          
+          <!-- 菜单组 -->
+          <div v-else class="menu-group">
+            <div class="menu-group-header" 
+                 :class="{ expanded: item.expanded }"
+                 @click="toggleMenuGroup(item)">
               <i :class="item.icon"></i>
               <span>{{ item.name }}</span>
+              <i class="expand-icon" :class="{ rotated: item.expanded }">▼</i>
             </div>
             
-            <!-- 菜单组 -->
-            <div v-else class="menu-group">
-              <div class="menu-group-header" 
-                   :class="{ expanded: item.expanded }"
-                   @click="toggleMenuGroup(item)">
-                <i :class="item.icon"></i>
-                <span>{{ item.name }}</span>
-                <i class="expand-icon" :class="{ rotated: item.expanded }">▼</i>
-              </div>
-              
-              <div class="menu-group-children" v-show="item.expanded">
-                <div v-for="child in item.children" 
-                     :key="child.id"
-                     class="menu-item child-item" 
-                     :class="{ active: $route.path === child.path }"
-                     @click="navigateToModule(child.path)">
-                  <i :class="child.icon"></i>
-                  <span>{{ child.name }}</span>
-                </div>
+            <div class="menu-group-children" v-show="item.expanded">
+              <div v-for="child in item.children" 
+                   :key="child.id"
+                   class="menu-item child-item" 
+                   :class="{ active: $route.path === child.path }"
+                   @click="navigateToModule(child.path)">
+                <i :class="child.icon"></i>
+                <span>{{ child.name }}</span>
               </div>
             </div>
-          </template>
-        </nav>
-      </aside>
+          </div>
+        </template>
+      </nav>
+      </el-scrollbar>
+    </aside>
 
       <!-- 右侧主内容区域 -->
       <main class="main-content">
@@ -78,6 +99,25 @@
       @close="closeAfterserviceProjectForm"
       @success="onAfterserviceProjectSuccess"
     />
+    <!-- 修改密码对话框 -->
+    <el-dialog v-model="changePasswordVisible" title="修改密码" width="420px" :close-on-click-modal="true">
+      <el-form label-position="top" class="pwd-form">
+        <el-form-item label="旧密码">
+          <el-input v-model="changePasswordForm.oldPassword" type="password" show-password placeholder="请输入旧密码" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="changePasswordForm.newPassword" type="password" show-password placeholder="至少6位" />
+        </el-form-item>
+        <el-form-item label="确认新密码">
+          <el-input v-model="changePasswordForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+        </el-form-item>
+        <div v-if="changePasswordError" class="error-text">{{ changePasswordError }}</div>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeChangePasswordDialog">取消</el-button>
+        <el-button type="primary" :loading="changingPassword" @click="submitChangePassword">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -85,17 +125,23 @@
 import ConstructingProjectForm from './ConstructingProjectForm.vue'
 import AfterserviceProjectForm from './AfterserviceProjectForm.vue'
 import { getConstructingProjectById } from '../api/constructingProject.js'
+import { changeUserPassword } from '../api/user.js'
+import { ArrowDown, Lock, SwitchButton } from '@element-plus/icons-vue'
 
 export default {
   name: 'HomePage',
   components: {
     ConstructingProjectForm,
-    AfterserviceProjectForm
+    AfterserviceProjectForm,
+    ArrowDown,
+    Lock,
+    SwitchButton
   },
   data() {
     return {
       userInfo: {
-        username: 'admin'
+        userName: 'admin',
+        roleName: ''
       },
       // 左侧菜单项
       menuItems: [
@@ -129,7 +175,16 @@ export default {
       selectedConstructingProject: null,
       selectedAfterserviceProject: null,
       // 路由视图刷新key
-      routerViewKey: 0
+      routerViewKey: 0,
+      // 修改密码对话框状态
+      changePasswordVisible: false,
+      changingPassword: false,
+      changePasswordError: '',
+      changePasswordForm: {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }
     }
   },
   mounted() {
@@ -167,6 +222,66 @@ export default {
       localStorage.removeItem('token');
       localStorage.removeItem('userInfo');
       this.$router.push('/');
+    },
+
+    /**
+     * 打开修改密码对话框
+     */
+    openChangePasswordDialog() {
+      this.changePasswordVisible = true
+      this.changePasswordError = ''
+      this.changePasswordForm = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    },
+
+    /**
+     * 关闭修改密码对话框
+     */
+    closeChangePasswordDialog() {
+      this.changePasswordVisible = false
+      this.changingPassword = false
+    },
+
+    /**
+     * 提交修改密码
+     */
+    async submitChangePassword() {
+      if (this.changingPassword) return
+      this.changePasswordError = ''
+      const { oldPassword, newPassword, confirmPassword } = this.changePasswordForm
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        this.changePasswordError = '请完整填写所有字段'
+        return
+      }
+      if (newPassword.length < 6) {
+        this.changePasswordError = '新密码至少6位'
+        return
+      }
+      if (newPassword !== confirmPassword) {
+        this.changePasswordError = '两次输入的新密码不一致'
+        return
+      }
+      const uid = this.userInfo && (this.userInfo.userId ?? this.userInfo.id)
+      if (!uid) {
+        this.changePasswordError = '用户信息缺失，请重新登录'
+        return
+      }
+      this.changingPassword = true
+      try {
+        await changeUserPassword(Number(uid), { oldPassword, newPassword })
+        if (this.$message && this.$message.success) this.$message.success('密码修改成功')
+        else alert('密码修改成功')
+        this.closeChangePasswordDialog()
+        setTimeout(() => {
+          this.logout()
+        }, 800)
+      } catch (e) {
+        const msg = e && e.message ? e.message : '修改密码失败'
+        if (this.$message && this.$message.error) this.$message.error(msg)
+        else alert(msg)
+        this.changePasswordError = msg
+      } finally {
+        this.changingPassword = false
+      }
     },
 
     /**
@@ -248,6 +363,50 @@ export default {
         this.routerViewKey++;
       }
     }
+  },
+  computed: {
+    userDisplayName() {
+      return (this.userInfo && (this.userInfo.name || this.userInfo.userName)) || '用户'
+    },
+    avatarInitial() {
+      const n = this.userDisplayName || ''
+      return n.trim() ? n.trim().charAt(0).toUpperCase() : 'U'
+    },
+    isAdminOrLeader() {
+      const name = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
+      const lower = name.toLowerCase()
+      return name === '管理员' || name === '公司领导' || name === '超级管理员' || name === '销售总监' || name === '项目总监' || lower === 'admin' || lower === 'leader' || lower === 'super admin' || lower === 'superadmin' || lower === 'sales director' || lower === 'project director'
+    },
+    isProjectManager() {
+      const name = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim().toLowerCase() : ''
+      return name === '项目经理' || name === 'project manager' || name === 'pm'
+    },
+    /**
+     * 是否可以查看“客户管理”菜单
+     * 包含：admin、管理员、公司领导、销售总监，以及具有“销售”角色的用户
+     */
+    canViewCustomers() {
+      const role = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
+      const roleLower = role.toLowerCase()
+      const isAdminUser = (this.userInfo && this.userInfo.userName) ? String(this.userInfo.userName).trim().toLowerCase() === 'admin' : false
+      const isAdminRole = role === '管理员' || role === '超级管理员' || roleLower.includes('admin') || roleLower.includes('super admin') || roleLower.includes('superadmin')
+      const isLeaderRole = role === '公司领导' || roleLower.includes('leader')
+      const isSalesDirector = role === '销售总监' || roleLower.includes('sales director')
+      const isSalesRole = role.includes('销售') || roleLower.includes('sales')
+      return isAdminUser || isAdminRole || isLeaderRole || isSalesDirector || isSalesRole
+    },
+    visibleMenuItems() {
+      // 非管理员/领导用户，限制菜单，但根据角色允许“客户管理”
+      if (this.isAdminOrLeader) {
+        return this.menuItems
+      }
+      const allowed = new Set(['dashboard', 'construction', 'maintenance'])
+      // 条件加入“客户管理”
+      if (this.canViewCustomers) {
+        allowed.add('customers')
+      }
+      return this.menuItems.filter(item => allowed.has(item.id))
+    }
   }
 }
 </script>
@@ -294,6 +453,36 @@ export default {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-trigger:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  font-size: 14px;
 }
 
 .welcome-text {

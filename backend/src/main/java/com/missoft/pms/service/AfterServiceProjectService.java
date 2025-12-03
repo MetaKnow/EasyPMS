@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
 
 /**
  * 运维项目服务
@@ -63,13 +64,16 @@ public class AfterServiceProjectService {
     @Autowired
     private AfterServiceEventService afterServiceEventService;
 
-    @Autowired
-    private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
+  @Autowired
+  private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
+
+  @Autowired
+  private ConstructMilestoneService constructMilestoneService;
 
     /**
      * 分页查询项目列表
      */
-    public Page<AfterServiceProjectDTO> getProjects(String projectName, String status, Long saleDirector, Pageable pageable) {
+    public Page<AfterServiceProjectDTO> getProjects(String projectName, String status, Long saleDirector, Long serviceDirector, Pageable pageable) {
         Specification<AfterServiceProject> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -83,6 +87,10 @@ public class AfterServiceProjectService {
 
             if (saleDirector != null) {
                 predicates.add(cb.equal(root.get("saleDirector"), saleDirector));
+            }
+
+            if (serviceDirector != null) {
+                predicates.add(cb.equal(root.get("serviceDirector"), serviceDirector));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -104,7 +112,7 @@ public class AfterServiceProjectService {
     /**
      * 从在建项目移交（校验：仅允许“进行中”且里程碑全部完成的项目）
      */
-    public void handoverProject(HandoverRequest request) {
+  public void handoverProject(HandoverRequest request) {
         ConstructingProject cp = constructingProjectRepository.findById(request.getConstructingProjectId())
                 .orElseThrow(() -> new RuntimeException("在建项目不存在"));
 
@@ -112,10 +120,16 @@ public class AfterServiceProjectService {
             throw new RuntimeException("项目状态不符合移交条件：仅允许进行中");
         }
 
+        // 移交流程前刷新里程碑完成状态，确保校验准确
+        constructMilestoneService.updateMilestoneCompletionForProject(cp.getProjectId());
         List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(cp.getProjectId());
         boolean allCompleted = milestones.stream().allMatch(m -> Boolean.TRUE.equals(m.getIscomplete()));
         if (!allCompleted) {
             throw new RuntimeException("里程碑未全部完成，不可移交");
+        }
+
+        if (request.getServiceDirector() == null) {
+            throw new RuntimeException("运维负责人不能为空");
         }
 
         AfterServiceProject asp = new AfterServiceProject();
@@ -157,6 +171,8 @@ public class AfterServiceProjectService {
         AfterServiceProject project = new AfterServiceProject();
         BeanUtils.copyProperties(dto, project);
         project.setProjectId(null); // Ensure new
+        // 保持总工时为系统统计值，创建时不接受前端传入的 totalHours
+        project.setTotalHours(null);
         // 项目编号：如果前端已传入编号则优先使用（需校验唯一），否则生成新的唯一编号
         if (StringUtils.hasText(dto.getProjectNum())) {
             String candidate = dto.getProjectNum().trim();
@@ -179,7 +195,8 @@ public class AfterServiceProjectService {
                 .orElseThrow(() -> new RuntimeException("Project not found"));
         
         // 保持项目编号只读，不允许更新
-        BeanUtils.copyProperties(dto, project, "projectId", "createTime", "updateTime", "projectNum");
+        // 总工时由系统统计，忽略前端传入的 totalHours
+        BeanUtils.copyProperties(dto, project, "projectId", "createTime", "updateTime", "projectNum", "totalHours");
         project.setProjectId(id);
         
         AfterServiceProject saved = afterServiceProjectRepository.save(project);
@@ -252,7 +269,30 @@ public class AfterServiceProjectService {
                     .ifPresent(user -> dto.setServiceDirectorName(user.getName()));
         }
 
+        // 计算并填充总工时字段
+        dto.setTotalHours(computeTotalHours(entity.getProjectId()));
+
         return dto;
+    }
+
+    /**
+     * 函数级注释：统计指定运维项目的总工时
+     * 规则：累加该项目下所有运维事件的 eventhours（忽略空值）
+     * @param projectId 运维项目ID
+     * @return 总工时（无事件时返回 BigDecimal.ZERO）
+     */
+    private BigDecimal computeTotalHours(Long projectId) {
+        if (projectId == null) return BigDecimal.ZERO;
+        List<AfterServiceEvent> events = afterServiceEventRepository.findByAfterServiceProjectId(projectId);
+        if (events == null || events.isEmpty()) return BigDecimal.ZERO;
+        BigDecimal sum = BigDecimal.ZERO;
+        for (AfterServiceEvent ev : events) {
+            BigDecimal h = (ev != null) ? ev.getEventhours() : null;
+            if (h != null) {
+                sum = sum.add(h);
+            }
+        }
+        return sum;
     }
 
     /**

@@ -3,3 +3,4 @@ deliverableFiles/
 tools/
 *.log
 afterServiceDeliverableFiles/
+backend/logs/

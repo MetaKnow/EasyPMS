@@ -306,6 +306,36 @@ export default {
           params.customerRank = this.searchForm.customerRank;
         }
 
+        /**
+         * 函数级注释：根据当前用户角色控制数据可见性
+         * - 销售总监/公司领导/管理员/admin：查看全部数据
+         * - 销售角色：仅查看“销售负责人”为自己的数据
+         */
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const roleName = info && info.roleName ? String(info.roleName).trim() : ''
+          const roleLower = roleName.toLowerCase()
+          const isAdminUser = info && info.userName && String(info.userName).trim().toLowerCase() === 'admin'
+          // 特权角色：管理员/公司领导/销售总监/超级管理员（中文支持包含匹配；英文支持包含匹配）
+          const isPrivileged = (
+            roleName.includes('管理员') ||
+            roleName.includes('公司领导') ||
+            roleName.includes('销售总监') ||
+            roleName.includes('超级管理员') ||
+            roleLower.includes('admin') ||
+            roleLower.includes('leader') ||
+            roleLower.includes('sales director') ||
+            roleLower.includes('super admin') ||
+            roleLower.includes('superadmin')
+          )
+          const isSalesRole = roleName.includes('销售') || roleLower.includes('sales')
+          const uid = info && (info.userId ?? info.id)
+          if (!isAdminUser && !isPrivileged && isSalesRole && uid != null) {
+            params.saleLeader = Number(uid)
+          }
+        } catch (_) {}
+
         const data = await getCustomerList(params);
         this.customers = data.customers || [];
         this.totalCount = data.totalItems || 0;

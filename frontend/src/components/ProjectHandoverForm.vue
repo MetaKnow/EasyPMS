@@ -28,8 +28,8 @@
           </div>
 
           <div class="form-group">
-            <label for="serviceDirector">运维负责人</label>
-            <select id="serviceDirector" v-model="form.serviceDirector">
+            <label for="serviceDirector">运维负责人 <span class="required">*</span></label>
+            <select id="serviceDirector" v-model="form.serviceDirector" required>
               <option value="">请选择运维负责人</option>
               <option v-for="user in users" :key="user.userId" :value="user.userId">
                 {{ user.name || user.userName }}
@@ -140,6 +140,11 @@ export default {
     async submitHandover() {
       this.isSubmitting = true;
       try {
+        if (!this.form.serviceDirector) {
+          alert('请选择运维负责人');
+          this.isSubmitting = false;
+          return;
+        }
         const payload = {
           constructingProjectId: this.projectData.projectId,
           ...this.form

@@ -51,13 +51,16 @@ public class ConstructingProjectController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) String projectState,
             @RequestParam(required = false) Long projectLeader,
+            @RequestParam(required = false) Long saleLeader,
             @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String customerName,
+            @RequestParam(required = false) String softName,
             @RequestParam(defaultValue = "projectId") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
         try {
             Page<ConstructingProjectDTO> projectPage = constructingProjectService.getConstructingProjectsWithCustomerName(
-                    page, size, projectName, year, projectState, projectLeader, customerId, sortBy, sortDir);
+                    page, size, projectName, year, projectState, projectLeader, saleLeader, customerId, customerName, softName, sortBy, sortDir);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

@@ -35,6 +35,18 @@
           placeholder="项目负责人"
           class="search-input"
         />
+        <input 
+          v-model="searchForm.customerName" 
+          type="text" 
+          placeholder="客户名称"
+          class="search-input"
+        />
+        <input 
+          v-model="searchForm.softName" 
+          type="text" 
+          placeholder="软件系统"
+          class="search-input"
+        />
         <select v-model="searchForm.projectState" class="search-select">
           <option value="">全部状态</option>
           <option value="待开始">待开始</option>
@@ -198,7 +210,9 @@ export default {
         projectName: '',
         projectLeaderName: '',
         projectState: '',
-        year: ''
+        year: '',
+        customerName: '',
+        softName: ''
       },
       // 分页信息
       currentPage: 1,
@@ -241,7 +255,8 @@ export default {
      * 函数级注释：移交按钮是否可用（仅选中且状态为“进行中”的项目）
      */
     handoverEnabled() {
-      const p = this.selectedProject || (this.selectedProjects.length === 1 ? this.projectList.find(x => x.projectId === this.selectedProjects[0]) : null)
+      if (this.selectedProjects.length !== 1) return false
+      const p = this.projectList.find(x => x.projectId === this.selectedProjects[0])
       return !!p && p.projectState === '进行中'
     }
   },
@@ -272,6 +287,27 @@ export default {
           size: this.pageSize,
           ...this.searchForm
         }
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const name = info && info.roleName ? String(info.roleName).trim() : ''
+          const lower = name.toLowerCase()
+          const uid = info && (info.userId ?? info.id)
+          const isPrivileged = (
+            ['管理员', '公司领导', '超级管理员', '销售总监', '项目总监'].some(r => name.includes(r)) ||
+            ['admin', 'leader', 'super admin', 'superadmin', 'sales director', 'project director'].some(r => lower === r)
+          )
+          if (!isPrivileged && uid != null) {
+            const isPM = (name.includes('项目经理') || lower === 'project manager' || lower === 'pm')
+            const isAfter = (name.includes('售后') || name.includes('运维'))
+            const isSales = (name.includes('销售') || lower === 'sales')
+            if (isPM || isAfter) {
+              params.projectLeader = Number(uid)
+            } else if (isSales) {
+              params.saleLeader = Number(uid)
+            }
+          }
+        } catch (_) {}
         
         console.log('正在加载项目列表，参数:', params)
         const response = await getConstructingProjects(params)
@@ -309,7 +345,9 @@ export default {
         projectName: '',
         projectLeaderName: '',
         projectState: '',
-        year: ''
+        year: '',
+        customerName: '',
+        softName: ''
       }
       this.searchProjects()
     },
@@ -331,6 +369,11 @@ export default {
       } else {
         this.selectedProjects.push(projectId)
       }
+      if (this.selectedProjects.length === 1) {
+        this.selectedProject = this.projectList.find(x => x.projectId === this.selectedProjects[0]) || null
+      } else {
+        this.selectedProject = null
+      }
     },
 
     /**
@@ -338,7 +381,8 @@ export default {
      */
     async openHandover() {
       if (!this.handoverEnabled) return
-      const p = this.selectedProject || (this.selectedProjects.length === 1 ? this.projectList.find(x => x.projectId === this.selectedProjects[0]) : null)
+      if (this.selectedProjects.length !== 1) return
+      const p = this.projectList.find(x => x.projectId === this.selectedProjects[0])
       if (!p) return
       try {
         const resp = await getProjectSummary(p.projectId)
@@ -518,6 +562,7 @@ export default {
       } else {
         this.selectedProjects = []
       }
+      this.selectedProject = null
     },
 
     /**

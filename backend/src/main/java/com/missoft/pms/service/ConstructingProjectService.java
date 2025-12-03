@@ -110,9 +110,24 @@ public class ConstructingProjectService {
      * @return 项目分页数据（包含客户名称）
      */
     @Transactional(readOnly = true)
+    /**
+     * 函数级注释：分页查询在建项目（支持按客户名称与软件系统名称模糊搜索）
+     * @param page 页码（0开始）
+     * @param size 每页大小
+     * @param projectName 项目名称（可选）
+     * @param year 年度（可选）
+     * @param projectState 项目状态（可选）
+     * @param projectLeader 项目负责人ID（可选）
+     * @param customerId 客户ID（可选）
+     * @param customerName 客户名称（可选，模糊匹配）
+     * @param softName 软件系统名称（可选，模糊匹配）
+     * @param sortBy 排序字段
+     * @param sortDir 排序方向
+     */
     public Page<ConstructingProjectDTO> getConstructingProjectsWithCustomerName(int page, int size, String projectName,
                                                                                Integer year, String projectState, Long projectLeader,
-                                                                               Long customerId, String sortBy, String sortDir) {
+                                                                               Long saleLeader, Long customerId, String customerName, String softName,
+                                                                               String sortBy, String sortDir) {
         // 创建排序对象
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -123,7 +138,7 @@ public class ConstructingProjectService {
 
         // 使用多条件查询（包含客户名称）
         return constructingProjectRepository.findByMultipleConditionsWithCustomerName(
-                projectName, year, projectState, projectLeader, customerId, pageable);
+                projectName, year, projectState, projectLeader, saleLeader, customerId, customerName, softName, pageable);
     }
 
     /**

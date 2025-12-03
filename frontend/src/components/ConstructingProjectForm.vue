@@ -101,9 +101,9 @@
             </div>
 
             <div class="form-group">
-              <label for="saleLeader">商务负责人 <span class="required">*</span></label>
+              <label for="saleLeader">销售负责人 <span class="required">*</span></label>
               <select id="saleLeader" v-model="form.saleLeader" required>
-                <option value="">请选择商务负责人</option>
+                <option value="">请选择销售负责人</option>
                 <option v-for="user in users" :key="user.userId" :value="user.userId">
                   {{ user.name || user.userName }}
                 </option>
@@ -312,7 +312,6 @@
       <!-- 固定按钮区域 -->
       <div class="modal-footer">
         <div class="form-actions">
-          <button v-if="isEdit && !isViewMode && form.projectState === '进行中'" type="button" class="btn btn-warning" @click="showHandoverForm" style="margin-right: 8px;">移交运维</button>
           <button type="button" class="btn btn-secondary" @click="closeModal">{{ isViewMode ? '关闭' : '取消' }}</button>
           <button v-if="!isViewMode" type="submit" class="btn btn-primary" :disabled="isSubmitting" @click="submitForm">
             {{ isSubmitting ? (isEdit ? '保存中...' : '创建中...') : (isEdit ? '保存' : '创建项目') }}
@@ -321,14 +320,7 @@
       </div>
     </div>
 
-    <!-- 移交运维表单 -->
-    <ProjectHandoverForm 
-      :visible="handoverFormVisible"
-      :project-data="projectData"
-      :users="users"
-      @close="closeHandoverForm"
-      @success="onHandoverSuccess"
-    />
+    
   </div>
 </template>
 
@@ -338,12 +330,10 @@ import { getAllCustomers } from '../api/customer.js'
 import { getAllUsers } from '../api/user.js'
 import { getAllProducts } from '../api/product.js'
 import { getAllChannelDistributors } from '../api/channelDistributor.js'
-import ProjectHandoverForm from './ProjectHandoverForm.vue'
 
 export default {
   name: 'ConstructingProjectForm',
   components: {
-    ProjectHandoverForm
   },
   props: {
     visible: {
@@ -366,7 +356,6 @@ export default {
       users: [],
       products: [],
       channels: [],
-      handoverFormVisible: false,
       form: {
         projectNum: '',
         year: new Date().getFullYear(),
@@ -469,28 +458,7 @@ export default {
     }
   },
   methods: {
-    /**
-     * 显示移交运维表单
-     */
-    showHandoverForm() {
-      this.handoverFormVisible = true
-    },
-
-    /**
-     * 关闭移交运维表单
-     */
-    closeHandoverForm() {
-      this.handoverFormVisible = false
-    },
-
-    /**
-     * 移交成功回调
-     */
-    onHandoverSuccess() {
-      this.closeHandoverForm()
-      this.$emit('success')
-      this.closeModal()
-    },
+    
 
     /**
      * 加载表单数据
@@ -604,7 +572,15 @@ export default {
     async loadUsers() {
       try {
         this.users = await getAllUsers()
-        console.log('ConstructingProjectForm loaded users:', this.users ? this.users.length : 0)
+        // 新建模式默认将项目负责人设置为当前登录用户
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const uid = info && (info.userId ?? info.id)
+          if (!this.isEdit && (this.form.projectLeader === '' || this.form.projectLeader == null) && uid != null) {
+            this.form.projectLeader = Number(uid)
+          }
+        } catch (_) {}
       } catch (error) {
         console.error('加载用户列表失败:', error)
         this.users = []
@@ -720,7 +696,7 @@ export default {
       }
       
       if (!this.form.saleLeader) {
-        errors.push('商务负责人不能为空')
+        errors.push('销售负责人不能为空')
       }
       
       if (!this.form.startDate) {

@@ -274,7 +274,7 @@ export default {
     },
 
     /**
-     * 初始化表单数据
+     * 初始化表单数据（新增默认将销售负责人设置为当前用户）
      */
     initForm() {
       if (this.mode === 'edit' && this.customer) {
@@ -301,6 +301,15 @@ export default {
           createTime: null,
           saleLeader: null
         }
+        // 新增模式默认将销售负责人设置为当前登录用户
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const uid = info && (info.userId ?? info.id)
+          if (uid != null) {
+            this.formData.saleLeader = Number(uid)
+          }
+        } catch (_) {}
       }
       
       // 清空错误信息

@@ -51,12 +51,12 @@
             <col style="width: 60px" />
             <col style="width: 170px" />
             <col style="width: calc((100% - var(--fixed-total)) / 3)" />
-            <col style="width: 160px" />
-            <col style="width: 160px" />
+            <col style="width: 120px" />
+            <col style="width: 100px" />
+            <col style="width: 100px" />
             <col style="width: 100px" />
             <col style="width: 100px" />
             <col style="width: 120px" />
-            <col style="width: 100px" />
             <col style="width: 160px" />
           </colgroup>
           <thead>
@@ -73,10 +73,11 @@
               <th>项目名称</th>
               <th>客户名称</th>
               <th>档案系统</th>
+              <th width="100">总工时</th>
               <th width="100">销售负责人</th>
-              <th width="100">运维状态</th>
-              <th width="120">运维类型</th>
               <th width="100">运维负责人</th>
+              <th width="120">运维状态</th>
+              <th width="100">运维类型</th>
               <th width="160">操作</th>
             </tr>
           </thead>
@@ -101,14 +102,15 @@
               <td>{{ project.projectName }}</td>
               <td>{{ project.customerName || '-' }}</td>
               <td>{{ project.arcSystem }}</td>
+              <td>{{ project.totalHours || '-' }}</td>
               <td>{{ project.saleDirectorName || '-' }}</td>
+              <td>{{ project.serviceDirectorName || '-' }}</td>
               <td>
                 <span :class="getStatusClass(project.serviceState)">
                   {{ project.serviceState || '-' }}
                 </span>
               </td>
               <td>{{ project.serviceType || '-' }}</td>
-              <td>{{ project.serviceDirectorName || '-' }}</td>
               <td>
                 <button class="btn-small btn-info" @click.stop="viewProject(project)" style="margin-right: 5px;">查看</button>
                 <button class="btn-small btn-primary" @click.stop="editProject(project)">编辑</button>
@@ -210,6 +212,27 @@ export default {
           size: this.pageSize,
           ...this.searchForm
         }
+        try {
+          const raw = localStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const name = info && info.roleName ? String(info.roleName).trim() : ''
+          const lower = name.toLowerCase()
+          const uid = info && (info.userId ?? info.id)
+          const isPrivileged = (
+            ['管理员', '公司领导', '超级管理员', '销售总监', '项目总监'].some(r => name.includes(r)) ||
+            ['admin', 'leader', 'super admin', 'superadmin', 'sales director', 'project director'].some(r => lower === r)
+          )
+          if (!isPrivileged && uid != null) {
+            const isPM = (name.includes('项目经理') || lower === 'project manager' || lower === 'pm')
+            const isAfter = (name.includes('售后') || name.includes('运维'))
+            const isSales = (name.includes('销售') || lower === 'sales')
+            if (isPM || isAfter) {
+              params.serviceDirector = Number(uid)
+            } else if (isSales) {
+              params.saleDirector = Number(uid)
+            }
+          }
+        } catch (_) {}
         
         const response = await getAfterserviceProjects(params)
         if (response.data.success) {

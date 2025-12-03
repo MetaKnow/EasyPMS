@@ -78,6 +78,10 @@ public class UserService {
                 user.getRoleId(),
                 user.getOrganId()
             );
+            if (user.getRoleId() != null) {
+                roleRepository.findById(user.getRoleId())
+                        .ifPresent(r -> userInfo.setRoleName(r.getRoleName()));
+            }
             
             // 生成JWT令牌（这里暂时返回一个简单的token，后续可以集成JWT）
             String token = generateSimpleToken(user);

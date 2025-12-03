@@ -15,6 +15,7 @@ const API_BASE_URL = 'http://localhost:8081/api'
  * @param {string} params.contact 联系人（可选）
  * @param {string} params.province 省份（可选）
  * @param {string} params.customerRank 客户等级（可选）
+ * @param {number} [params.saleLeader] 销售负责人ID（可选；销售角色下用于数据范围控制）
  * @returns {Promise} 客户分页数据
  */
 export async function getCustomerList(params = {}) {
@@ -38,6 +39,9 @@ export async function getCustomerList(params = {}) {
     }
     if (params.customerRank) {
       queryParams.append('customerRank', params.customerRank)
+    }
+    if (params.saleLeader !== undefined && params.saleLeader !== null) {
+      queryParams.append('saleLeader', params.saleLeader)
     }
     
     const response = await request({

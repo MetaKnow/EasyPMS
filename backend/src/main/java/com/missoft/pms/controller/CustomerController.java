@@ -39,6 +39,10 @@ public class CustomerController {
      * @return 客户分页数据
      */
     @GetMapping
+    /**
+     * 函数级注释：分页查询客户列表
+     * - 支持按销售负责人 `saleLeader` 过滤，满足销售角色仅查看自身数据的要求
+     */
     public ResponseEntity<Map<String, Object>> getCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -47,11 +51,12 @@ public class CustomerController {
             @RequestParam(required = false) String province,
             @RequestParam(required = false) String customerRank,
             @RequestParam(defaultValue = "customerId") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) Long saleLeader) {
 
         try {
             Page<Customer> customerPage = customerService.getCustomers(
-                    page, size, customerName, contact, province, customerRank, sortBy, sortDir);
+                    page, size, customerName, contact, province, customerRank, sortBy, sortDir, saleLeader);
 
             Map<String, Object> response = new HashMap<>();
             response.put("customers", customerPage.getContent());

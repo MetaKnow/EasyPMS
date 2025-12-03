@@ -39,8 +39,13 @@ public class CustomerService {
      * @return 客户分页数据
      */
     @Transactional(readOnly = true)
+    /**
+     * 函数级注释：分页查询客户列表（支持按销售负责人过滤）
+     * @param saleLeader 销售负责人用户ID（可为null；销售角色用户传入自身ID以限定数据范围）
+     */
     public Page<Customer> getCustomers(int page, int size, String customerName, String contact,
-                                       String province, String customerRank, String sortBy, String sortDir) {
+                                       String province, String customerRank, String sortBy, String sortDir,
+                                       Long saleLeader) {
         // 创建排序对象
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -52,12 +57,12 @@ public class CustomerService {
         customerRank = StringUtils.hasText(customerRank) ? customerRank.trim() : null;
 
         // 如果所有查询条件都为空，返回所有客户
-        if (customerName == null && contact == null && province == null && customerRank == null) {
+        if (customerName == null && contact == null && province == null && customerRank == null && saleLeader == null) {
             return customerRepository.findAll(pageable);
         }
 
-        // 使用多条件查询
-        return customerRepository.findByMultipleConditions(customerName, contact, province, customerRank, pageable);
+        // 使用多条件查询（包含销售负责人）
+        return customerRepository.findByMultipleConditions(customerName, contact, province, customerRank, saleLeader, pageable);
     }
 
     /**

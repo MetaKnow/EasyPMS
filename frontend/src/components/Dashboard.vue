@@ -16,28 +16,7 @@
       </div>
     </div>
 
-    <!-- 快速操作区域 -->
-    <div class="actions-section">
-      <h2 class="section-title">快速操作</h2>
-      <div class="action-buttons">
-        <button class="action-btn primary" @click="createConstructingProject">
-          <i class="icon-plus"></i>
-          创建在建项目
-        </button>
-        <button class="action-btn primary" @click="createAfterserviceProject">
-          <i class="icon-tools"></i>
-          创建运维项目
-        </button>
-        <button class="action-btn" @click="addCustomer">
-          <i class="icon-user-plus"></i>
-          添加客户
-        </button>
-        <button class="action-btn" @click="viewReports">
-          <i class="icon-chart"></i>
-          查看报表
-        </button>
-      </div>
-    </div>
+
 
     <!-- 最近项目列表 -->
     <div class="recent-projects">
@@ -102,38 +81,6 @@ export default {
         'paused': '已暂停'
       };
       return statusMap[status] || '未知状态';
-    },
-
-    /**
-     * 创建在建项目
-     */
-    createConstructingProject() {
-      console.log('创建在建项目');
-      this.$emit('show-constructing-project-form');
-    },
-
-    /**
-     * 创建运维项目
-     */
-    createAfterserviceProject() {
-      console.log('创建运维项目');
-      this.$emit('show-afterservice-project-form');
-    },
-
-    /**
-     * 添加客户
-     */
-    addCustomer() {
-      console.log('添加客户');
-      this.$router.push('/customers');
-    },
-
-    /**
-     * 查看报表
-     */
-    viewReports() {
-      console.log('查看报表');
-      // TODO: 实现查看报表功能
     },
 
     /**
@@ -257,68 +204,6 @@ export default {
   font-weight: 500;
 }
 
-.actions-section {
-  margin-bottom: 20px;
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.action-buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-}
-
-.action-btn {
-  padding: 14px 18px;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1890ff, #40a9ff);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.action-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.action-btn:hover::before {
-  left: 100%;
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4);
-}
-
-.action-btn.primary {
-  background: linear-gradient(135deg, #1890ff, #40a9ff);
-  color: white;
-}
-
-.action-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4);
-}
 
 .recent-projects {
   background: white;
@@ -419,20 +304,16 @@ export default {
   color: #1890ff;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .project-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+  /* 响应式设计 */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .project-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
   }
   
   .project-actions {

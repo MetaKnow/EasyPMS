@@ -139,6 +139,7 @@ public class LoginResponse {
         private String name;
         private Long roleId;
         private Long organId;
+        private String roleName;
         
         /**
          * 默认构造函数
@@ -177,5 +178,8 @@ public class LoginResponse {
         
         public Long getOrganId() { return organId; }
         public void setOrganId(Long organId) { this.organId = organId; }
+
+        public String getRoleName() { return roleName; }
+        public void setRoleName(String roleName) { this.roleName = roleName; }
     }
 }

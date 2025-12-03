@@ -328,7 +328,9 @@ public class ConstructMilestoneService {
             List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(projectId);
             for (ConstructMilestone m : milestones) {
                 m.setMilestonePeriod(null);
-            }
+  }
+
+  
             if (!milestones.isEmpty()) {
                 constructMilestoneRepository.saveAll(milestones);
             }
@@ -361,6 +363,67 @@ public class ConstructMilestoneService {
             String name = m.getMilestoneName().trim();
             Integer sum = sumByMilestoneName.get(name);
             m.setMilestonePeriod(sum); // 若无汇总值则写回null
+            updated++;
+        }
+        if (!milestones.isEmpty()) {
+            constructMilestoneRepository.saveAll(milestones);
+        }
+        return updated;
+    }
+
+    /**
+     * 函数级注释：根据项目步骤完成状态更新里程碑完成标记与完成日期。
+     * @param projectId 项目ID
+     * @return 被更新的里程碑数量
+     */
+    public int updateMilestoneCompletionForProject(Long projectId) {
+        if (projectId == null) return 0;
+
+        List<ProjectSstepRelation> relations = projectSstepRelationRepository.findByProjectId(projectId);
+        Map<String, List<ProjectSstepRelation>> relByMilestoneName = new HashMap<>();
+        if (relations != null) {
+            for (ProjectSstepRelation rel : relations) {
+                if (rel == null) continue;
+                String name = null;
+                if (rel.getMilestoneId() != null) {
+                    ConstructMilestone cm = constructMilestoneRepository.findById(rel.getMilestoneId()).orElse(null);
+                    if (cm != null && cm.getMilestoneName() != null) {
+                        name = cm.getMilestoneName().trim();
+                    }
+                }
+                if (name == null && rel.getSstepId() != null) {
+                    StandardConstructStep step = standardConstructStepRepository.findById(rel.getSstepId()).orElse(null);
+                    if (step != null && step.getSmilestoneId() != null) {
+                        StandardMilestone sm = standardMilestoneRepository.findById(step.getSmilestoneId()).orElse(null);
+                        if (sm != null && sm.getMilestoneName() != null) {
+                            name = sm.getMilestoneName().trim();
+                        }
+                    }
+                }
+                if (name != null && !name.isEmpty()) {
+                    relByMilestoneName.computeIfAbsent(name, k -> new ArrayList<>()).add(rel);
+                }
+            }
+        }
+
+        List<ConstructMilestone> milestones = constructMilestoneRepository.findByProjectId(projectId);
+        int updated = 0;
+        for (ConstructMilestone m : milestones) {
+            if (m == null || m.getMilestoneName() == null) continue;
+            String name = m.getMilestoneName().trim();
+            List<ProjectSstepRelation> list = relByMilestoneName.get(name);
+            boolean complete = list != null && !list.isEmpty() && list.stream().allMatch(r -> "已完成".equals(r.getStepStatus()));
+            m.setIscomplete(complete);
+            if (complete) {
+                java.time.LocalDate maxEnd = list.stream()
+                        .map(ProjectSstepRelation::getActualEndDate)
+                        .filter(java.util.Objects::nonNull)
+                        .max(java.util.Comparator.naturalOrder())
+                        .orElse(null);
+                m.setCompleteDate(maxEnd);
+            } else {
+                m.setCompleteDate(null);
+            }
             updated++;
         }
         if (!milestones.isEmpty()) {

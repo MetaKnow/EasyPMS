@@ -34,10 +34,11 @@ public class AfterServiceProjectController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String projectName,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long saleDirector) { // Updated from director to saleDirector
+            @RequestParam(required = false) Long saleDirector,
+            @RequestParam(required = false) Long serviceDirector) {
         
         PageRequest pageRequest = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createTime"));
-        Page<AfterServiceProjectDTO> projectPage = afterServiceProjectService.getProjects(projectName, status, saleDirector, pageRequest);
+        Page<AfterServiceProjectDTO> projectPage = afterServiceProjectService.getProjects(projectName, status, saleDirector, serviceDirector, pageRequest);
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

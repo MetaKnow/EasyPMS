@@ -100,9 +100,9 @@
             </div>
 
             <div class="form-group">
-              <label for="saleLeader">商务负责人 <span class="required">*</span></label>
+              <label for="saleLeader">销售负责人 <span class="required">*</span></label>
               <select id="saleLeader" v-model="form.saleLeader" required>
-                <option value="">请选择商务负责人</option>
+                <option value="">请选择销售负责人</option>
                 <option v-for="user in users" :key="user.userId" :value="user.userId">
                   {{ user.name || user.userName }}
                 </option>
@@ -450,6 +450,15 @@ export default {
         unreceiveMoney: '',
         acceptanceDate: ''
       }
+      // 新建模式默认将项目负责人设置为当前登录用户
+      try {
+        const raw = localStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const uid = info && (info.userId ?? info.id)
+        if (uid != null) {
+          this.form.projectLeader = Number(uid)
+        }
+      } catch (_) {}
       this.constructionContent = {
         standardProduct: true,
         interfaceDevelopment: false,
@@ -535,7 +544,7 @@ export default {
       }
       
       if (!this.form.saleLeader) {
-        errors.push('商务负责人不能为空')
+        errors.push('销售负责人不能为空')
       }
       
       if (!this.form.startDate) {

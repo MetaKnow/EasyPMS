@@ -122,13 +122,19 @@ public interface ConstructingProjectRepository extends JpaRepository<Constructin
            "(:year IS NULL OR cp.year = :year) AND " +
            "(:projectState IS NULL OR cp.projectState = :projectState) AND " +
            "(:projectLeader IS NULL OR cp.projectLeader = :projectLeader) AND " +
-           "(:customerId IS NULL OR cp.customerId = :customerId)")
+           "(:saleLeader IS NULL OR cp.saleLeader = :saleLeader) AND " +
+           "(:customerId IS NULL OR cp.customerId = :customerId) AND " +
+           "(:customerName IS NULL OR LOWER(c.customerName) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
+           "(:softName IS NULL OR LOWER(a.softName) LIKE LOWER(CONCAT('%', :softName, '%')))")
     Page<com.missoft.pms.dto.ConstructingProjectDTO> findByMultipleConditionsWithCustomerName(
             @Param("projectName") String projectName,
             @Param("year") Integer year,
             @Param("projectState") String projectState,
             @Param("projectLeader") Long projectLeader,
+            @Param("saleLeader") Long saleLeader,
             @Param("customerId") Long customerId,
+            @Param("customerName") String customerName,
+            @Param("softName") String softName,
             Pageable pageable);
 
     /**
