@@ -165,6 +165,7 @@ export default {
   },
   data() {
     return {
+      API_BASE: __BACKEND_API_URL__ + '/api',
       // 产品列表数据
       products: [],
       
@@ -242,7 +243,7 @@ export default {
           params.append('softVersion', this.searchForm.softVersion)
         }
         
-        const response = await fetch(`http://localhost:8081/api/products?${params}`)
+        const response = await fetch(`${this.API_BASE}/products?${params}`)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -375,7 +376,7 @@ export default {
       
       try {
         // 调用批量删除API
-        const response = await fetch('http://localhost:8081/api/products/batch', {
+        const response = await fetch(`${this.API_BASE}/products/batch`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
@@ -413,7 +414,7 @@ export default {
       if (!this.deletingProduct) return
       
       try {
-        const response = await fetch(`http://localhost:8081/api/products/${this.deletingProduct.softId}`, {
+        const response = await fetch(`${this.API_BASE}/products/${this.deletingProduct.softId}`, {
           method: 'DELETE'
         })
         
@@ -456,7 +457,7 @@ export default {
         
         if (this.formMode === 'add') {
           // 新增产品
-          response = await fetch('http://localhost:8081/api/products', {
+          response = await fetch(`${this.API_BASE}/products`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -472,7 +473,7 @@ export default {
           
         } else {
           // 更新产品
-          response = await fetch(`http://localhost:8081/api/products/${productData.softId}`, {
+          response = await fetch(`${this.API_BASE}/products/${productData.softId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json'

@@ -4,8 +4,6 @@
 
 import request from './request.js'
 
-const API_BASE_URL = 'http://localhost:8081/api'
-
 /**
  * 获取客户列表（分页查询）
  * @param {Object} params 查询参数

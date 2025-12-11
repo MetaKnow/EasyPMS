@@ -192,6 +192,7 @@ export default {
   emits: ['edit-user', 'delete-user', 'refresh', 'batch-delete-users', 'selection-change'],
   data() {
     return {
+      API_BASE: __BACKEND_API_URL__ + '/api',
       // 选中用户ID集合
       selectedUsers: [],
       // 分页信息
@@ -319,7 +320,7 @@ export default {
         const currentLocked = user.locked === 1 || user.locked === true
         const newLocked = !currentLocked
         
-        const response = await fetch(`http://localhost:8081/api/users/${user.userId}/status`, {
+        const response = await fetch(`${this.API_BASE}/users/${user.userId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -396,7 +397,7 @@ export default {
      */
     async confirmBatchDelete() {
       try {
-        const response = await fetch('http://localhost:8081/api/users/batch', {
+        const response = await fetch(`${this.API_BASE}/users/batch`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'

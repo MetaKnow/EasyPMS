@@ -1105,7 +1105,7 @@ export default {
      */
     async onDownloadDeliverables(row) {
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8081'
+        const API_BASE = __BACKEND_API_URL__
         const projectId = this.project?.projectId
         if (!projectId) return this.showError('项目ID缺失，无法下载')
 
@@ -1889,21 +1889,24 @@ export default {
       }
     },
     downloadURL(fileId) {
-      return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/download/${fileId}`;
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/construct-deliverable-files/download/${fileId}`;
     },
     /**
      * 函数级注释：获取后端 Office→PDF 预览端点URL
      * - 统一将 doc/docx/ppt/pptx 转换为 PDF，供 PDFJS 渲染。
      */
     convertPreviewPdfURL(fileId) {
-      return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/preview/pdf/${fileId}`;
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/construct-deliverable-files/preview/pdf/${fileId}`;
     },
     /**
      * 函数级注释：获取后端 MP4 视频预览端点 URL
      * - 返回 inline 的 mp4 资源，支持 Range 分段；用于 <video> src。
      */
     convertPreviewVideoURL(fileId) {
-      return `${import.meta.env.VITE_API_BASE || 'http://localhost:8081'}/api/construct-deliverable-files/preview/video/${fileId}`;
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/construct-deliverable-files/preview/video/${fileId}`;
     },
     fileBaseName(path) {
       if (!path) return '未知文件';

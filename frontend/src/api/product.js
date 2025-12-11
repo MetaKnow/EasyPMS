@@ -2,7 +2,7 @@
  * 基础产品维护相关API接口
  */
 
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = __BACKEND_API_URL__ + '/api'
 
 /**
  * 获取所有产品列表（不分页）

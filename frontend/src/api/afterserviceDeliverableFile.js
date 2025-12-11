@@ -51,27 +51,22 @@ export async function listAfterserviceDeliverableFiles(projectId, eventId) {
  * 获取预览/下载URL
  */
 export function getAfterserviceDeliverablePreviewUrl(fileId) {
-  // 使用全局后端地址，避免在开发环境下跳转到前端服务器首页
-  // eslint-disable-next-line no-undef
-  const backendBase = typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081'
+  const backendBase = __BACKEND_API_URL__
   return `${backendBase}${API_BASE_URL}/afterservice-deliverable-files/preview/${fileId}`
 }
 
 export function getAfterserviceDeliverablePreviewPdfUrl(fileId) {
-  // eslint-disable-next-line no-undef
-  const backendBase = typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081'
+  const backendBase = __BACKEND_API_URL__
   return `${backendBase}${API_BASE_URL}/afterservice-deliverable-files/preview/pdf/${fileId}`
 }
 
 export function getAfterserviceDeliverablePreviewVideoUrl(fileId) {
-  // eslint-disable-next-line no-undef
-  const backendBase = typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081'
+  const backendBase = __BACKEND_API_URL__
   return `${backendBase}${API_BASE_URL}/afterservice-deliverable-files/preview/video/${fileId}`
 }
 
 export function getAfterserviceDeliverableDownloadUrl(fileId) {
-  // eslint-disable-next-line no-undef
-  const backendBase = typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081'
+  const backendBase = __BACKEND_API_URL__
   return `${backendBase}${API_BASE_URL}/afterservice-deliverable-files/download/${fileId}`
 }
 

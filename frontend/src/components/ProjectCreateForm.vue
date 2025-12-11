@@ -635,7 +635,8 @@ export default {
           constructContent: constructContent
         }
         
-        const response = await axios.post('http://localhost:8081/api/constructing-projects', projectData)
+        const API_BASE = __BACKEND_API_URL__ + '/api'
+        const response = await axios.post(`${API_BASE}/constructing-projects`, projectData)
         
         if (response.data.success) {
           this.$emit('success', response.data.data)

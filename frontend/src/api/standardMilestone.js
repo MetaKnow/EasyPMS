@@ -2,7 +2,7 @@
  * 标准里程碑相关API接口
  */
 
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = __BACKEND_API_URL__ + '/api'
 
 /**
  * 获取标准里程碑列表（分页）

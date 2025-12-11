@@ -765,9 +765,10 @@ export default {
           constructContent: selectedContents.join('/')
         }
         
+        const API_BASE = __BACKEND_API_URL__ + '/api'
         const url = this.isEdit 
-          ? `http://localhost:8081/api/constructing-projects/${this.projectData.projectId}`
-          : 'http://localhost:8081/api/constructing-projects'
+          ? `${API_BASE}/constructing-projects/${this.projectData.projectId}`
+          : `${API_BASE}/constructing-projects`
         
         const method = this.isEdit ? 'put' : 'post'
         

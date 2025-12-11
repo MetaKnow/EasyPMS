@@ -6,7 +6,7 @@ import axios from 'axios'
 const request = axios.create({
   // 使用 vite.config.js 中注入的全局变量
   // eslint-disable-next-line no-undef
-  baseURL: typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081',
+  baseURL: __BACKEND_API_URL__,
   timeout: 10000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json'

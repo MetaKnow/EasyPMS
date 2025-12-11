@@ -1,10 +1,17 @@
 {
   "backend": {
     "host": "localhost",
-    "port": 8081
+    "port": 8078
   },
   "frontend": {
     "host": "localhost",
-    "port": 8082
+    "port": 8079
+  },
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "name": "pms_db",
+    "username": "root",
+    "password": "wenliu125&*"
   }
 }

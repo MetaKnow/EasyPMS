@@ -182,6 +182,8 @@ export default {
   },
   data() {
     return {
+      // eslint-disable-next-line no-undef
+      API_BASE: __BACKEND_API_URL__ + '/api',
       isSubmitting: false,
       users: [],
       customers: [],
@@ -253,7 +255,7 @@ export default {
      */
     async loadProjectNum() {
       try {
-        const resp = await axios.get('http://localhost:8081/api/afterservice-projects/new-project-num')
+        const resp = await axios.get(`${this.API_BASE}/afterservice-projects/new-project-num`)
         const num = resp?.data?.data?.projectNum
         if (num) {
           this.form.projectNum = num
@@ -288,7 +290,7 @@ export default {
      */
     async loadUsers() {
       try {
-        const response = await axios.get('http://localhost:8081/api/users?size=1000')
+        const response = await axios.get(`${this.API_BASE}/users?size=1000`)
         if (response.data && response.data.users) {
           this.users = response.data.users
         }
@@ -311,7 +313,7 @@ export default {
      */
     async loadCustomers() {
       try {
-        const response = await axios.get('http://localhost:8081/api/customers?size=1000')
+        const response = await axios.get(`${this.API_BASE}/customers?size=1000`)
         if (response.data && response.data.customers) {
           this.customers = response.data.customers
         }
@@ -325,7 +327,7 @@ export default {
      */
     async loadProducts() {
       try {
-        const response = await axios.get('http://localhost:8081/api/products?size=1000')
+        const response = await axios.get(`${this.API_BASE}/products?size=1000`)
         if (response.data && response.data.products) {
           this.products = response.data.products
         }
@@ -341,8 +343,8 @@ export default {
       this.isSubmitting = true
       try {
         const url = this.isEdit 
-          ? `http://localhost:8081/api/afterservice-projects/${this.projectData.projectId}`
-          : 'http://localhost:8081/api/afterservice-projects'
+          ? `${this.API_BASE}/afterservice-projects/${this.projectData.projectId}`
+          : `${this.API_BASE}/afterservice-projects`
         
         const method = this.isEdit ? 'put' : 'post'
         // 函数级注释：提交时排除 totalHours，防止用户修改统计值

@@ -105,7 +105,7 @@ export default {
      */
     async countConstructingByState(state) {
       // eslint-disable-next-line no-undef
-      const backendBase = typeof __BACKEND_API_URL__ !== 'undefined' ? __BACKEND_API_URL__ : 'http://localhost:8081'
+      const backendBase = __BACKEND_API_URL__
       const url = `${backendBase}/api/constructing-projects/count/state/${encodeURIComponent(state)}`
       const resp = await fetch(url)
       if (!resp.ok) throw new Error('在建项目状态统计失败: ' + resp.status)

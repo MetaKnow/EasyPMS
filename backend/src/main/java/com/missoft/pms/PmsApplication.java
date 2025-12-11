@@ -33,37 +33,91 @@ public class PmsApplication {
         
         // 尝试加载 pms-config.json
         try {
-            // 查找配置文件的逻辑：
-            // 1. 检查当前目录（如果是从根目录运行）
-            // 2. 检查上级目录（如果是从backend目录运行）
-            File configFile = new File("pms-config.json");
-            if (!configFile.exists()) {
-                configFile = new File("../pms-config.json");
+            // 支持显式路径（优先级最高）
+            String explicitPath = System.getenv("PMS_CONFIG_PATH");
+            if (explicitPath == null || explicitPath.isBlank()) {
+                explicitPath = System.getProperty("pms.config.path");
+            }
+            File configFile = null;
+            if (explicitPath != null && !explicitPath.isBlank()) {
+                configFile = new File(explicitPath);
+            } else {
+                // 逐级回溯查找（当前、上一级、上两级）
+                File[] candidates = new File[] {
+                    new File("pms-config.json"),
+                    new File("../pms-config.json"),
+                    new File("../../pms-config.json")
+                };
+                for (File c : candidates) {
+                    if (c.exists()) { configFile = c; break; }
+                }
+                // 如果仍未找到，尝试根据当前路径推断项目根
+                if (configFile == null) {
+                    String cwd = System.getProperty("user.dir");
+                    var base = Paths.get(cwd).toAbsolutePath();
+                    var maybeRoot = base.getParent() != null ? base.getParent().getParent() : null;
+                    if (maybeRoot != null) {
+                        File inferred = maybeRoot.resolve("pms-config.json").toFile();
+                        if (inferred.exists()) configFile = inferred;
+                    }
+                }
             }
             
-            if (configFile.exists()) {
+            if (configFile != null && configFile.exists()) {
                 System.out.println("📄 发现配置文件: " + configFile.getAbsolutePath());
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode rootNode = mapper.readTree(configFile);
-                if (rootNode.has("backend") && rootNode.get("backend").has("port")) {
-                    int port = rootNode.get("backend").get("port").asInt();
-                    System.setProperty("server.port", String.valueOf(port));
-                    System.out.println("🔌 使用配置端口: " + port);
+                if (rootNode.has("backend")) {
+                    JsonNode be = rootNode.get("backend");
+                    if (be.has("port")) {
+                        int port = be.get("port").asInt();
+                        System.setProperty("server.port", String.valueOf(port));
+                        System.out.println("🔌 使用配置端口: " + port);
+                    }
+                    if (be.has("host")) {
+                        String host = be.get("host").asText();
+                        if (host != null && !host.isBlank()) {
+                            System.setProperty("server.address", host);
+                            System.out.println("🖧 绑定服务地址: " + host);
+                        }
+                    }
+                }
+                // 读取数据库配置并覆盖 Spring 数据源属性（函数级注释：支持url或host/port/name组合）
+                if (rootNode.has("database")) {
+                    JsonNode db = rootNode.get("database");
+                    String url = null;
+                    if (db.has("url") && db.get("url").isTextual()) {
+                        url = db.get("url").asText();
+                    } else {
+                        String host = db.path("host").asText("localhost");
+                        int dbPort = db.path("port").asInt(3306);
+                        String name = db.path("name").asText("pms_db");
+                        String params = "useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai";
+                        url = String.format("jdbc:mysql://%s:%d/%s?%s", host, dbPort, name, params);
+                        System.out.println("🔧 使用数据库配置: " + host + ":" + dbPort + "/" + name);
+                    }
+                    String username = db.path("username").asText(null);
+                    String password = db.path("password").asText(null);
+                    if (url != null) System.setProperty("spring.datasource.url", url);
+                    if (username != null) System.setProperty("spring.datasource.username", username);
+                    if (password != null) System.setProperty("spring.datasource.password", password);
                 }
             } else {
                  System.out.println("⚠️ 未找到 pms-config.json，使用默认配置");
+                 System.out.println("   查找路径支持: 当前/父级/祖父级目录，或通过 PMS_CONFIG_PATH / -Dpms.config.path 指定绝对路径");
             }
         } catch (Exception e) {
             System.err.println("⚠️ 读取配置文件失败: " + e.getMessage());
         }
-
+        
         System.out.println("🔧 数据库将通过DatabasePreInitializer自动创建");
         
         ConfigurableApplicationContext context = SpringApplication.run(PmsApplication.class, args);
         
         System.out.println("🎉 应用启动完成!");
         String port = context.getEnvironment().getProperty("server.port", "8081");
-        System.out.println("🌐 访问地址: http://localhost:" + port);
+        String addr = context.getEnvironment().getProperty("server.address", "localhost");
+        System.out.println("🌐 访问地址: http://" + addr + ":" + port);
     }
 
 }

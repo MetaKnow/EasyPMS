@@ -3,7 +3,7 @@
  */
 import request from './request'
 
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = __BACKEND_API_URL__ + '/api'
 
 /**
  * 函数级注释：上传项目交付物文件

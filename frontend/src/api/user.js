@@ -4,7 +4,7 @@
 
 import request from './request'
 
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = __BACKEND_API_URL__ + '/api'
 
 /**
  * 获取所有用户列表

@@ -106,6 +106,9 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+// eslint-disable-next-line no-undef
+const API_BASE = __BACKEND_API_URL__ + '/api'
+
 // 路由实例
 const router = useRouter()
 
@@ -136,7 +139,7 @@ const handleLogin = async () => {
 
   try {
     // 调用登录API
-    const response = await axios.post('http://localhost:8081/api/auth/login', {
+    const response = await axios.post(`${API_BASE}/auth/login`, {
       username: loginForm.username,
       password: loginForm.password,
       rememberMe: loginForm.rememberMe
@@ -521,3 +524,5 @@ const handleLogin = async () => {
   margin-bottom: 10px;
 }
 </style>
+// eslint-disable-next-line no-undef
+const API_BASE = __BACKEND_API_URL__ + '/api'

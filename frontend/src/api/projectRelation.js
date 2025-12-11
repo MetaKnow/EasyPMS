@@ -1,6 +1,6 @@
 import request from './request'
 
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = __BACKEND_API_URL__ + '/api'
 
 // 更新项目-标准步骤关系指定字段
 export async function updateProjectRelation(relationId, changes) {
