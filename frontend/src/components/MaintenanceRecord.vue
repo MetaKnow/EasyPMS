@@ -194,7 +194,7 @@
                     </div>
                     <div class="file-actions">
                       <a class="mini-icon" :href="getDownloadUrl(f.fileId)" title="下载" aria-label="下载">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L5.33 8h3.84v4h6.66V8h3.84L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
                       </a>
                     </div>
                   </div>

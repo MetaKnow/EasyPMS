@@ -6,12 +6,6 @@
         <span class="name">{{ project?.projectName || '项目详情' }}</span>
         <span class="num" v-if="project?.projectNum">编号：{{ project.projectNum }}</span>
       </div>
-      <div class="stats" v-if="summaryLoaded">
-        <div class="chip">步骤 {{ steps.length }}</div>
-        <div class="chip">里程碑 {{ milestones.length }}</div>
-        <div class="chip">交付物 {{ deliverables.length }}</div>
-        <div class="chip">文件 {{ files.length }}</div>
-      </div>
     </div>
 
     <div v-if="loading" class="state">正在加载...</div>
@@ -679,9 +673,10 @@ export default {
     };
   },
   computed: {
-    // 函数级注释：判断项目是否为“已完成”状态，用于前端禁用新增/删除入口
     isProjectCompleted() {
-      return this.project && this.project.projectState === '已完成'
+      const s = this.project && this.project.projectState ? String(this.project.projectState).trim() : ''
+      const lower = s.toLowerCase()
+      return s === '已完成' || s === '完成' || lower === 'completed'
     },
     // 将步骤与里程碑合并后用于渲染的行
     /*
@@ -2478,6 +2473,15 @@ export default {
   /* 保持图标黑色，不受按钮颜色影响 */
   fill: #000;
 }
+.icon-btn.disabled {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.icon-btn.disabled:hover { background: #f3f4f6; box-shadow: none; }
+.icon-btn.disabled svg { fill: #9ca3af; }
 /* 类级注释：上传按钮“模板”标记样式 —— 在右上角显示一个醒目的星标 */
 .icon-btn.has-template::after {
   content: '\2605'; /* ★ 星号，表示存在模板 */

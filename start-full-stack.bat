@@ -52,21 +52,26 @@ echo [OK] Frontend dependencies ready
 REM -------- Start services --------
 echo.
 echo Starting services...
-echo Backend: http://localhost:8081
-echo Frontend: http://localhost:5173
+REM Read ports from pms-config.json via PowerShell (fallback to defaults)
+set "BACKEND_PORT="
+set "FRONTEND_PORT="
+for /f "usebackq tokens=* delims=" %%P in (`powershell -NoProfile -Command "try{$c=Get-Content '%ROOT%pms-config.json' | ConvertFrom-Json; [Console]::WriteLine($c.backend.port)}catch{[Console]::WriteLine(8081)}"`) do set "BACKEND_PORT=%%P"
+for /f "usebackq tokens=* delims=" %%P in (`powershell -NoProfile -Command "try{$c=Get-Content '%ROOT%pms-config.json' | ConvertFrom-Json; [Console]::WriteLine($c.frontend.port)}catch{[Console]::WriteLine(5173)}"`) do set "FRONTEND_PORT=%%P"
+echo Backend: http://localhost:%BACKEND_PORT%
+echo Frontend: http://localhost:%FRONTEND_PORT%
 echo.
 
 REM Start backend (new window)
-echo Starting backend service window...
-start "MissoftPMS-Backend" cmd /k cd /d "%ROOT%backend" ^&^& mvn spring-boot:run
+echo Starting backend in current window...
+start "" /b cmd /c "cd /d "%ROOT%backend" && mvn spring-boot:run"
 
 REM Wait a short time for backend initialization
 echo Waiting 10 seconds for backend to initialize...
 timeout /t 10 /nobreak >nul
 
 REM Start frontend (new window)
-echo Starting frontend service window...
-start "MissoftPMS-Frontend" cmd /k cd /d "%ROOT%frontend" ^&^& npm run dev
+echo Starting frontend in current window...
+start "" /b cmd /c "cd /d "%ROOT%frontend" && npm run dev"
 
 echo.
 echo [OK] Both services launched.
