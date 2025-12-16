@@ -1,7 +1,9 @@
 {
   "backend": {
     "host": "localhost",
-    "port": 8078
+    "port": 8078,
+    "internalHost": "localhost",
+    "internalPort": 8078
   },
   "frontend": {
     "host": "localhost",

@@ -69,18 +69,22 @@ public class PmsApplication {
                 JsonNode rootNode = mapper.readTree(configFile);
                 if (rootNode.has("backend")) {
                     JsonNode be = rootNode.get("backend");
-                    if (be.has("port")) {
-                        int port = be.get("port").asInt();
-                        System.setProperty("server.port", String.valueOf(port));
-                        System.out.println("🔌 使用配置端口: " + port);
+                    // 内网监听端口优先：backend.internalPort -> 环境变量 PMS_SERVER_PORT -> backend.port -> 8081
+                    int bindPort = be.path("internalPort").asInt(-1);
+                    String envPort = System.getenv("PMS_SERVER_PORT");
+                    if (bindPort <= 0 && envPort != null && !envPort.isBlank()) {
+                        try { bindPort = Integer.parseInt(envPort.trim()); } catch (Exception ignored) {}
                     }
-                    if (be.has("host")) {
-                        String host = be.get("host").asText();
-                        if (host != null && !host.isBlank()) {
-                            System.setProperty("server.address", host);
-                            System.out.println("🖧 绑定服务地址: " + host);
-                        }
-                    }
+                    if (bindPort <= 0) bindPort = be.path("port").asInt(8081);
+                    System.setProperty("server.port", String.valueOf(bindPort));
+                    System.out.println("🔌 服务监听端口: " + bindPort);
+
+                    // 内网绑定地址优先：env PMS_BIND_ADDRESS -> backend.internalHost -> 0.0.0.0
+                    String bindAddr = System.getenv("PMS_BIND_ADDRESS");
+                    if (bindAddr == null || bindAddr.isBlank()) bindAddr = be.path("internalHost").asText("");
+                    if (bindAddr == null || bindAddr.isBlank()) bindAddr = "0.0.0.0";
+                    System.setProperty("server.address", bindAddr);
+                    System.out.println("🖧 服务绑定地址: " + bindAddr);
                 }
                 // 读取数据库配置并覆盖 Spring 数据源属性（函数级注释：支持url或host/port/name组合）
                 if (rootNode.has("database")) {

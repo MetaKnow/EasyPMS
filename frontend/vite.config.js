@@ -22,7 +22,11 @@ if (fs.existsSync(configPath)) {
 // https://vite.dev/config/
 export default defineConfig({
   server: {
-    host: pmsConfig.frontend.host,
+    host: '0.0.0.0',
+    port: pmsConfig.frontend.port
+  },
+  preview: {
+    host: '0.0.0.0',
     port: pmsConfig.frontend.port
   },
   define: {

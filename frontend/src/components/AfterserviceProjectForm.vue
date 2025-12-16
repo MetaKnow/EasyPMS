@@ -49,7 +49,7 @@
             <select id="arcSystem" v-model="form.arcSystem" required :disabled="isViewMode">
               <option value="">请选择档案系统</option>
               <option v-for="product in products" :key="product.softId" :value="product.softName">
-                {{ product.softName }}
+                {{ product.softName }} {{ product.softVersion ? `(${product.softVersion})` : '' }}
               </option>
             </select>
           </div>
