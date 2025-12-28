@@ -46,7 +46,7 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group full-width">
+          <div class="form-group">
             <label for="phoneNumber" class="required">联系方式</label>
             <input
               id="phoneNumber"
@@ -60,6 +60,20 @@
             <span v-if="errors.phoneNumber" class="error-message">
               {{ errors.phoneNumber }}
             </span>
+          </div>
+
+          <div class="form-group">
+            <label for="saleDirector">销售负责人</label>
+            <select
+              id="saleDirector"
+              v-model="formData.saleDirector"
+              class="form-input"
+            >
+              <option value="">请选择销售负责人</option>
+              <option v-for="user in users" :key="user.userId" :value="user.userId">
+                {{ user.name || user.userName }}
+              </option>
+            </select>
           </div>
         </div>
 
@@ -78,6 +92,7 @@
 
 <script>
 import { createChannelDistributor, updateChannelDistributor, checkChannelNameAvailable } from '../api/channelDistributor.js'
+import { getAllUsers } from '../api/user.js'
 
 export default {
   name: 'ChannelDistributorForm',
@@ -123,6 +138,8 @@ export default {
        * 是否正在提交
        */
       isSubmitting: false,
+      // 用户列表
+      users: [],
       // 判重防抖定时器
       channelNameCheckTimer: null
     }
@@ -173,17 +190,32 @@ export default {
     /**
      * 初始化表单数据
      */
-    initForm() {
+    async initForm() {
+      // 加载用户列表
+      this.loadUsers()
+
       if (this.mode === 'edit' && this.channelData) {
         this.formData = {
           channelName: this.channelData.channelName || '',
           contactor: this.channelData.contactor || '',
-          phoneNumber: this.channelData.phoneNumber || ''
+          phoneNumber: this.channelData.phoneNumber || '',
+          saleDirector: this.channelData.saleDirector || ''
         }
       } else {
         this.resetForm()
       }
       this.errors = {}
+    },
+
+    /**
+     * 加载用户列表
+     */
+    async loadUsers() {
+      try {
+        this.users = await getAllUsers()
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+      }
     },
 
     /**
@@ -193,7 +225,8 @@ export default {
       this.formData = {
         channelName: '',
         contactor: '',
-        phoneNumber: ''
+        phoneNumber: '',
+        saleDirector: ''
       }
       this.errors = {}
       this.isSubmitting = false

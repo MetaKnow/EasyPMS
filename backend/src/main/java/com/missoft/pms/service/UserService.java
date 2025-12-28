@@ -254,6 +254,16 @@ public class UserService {
     }
 
     /**
+     * 获取所有用户列表（包含角色信息）
+     * @return 包含角色信息的用户列表
+     */
+    public List<UserWithRoleDTO> getAllUsersWithRole() {
+        return userRepository.findAll(Sort.by(Sort.Direction.DESC, "userId")).stream()
+                .map(this::convertToUserWithRoleDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 根据ID查询用户（函数级注释：找不到则抛出异常）
      * @param userId 用户ID
      * @return User 实体

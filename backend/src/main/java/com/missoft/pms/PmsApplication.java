@@ -3,6 +3,7 @@ package com.missoft.pms;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -15,6 +16,7 @@ import java.nio.file.Paths;
  * @version 1.0.0
  */
 @SpringBootApplication
+@EnableScheduling
 public class PmsApplication {
 
     public static void main(String[] args) {

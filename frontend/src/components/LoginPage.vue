@@ -148,10 +148,10 @@ const handleLogin = async () => {
     if (response.data.success) {
        // 保存用户信息和token
        if (response.data.token) {
-         localStorage.setItem('token', response.data.token)
+         sessionStorage.setItem('token', response.data.token)
        }
        if (response.data.userInfo) {
-         localStorage.setItem('userInfo', JSON.stringify(response.data.userInfo))
+         sessionStorage.setItem('userInfo', JSON.stringify(response.data.userInfo))
        }
        
        // 发射登录成功事件

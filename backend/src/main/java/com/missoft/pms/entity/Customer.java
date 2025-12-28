@@ -72,6 +72,25 @@ public class Customer {
     private Long saleLeader;
 
     /**
+     * 是否成交
+     */
+    @Column(name = "ifDeal", columnDefinition = "boolean default false")
+    private Boolean ifDeal = false;
+
+    /**
+     * 客户归属
+     * 值域：自有客户、渠道客户
+     */
+    @Column(name = "customerOwner")
+    private String customerOwner = "自有客户";
+
+    /**
+     * 渠道ID
+     */
+    @Column(name = "channelId")
+    private Long channelId;
+
+    /**
      * 创建时间
      */
     @CreationTimestamp
@@ -164,6 +183,30 @@ public class Customer {
 
     public void setSaleLeader(Long saleLeader) {
         this.saleLeader = saleLeader;
+    }
+
+    public Boolean getIfDeal() {
+        return ifDeal;
+    }
+
+    public void setIfDeal(Boolean ifDeal) {
+        this.ifDeal = ifDeal;
+    }
+
+    public String getCustomerOwner() {
+        return customerOwner;
+    }
+
+    public void setCustomerOwner(String customerOwner) {
+        this.customerOwner = customerOwner;
+    }
+
+    public Long getChannelId() {
+        return channelId;
+    }
+
+    public void setChannelId(Long channelId) {
+        this.channelId = channelId;
     }
 
     public LocalDateTime getCreateTime() {

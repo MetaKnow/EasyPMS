@@ -11,6 +11,21 @@
           <i class="icon-delete"></i>
           删除项目
         </button>
+        <button v-if="canExport" class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".csv"
+          style="display: none"
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -149,9 +164,14 @@
 <script>
 import { 
   getAfterserviceProjects, 
+  getAfterserviceProjectById,
+  createAfterserviceProject,
   deleteAfterserviceProject, 
   batchDeleteAfterserviceProjects 
 } from '../api/afterserviceProject'
+import { getAllUsers } from '../api/user.js'
+import { getAllCustomers } from '../api/customer.js'
+import { getAllProducts } from '../api/product.js'
 
 export default {
   name: 'MaintenanceProjectManagement',
@@ -179,7 +199,10 @@ export default {
       tooltipVisible: false,
       tooltipText: '',
       tooltipStyle: { top: '0px', left: '0px' },
-      tooltipCell: null
+      tooltipCell: null,
+      users: [],
+      customers: [],
+      products: []
     }
   },
   computed: {
@@ -195,6 +218,20 @@ export default {
     isAllSelected() {
       return this.projectList.length > 0 && 
              this.selectedProjects.length === this.projectList.length
+    },
+    canExport() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const role = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = role.toLowerCase()
+        const isSales = role === '销售' || role === '销售角色' || roleLower === 'sales'
+        const isAfterSales = role === '售后' || role.includes('售后') || roleLower === 'afterservice' || roleLower === 'after service'
+        const isPM = role === '项目经理' || role.includes('项目经理') || roleLower === 'project manager' || roleLower === 'pm'
+        return !(isSales || isAfterSales || isPM)
+      } catch (_) {
+        return true
+      }
     }
   },
   mounted() {
@@ -213,7 +250,7 @@ export default {
           ...this.searchForm
         }
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const name = info && info.roleName ? String(info.roleName).trim() : ''
           const lower = name.toLowerCase()
@@ -265,6 +302,407 @@ export default {
         saleDirector: ''
       }
       this.searchProjects()
+    },
+
+    async exportTable() {
+      if (!Array.isArray(this.projectList) || this.projectList.length === 0) {
+        alert('当前没有数据可导出')
+        return
+      }
+
+      try {
+        await this.ensureImportLookups()
+
+        const details = await Promise.all(
+          (this.projectList || []).map(async (p) => {
+            const id = p && p.projectId != null ? p.projectId : null
+            if (!id) return null
+            try {
+              const resp = await getAfterserviceProjectById(id)
+              const data = resp && resp.data ? resp.data : null
+              if (data && data.success === true) return data.data || null
+              return data && data.data ? data.data : null
+            } catch (_) {
+              return null
+            }
+          })
+        )
+
+        const userNameById = (id) => {
+          if (!id) return ''
+          const u = (this.users || []).find(x => x && x.userId === id)
+          return u ? (u.name || u.userName || '') : ''
+        }
+        const customerNameById = (id) => {
+          if (!id) return ''
+          const c = (this.customers || []).find(x => x && x.customerId === id)
+          return c ? (c.customerName || '') : ''
+        }
+        const dateStr = (v) => (v == null ? '' : String(v))
+
+        const exportData = details
+          .filter(Boolean)
+          .map((d) => {
+            const arcSystem = d.arcSystem || ''
+            const arcSystemId = this.parseProductIdFromArcSystem(arcSystem)
+            return {
+              '项目ID': d.projectId != null ? String(d.projectId) : '',
+              '项目编号': d.projectNum || '',
+              '项目名称': d.projectName || '',
+              '客户ID': d.customerId != null ? String(d.customerId) : '',
+              '客户名称': customerNameById(d.customerId) || d.customerName || '',
+              '档案系统ID': arcSystemId != null ? String(arcSystemId) : '',
+              '档案系统': arcSystem || '',
+              '销售负责人ID': d.saleDirector != null ? String(d.saleDirector) : '',
+              '销售负责人': d.saleDirectorName || userNameById(d.saleDirector),
+              '运维负责人ID': d.serviceDirector != null ? String(d.serviceDirector) : '',
+              '运维负责人': d.serviceDirectorName || userNameById(d.serviceDirector),
+              '运维年限': d.serviceYear != null ? String(d.serviceYear) : '',
+              '开始日期': dateStr(d.startDate),
+              '结束日期': dateStr(d.endDate),
+              '运维状态': d.serviceState || '',
+              '运维类型': d.serviceType || '',
+              '关联在建项目ID': d.constructingProjectId != null ? String(d.constructingProjectId) : '',
+              '总工时': d.totalHours != null ? String(d.totalHours) : '',
+              '创建时间': dateStr(d.createTime),
+              '更新时间': dateStr(d.updateTime)
+            }
+          })
+
+        const csvContent = this.convertToCSV(exportData)
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `运维项目管理_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        alert('表格导出成功')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        alert('导出表格失败: ' + error.message)
+      }
+    },
+
+    triggerImport() {
+      this.$refs.fileInput?.click()
+    },
+
+    async handleFileImport(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+
+      try {
+        await this.ensureImportLookups()
+
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+        if (!Array.isArray(importData) || importData.length === 0) {
+          alert('文件中没有有效数据')
+          return
+        }
+
+        const headers = Object.keys(importData[0] || {})
+        const requiredHeaders = ['项目名称', '档案系统', '销售负责人', '运维状态']
+        const missing = requiredHeaders.filter(h => !headers.includes(h))
+        if (missing.length > 0) {
+          alert(`文件缺少必须的列: ${missing.join(', ')}`)
+          return
+        }
+
+        const validData = this.validateAfterserviceProjectImportData(importData)
+        if (validData.length === 0) {
+          alert('文件格式不正确或数据无效')
+          return
+        }
+
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importAfterserviceProjects(validData)
+        }
+      } catch (error) {
+        console.error('导入表格失败:', error)
+        alert('导入表格失败: ' + error.message)
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    async ensureImportLookups() {
+      if (!Array.isArray(this.users) || this.users.length === 0) {
+        try {
+          this.users = await getAllUsers()
+        } catch (_) {
+          this.users = []
+        }
+      }
+      if (!Array.isArray(this.customers) || this.customers.length === 0) {
+        try {
+          this.customers = await getAllCustomers()
+        } catch (_) {
+          this.customers = []
+        }
+      }
+      if (!Array.isArray(this.products) || this.products.length === 0) {
+        try {
+          this.products = await getAllProducts()
+        } catch (_) {
+          this.products = []
+        }
+      }
+    },
+
+    validateAfterserviceProjectImportData(rows) {
+      const list = []
+      for (const row of rows || []) {
+        const projectName = (row['项目名称'] || '').trim()
+        const arcSystem = this.parseArcSystem(row['档案系统ID']) || (row['档案系统'] || '').trim()
+        const serviceState = (row['运维状态'] || '').trim()
+        const saleDirector = this.parseUserId(row['销售负责人ID']) || this.parseUserId(row['销售负责人'])
+        if (!projectName || !arcSystem || !serviceState || !saleDirector) continue
+
+        const projectNum = (row['项目编号'] || '').trim()
+        const customerId = this.parseCustomerId(row['客户ID']) || this.parseCustomerId(row['客户名称'])
+        const serviceDirector = this.parseUserId(row['运维负责人ID']) || this.parseUserId(row['运维负责人'])
+        const serviceType = (row['运维类型'] || '').trim()
+        const serviceYear = this.parseInt(row['运维年限'])
+        const startDate = this.parseDate(row['开始日期'])
+        const endDate = this.parseDate(row['结束日期'])
+        const constructingProjectId = this.parseInt(row['关联在建项目ID'])
+
+        const payload = {
+          projectName,
+          arcSystem,
+          saleDirector,
+          serviceState
+        }
+        if (projectNum) payload.projectNum = projectNum
+        if (customerId) payload.customerId = customerId
+        if (serviceDirector) payload.serviceDirector = serviceDirector
+        if (serviceType) payload.serviceType = serviceType
+        if (serviceYear != null) payload.serviceYear = serviceYear
+        if (startDate) payload.startDate = startDate
+        if (endDate) payload.endDate = endDate
+        if (constructingProjectId != null) payload.constructingProjectId = constructingProjectId
+        list.push(payload)
+      }
+      return list
+    },
+
+    async importAfterserviceProjects(data) {
+      let successCount = 0
+      let errorCount = 0
+      for (const item of data) {
+        try {
+          const resp = await createAfterserviceProject(item)
+          if (resp?.data?.success === false) throw new Error(resp?.data?.message || resp?.data?.error || '创建失败')
+          successCount++
+        } catch (error) {
+          console.error('导入运维项目失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`)
+        this.loadProjects()
+      } else {
+        alert('导入失败，请检查数据格式')
+      }
+    },
+
+    parseUserId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const user = (this.users || []).find(u => (u?.name && String(u.name).trim() === raw) || (u?.userName && String(u.userName).trim() === raw))
+      return user ? user.userId : null
+    },
+
+    parseCustomerId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const c = (this.customers || []).find(x => x?.customerName && String(x.customerName).trim() === raw)
+      return c ? c.customerId : null
+    },
+
+    parseInt(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const n = Number(raw)
+      if (Number.isNaN(n) || !Number.isFinite(n)) return null
+      return Math.trunc(n)
+    },
+
+    parseDate(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const m = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+      if (!m) return null
+      const y = String(m[1]).padStart(4, '0')
+      const mm = String(m[2]).padStart(2, '0')
+      const dd = String(m[3]).padStart(2, '0')
+      return `${y}-${mm}-${dd}`
+    },
+
+    parseArcSystem(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) {
+        const p = (this.products || []).find(x => x && x.softId === asNum)
+        if (!p) return null
+        const name = p.softName || ''
+        const ver = p.softVersion || ''
+        return name ? (name + (ver ? ` (${ver})` : '')) : null
+      }
+      return raw
+    },
+
+    parseProductIdFromArcSystem(arcSystem) {
+      const raw = arcSystem == null ? '' : String(arcSystem).trim()
+      if (!raw) return null
+      const match = raw.match(/^(.+?)(?:\s*\((.+)\))?$/)
+      const softName = match ? String(match[1] || '').trim() : raw
+      const softVersion = match && match[2] != null ? String(match[2]).trim() : ''
+      const p = (this.products || []).find(x => {
+        const n = x?.softName ? String(x.softName).trim() : ''
+        const v = x?.softVersion ? String(x.softVersion).trim() : ''
+        if (!n) return false
+        if (softVersion) return n === softName && v === softVersion
+        return n === softName
+      })
+      return p ? p.softId : null
+    },
+
+    convertToCSV(data) {
+      if (!Array.isArray(data) || data.length === 0) return ''
+      const headers = Object.keys(data[0])
+      const rows = [headers.join(',')]
+      for (const row of data) {
+        const values = headers.map(h => {
+          const v = row[h] == null ? '' : String(row[h])
+          if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`
+          return v
+        })
+        rows.push(values.join(','))
+      }
+      return rows.join('\n')
+    },
+
+    async readFileAsText(file) {
+      const buffer = await this.readFileAsArrayBuffer(file)
+      let utf8 = ''
+      try {
+        utf8 = new TextDecoder('utf-8').decode(buffer)
+      } catch (_) {}
+      if (this.isLikelyChineseCSV(utf8)) return utf8
+      try {
+        const gb18030 = new TextDecoder('gb18030').decode(buffer)
+        if (this.isLikelyChineseCSV(gb18030)) return gb18030
+      } catch (_) {}
+      try {
+        const gbk = new TextDecoder('gbk').decode(buffer)
+        if (this.isLikelyChineseCSV(gbk)) return gbk
+      } catch (_) {}
+      try {
+        return await this.readAsTextLegacy(file, 'utf-8')
+      } catch (_) {}
+      return utf8
+    },
+
+    readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
+    },
+
+    readAsTextLegacy(file, encoding) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, encoding)
+      })
+    },
+
+    isLikelyChineseCSV(text) {
+      if (!text || typeof text !== 'string') return false
+      const firstLine = (text.split(/\r?\n/).find(line => line.trim().length > 0) || '')
+      const delimiter = firstLine.includes(',') ? ',' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : firstLine.includes('，') ? '，' : ','
+      const tokens = this.parseCSVLine(firstLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+      const replacementCount = (text.match(/\uFFFD/g) || []).length
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text)
+      const headerOk = tokens.includes('项目名称') || tokens.includes('档案系统') || tokens.includes('运维状态')
+      return (headerOk && replacementCount === 0) || (hasChinese && replacementCount < 5)
+    },
+
+    parseCSV(text) {
+      const lines = (text || '').split(/\r?\n/).filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      const headerLine = lines[0]
+      const candidates = [',', ';', '\t', '，', '；', '|']
+      let delimiter = ','
+      let bestCount = -1
+      const stripped = headerLine.replace(/"[^"]*"/g, '')
+      for (const d of candidates) {
+        const count = stripped.split(d).length - 1
+        if (count > bestCount) {
+          bestCount = count
+          delimiter = d
+        }
+      }
+      const headers = this.parseCSVLine(headerLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = this.parseCSVLine(lines[i], delimiter)
+        const row = {}
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] !== undefined ? String(values[idx]).trim().replace(/^\ufeff/, '') : ''
+        })
+        data.push(row)
+      }
+      return data
+    },
+
+    parseCSVLine(line, delimiter = ',') {
+      const result = []
+      let current = ''
+      let inQuotes = false
+      const s = String(line || '')
+      for (let i = 0; i < s.length; i++) {
+        const char = s[i]
+        if (char === '"') {
+          if (inQuotes && s[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      result.push(current)
+      return result.map(x => String(x).trim())
     },
 
     /**
@@ -690,14 +1128,27 @@ export default {
 }
 
 .btn-warning {
-  background: #fa8c16;
-  border-color: #fa8c16;
-  color: white;
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
 }
 
 .btn-warning:hover {
-  background: #ffa940;
-  border-color: #ffa940;
+  background-color: #e0a800;
+  border-color: #e0a800;
+  color: #212529;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #218838;
+  color: #fff;
 }
 
 .btn-danger {
@@ -819,6 +1270,9 @@ export default {
   .icon-delete::before {
     content: '🗑';
   }
+
+  .icon-download::before { content: "↓"; display: inline-block; margin-right: 4px; }
+  .icon-upload::before { content: "↑"; display: inline-block; margin-right: 4px; }
 
 /* 响应式设计 */
 @media (max-width: 768px) {

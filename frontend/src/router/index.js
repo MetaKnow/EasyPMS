@@ -12,6 +12,7 @@ import StandardConstructStepManagement from '../components/StandardConstructStep
 import StandardDeliverableManagement from '../components/StandardDeliverableManagement.vue'
 import ProductManagement from '../components/ProductManagement.vue'
 import ChannelDistributorManagement from '../components/ChannelDistributorManagement.vue'
+import SystemBackup from '../components/SystemBackup.vue'
 import ProjectDetail from '../components/ProjectDetail.vue'
 import MaintenanceRecord from '../components/MaintenanceRecord.vue'
 
@@ -44,7 +45,7 @@ const routes = [
         path: 'customers',
         name: 'CustomerManagement',
         component: CustomerManagement,
-        meta: { title: '客户管理', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', 'sales'] }
+        meta: { title: '客户管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', 'sales', '销售总监', '销售总监角色'] }
       },
       {
         path: 'construction',
@@ -110,7 +111,13 @@ const routes = [
         path: 'system/partners',
         name: 'ChannelDistributorManagement',
         component: ChannelDistributorManagement,
-        meta: { title: '渠道商维护', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '渠道商维护', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
+      },
+      {
+        path: 'system/backup',
+        name: 'SystemBackup',
+        component: SystemBackup,
+        meta: { title: '系统备份', roles: ['管理员', 'admin'] }
       }
     ]
   },
@@ -132,9 +139,9 @@ const router = createRouter({
  * 路由守卫 - 检查登录状态
  */
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
-  const userInfoRaw = localStorage.getItem('userInfo')
+  const userInfoRaw = sessionStorage.getItem('userInfo')
   const userInfo = userInfoRaw ? JSON.parse(userInfoRaw) : null
   const roleName = userInfo && userInfo.roleName ? String(userInfo.roleName).trim() : ''
   const roles = to.meta && Array.isArray(to.meta.roles) ? to.meta.roles : null

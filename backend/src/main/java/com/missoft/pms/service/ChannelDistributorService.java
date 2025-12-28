@@ -42,6 +42,7 @@ public class ChannelDistributorService {
     @Transactional(readOnly = true)
     public Page<ChannelDistributor> getChannelDistributors(int page, int size, String channelName, 
                                                           String contactor, String phoneNumber, 
+                                                          Long saleDirector,
                                                           String sortBy, String sortDir) {
         // 创建排序对象
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
@@ -53,12 +54,12 @@ public class ChannelDistributorService {
         phoneNumber = StringUtils.hasText(phoneNumber) ? phoneNumber.trim() : null;
 
         // 如果所有查询条件都为空，返回所有渠道商
-        if (channelName == null && contactor == null && phoneNumber == null) {
+        if (channelName == null && contactor == null && phoneNumber == null && saleDirector == null) {
             return channelDistributorRepository.findAll(pageable);
         }
 
         // 使用多条件查询
-        return channelDistributorRepository.findByMultipleConditions(channelName, contactor, phoneNumber, pageable);
+        return channelDistributorRepository.findByMultipleConditions(channelName, contactor, phoneNumber, saleDirector, pageable);
     }
 
     /**
@@ -113,6 +114,7 @@ public class ChannelDistributorService {
         existingChannelDistributor.setChannelName(channelDistributor.getChannelName());
         existingChannelDistributor.setContactor(channelDistributor.getContactor());
         existingChannelDistributor.setPhoneNumber(channelDistributor.getPhoneNumber());
+        existingChannelDistributor.setSaleDirector(channelDistributor.getSaleDirector());
 
         return channelDistributorRepository.save(existingChannelDistributor);
     }

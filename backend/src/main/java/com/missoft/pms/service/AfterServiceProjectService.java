@@ -139,7 +139,11 @@ public class AfterServiceProjectService {
 
         if (cp.getSoftId() != null) {
             archieveSoftRepository.findById(cp.getSoftId())
-                    .ifPresent(soft -> asp.setArcSystem(soft.getSoftName()));
+                    .ifPresent(soft -> {
+                        String v = soft.getSoftVersion();
+                        String display = soft.getSoftName() + (v != null && !v.isEmpty() ? " (" + v + ")" : "");
+                        asp.setArcSystem(display);
+                    });
         } else {
             asp.setArcSystem("未知系统");
         }

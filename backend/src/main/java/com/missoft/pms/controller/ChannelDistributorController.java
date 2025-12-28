@@ -47,12 +47,13 @@ public class ChannelDistributorController {
             @RequestParam(required = false) String channelName,
             @RequestParam(required = false) String contactor,
             @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) Long saleDirector,
             @RequestParam(defaultValue = "channelId") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         
         try {
             Page<ChannelDistributor> channelDistributorPage = channelDistributorService.getChannelDistributors(
-                    page, size, channelName, contactor, phoneNumber, sortBy, sortDir);
+                    page, size, channelName, contactor, phoneNumber, saleDirector, sortBy, sortDir);
 
             Map<String, Object> response = new HashMap<>();
             response.put("content", channelDistributorPage.getContent());

@@ -33,6 +33,9 @@ export async function getChannelDistributorList(params = {}) {
     if (params.phoneNumber) {
       queryParams.append('phoneNumber', params.phoneNumber)
     }
+    if (params.saleDirector !== undefined && params.saleDirector !== null && params.saleDirector !== '') {
+      queryParams.append('saleDirector', params.saleDirector)
+    }
     
     const response = await request({
       url: `/api/channel-distributors${queryParams.toString() ? '?' + queryParams.toString() : ''}`,

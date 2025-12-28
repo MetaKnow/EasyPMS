@@ -34,21 +34,32 @@
             />
           </div>
 
-          <div class="form-group full-width">
+          <div class="form-group full-width" style="position: relative;">
             <label for="customerId">客户名称</label>
-            <select id="customerId" v-model="form.customerId" :disabled="isViewMode">
-              <option value="">请选择客户</option>
-              <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
-                {{ customer.customerName }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              id="customerId" 
+              v-model="customerSearchText" 
+              @focus="showCustomerDropdown = true"
+              @input="onCustomerInput"
+              @blur="onCustomerBlur"
+              placeholder="请输入或选择客户"
+              :disabled="isViewMode"
+              autocomplete="off"
+            />
+            <ul v-if="showCustomerDropdown" class="dropdown-list">
+               <li v-for="c in filteredCustomers" :key="c.customerId" @mousedown.prevent="selectCustomer(c)">
+                 {{ c.customerName }}
+               </li>
+               <li v-if="filteredCustomers.length === 0" class="no-result">无匹配客户</li>
+            </ul>
           </div>
 
           <div class="form-group full-width">
             <label for="arcSystem">档案系统 <span class="required">*</span></label>
             <select id="arcSystem" v-model="form.arcSystem" required :disabled="isViewMode">
               <option value="">请选择档案系统</option>
-              <option v-for="product in products" :key="product.softId" :value="product.softName">
+              <option v-for="product in products" :key="product.softId" :value="product.softName + (product.softVersion ? ' (' + product.softVersion + ')' : '')">
                 {{ product.softName }} {{ product.softVersion ? `(${product.softVersion})` : '' }}
               </option>
             </select>
@@ -185,6 +196,8 @@ export default {
       // eslint-disable-next-line no-undef
       API_BASE: __BACKEND_API_URL__ + '/api',
       isSubmitting: false,
+      customerSearchText: '',
+      showCustomerDropdown: false,
       users: [],
       customers: [],
       products: [],
@@ -210,6 +223,11 @@ export default {
      */
     isEdit() {
       return this.projectData && this.projectData.projectId
+    },
+    filteredCustomers() {
+      if (!this.customerSearchText) return this.customers
+      const lower = this.customerSearchText.toLowerCase()
+      return this.customers.filter(c => c.customerName && c.customerName.toLowerCase().includes(lower))
     }
   },
   watch: {
@@ -235,6 +253,38 @@ export default {
     }
   },
   methods: {
+    onCustomerInput() {
+      this.form.customerId = ''
+      const match = this.customers.find(c => c.customerName === this.customerSearchText)
+      if (match) {
+        this.form.customerId = match.customerId
+      }
+    },
+    selectCustomer(customer) {
+      this.form.customerId = customer.customerId
+      this.customerSearchText = customer.customerName
+      this.showCustomerDropdown = false
+    },
+    onCustomerBlur() {
+      this.showCustomerDropdown = false
+      // 如果失焦时没有ID，且当前文本能匹配到，尝试匹配
+      if (!this.form.customerId && this.customerSearchText) {
+        const match = this.customers.find(c => c.customerName === this.customerSearchText)
+        if (match) {
+          this.form.customerId = match.customerId
+        }
+      }
+    },
+    updateCustomerSearchText() {
+      if (this.form.customerId && this.customers.length > 0) {
+        const c = this.customers.find(x => x.customerId === this.form.customerId)
+        if (c) {
+          this.customerSearchText = c.customerName
+        }
+      } else if (!this.form.customerId) {
+        this.customerSearchText = ''
+      }
+    },
     /**
      * 加载表单数据
      */
@@ -248,6 +298,7 @@ export default {
       } else {
         this.resetForm()
       }
+      this.updateCustomerSearchText()
     },
 
     /**
@@ -296,7 +347,7 @@ export default {
         }
         // 新建模式默认将运维负责人设置为当前登录用户
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const uid = info && (info.userId ?? info.id)
           if (!this.isEdit && uid != null) {
@@ -316,6 +367,7 @@ export default {
         const response = await axios.get(`${this.API_BASE}/customers?size=1000`)
         if (response.data && response.data.customers) {
           this.customers = response.data.customers
+          this.updateCustomerSearchText()
         }
       } catch (error) {
         console.error('加载客户列表失败:', error)
@@ -594,5 +646,36 @@ export default {
   .btn {
     width: 100%;
   }
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  list-style: none;
+  padding: 0;
+}
+.dropdown-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.dropdown-list li:hover {
+  background-color: #f5f5f5;
+}
+.no-result {
+  color: #999;
+  cursor: default;
+  text-align: center;
+  padding: 12px !important;
 }
 </style>

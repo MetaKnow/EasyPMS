@@ -793,7 +793,7 @@ export default {
       // 默认负责人为当前登录用户
       let defaultDirector = ''
       try {
-        const raw = localStorage.getItem('userInfo')
+        const raw = sessionStorage.getItem('userInfo')
         const userInfo = raw ? JSON.parse(raw) : null
         const uid = userInfo && userInfo.userId != null ? Number(userInfo.userId) : null
         if (uid != null) defaultDirector = uid

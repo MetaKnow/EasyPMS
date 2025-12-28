@@ -108,8 +108,8 @@ import OrganDialog from './OrganDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // API imports
-import { getOrganTree, createOrgan, updateOrgan, deleteOrgan, checkOrganHasUsers, checkOrganAndChildrenUsersDetail } from '../api/organ.js'
-import { getUsersByOrganId, getUserList, createUser, updateUser, deleteUser, batchDeleteUsers, checkUserNameExists } from '../api/user.js'
+import { getOrganTree, createOrgan, updateOrgan, deleteOrgan, checkOrganAndChildrenUsersDetail } from '../api/organ.js'
+import { getUsersByOrganId, getAllUsers, createUser, updateUser, deleteUser, batchDeleteUsers, checkUserNameExists } from '../api/user.js'
 import { getRoleList } from '../api/role.js'
 
 export default {
@@ -248,8 +248,8 @@ export default {
      */
     async loadAllUsers() {
       try {
-        const response = await getUserList()
-        this.users = response.users || []
+        const users = await getAllUsers()
+        this.users = users || []
       } catch (error) {
         console.error('加载所有用户数据失败:', error)
         this.$message?.error('加载所有用户数据失败')

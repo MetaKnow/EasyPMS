@@ -12,12 +12,12 @@ const API_BASE_URL = __BACKEND_API_URL__ + '/api'
  * @param {number} deliverableId 标准交付物ID
  * @param {File[]} files 文件数组
  * @param {Object} [options] 其他可选参数，如 { uploaderId, projectStepId, nstepId, interfaceId, personalDevId }
- * 行为说明：后端要求 `uploaderId` 不为空。若未在 `options` 提供，将尝试从 `localStorage.userInfo.userId` 自动填充。
+ * 行为说明：后端要求 `uploaderId` 不为空。若未在 `options` 提供，将尝试从 `sessionStorage.userInfo.userId` 自动填充。
  * @returns {Promise<Object>} 后端返回的上传结果（包含 files 列表）
  */
 /**
  * 函数级注释：上传项目交付物文件（支持进度回调）
- * - 自动从 `localStorage.userInfo.userId` 填充 `uploaderId`（若未显式传入）。
+ * - 自动从 `sessionStorage.userInfo.userId` 填充 `uploaderId`（若未显式传入）。
  * - 使用 axios 实例发送 multipart/form-data 并通过 onUploadProgress 回调上报进度。
  * @param {number} projectId 项目ID
  * @param {number} deliverableId 标准交付物ID
@@ -30,11 +30,11 @@ export async function uploadConstructDeliverableFiles(projectId, deliverableId, 
   for (const f of files || []) {
     formData.append('files', f)
   }
-  // 若未传 uploaderId，则从 localStorage.userInfo.userId 自动填充
+  // 若未传 uploaderId，则从 sessionStorage.userInfo.userId 自动填充
   let uploaderId = options.uploaderId
   if (uploaderId == null) {
     try {
-      const raw = localStorage.getItem('userInfo')
+      const raw = sessionStorage.getItem('userInfo')
       const userInfo = raw ? JSON.parse(raw) : null
       if (userInfo && userInfo.userId != null) {
         uploaderId = userInfo.userId

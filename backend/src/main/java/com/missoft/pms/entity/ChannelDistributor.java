@@ -52,6 +52,12 @@ public class ChannelDistributor {
     private String phoneNumber;
 
     /**
+     * 销售总监（关联user表）
+     */
+    @Column(name = "saleDirector")
+    private Long saleDirector;
+
+    /**
      * 创建时间
      */
     @CreationTimestamp
@@ -159,6 +165,24 @@ public class ChannelDistributor {
     }
 
     /**
+     * 获取销售总监ID
+     *
+     * @return 销售总监ID
+     */
+    public Long getSaleDirector() {
+        return saleDirector;
+    }
+
+    /**
+     * 设置销售总监ID
+     *
+     * @param saleDirector 销售总监ID
+     */
+    public void setSaleDirector(Long saleDirector) {
+        this.saleDirector = saleDirector;
+    }
+
+    /**
      * 获取创建时间
      *
      * @return 创建时间
@@ -201,6 +225,7 @@ public class ChannelDistributor {
                 ", channelName='" + channelName + '\'' +
                 ", contactor='" + contactor + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
+                ", saleDirector=" + saleDirector +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 '}';

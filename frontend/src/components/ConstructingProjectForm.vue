@@ -80,14 +80,25 @@
               </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="position: relative;">
               <label for="customerId">客户 <span class="required">*</span></label>
-              <select id="customerId" v-model="form.customerId" required>
-                <option value="">请选择客户</option>
-                <option v-for="customer in customers" :key="customer.customerId" :value="customer.customerId">
-                  {{ customer.customerName }}
-                </option>
-              </select>
+              <input 
+                type="text" 
+                id="customerId" 
+                v-model="customerSearchText" 
+                @focus="showCustomerDropdown = true"
+                @input="onCustomerInput"
+                @blur="onCustomerBlur"
+                placeholder="请输入或选择客户"
+                :disabled="isViewMode"
+                autocomplete="off"
+              />
+              <ul v-if="showCustomerDropdown" class="dropdown-list">
+                 <li v-for="c in filteredCustomers" :key="c.customerId" @mousedown.prevent="selectCustomer(c)">
+                   {{ c.customerName }}
+                 </li>
+                 <li v-if="filteredCustomers.length === 0" class="no-result">无匹配客户</li>
+              </ul>
             </div>
 
             <div class="form-group">
@@ -220,18 +231,25 @@
               </select>
             </div>
 
-            <div class="form-group" v-if="form.isAgent === 1">
+            <div class="form-group" v-if="form.isAgent === 1" style="position: relative;">
               <label for="channelId">渠道名称 <span class="required">*</span></label>
-              <select 
+              <input 
+                type="text"
                 id="channelId" 
-                v-model="form.channelId" 
-                required
-              >
-                <option value="">请选择渠道名称</option>
-                <option v-for="channel in channels" :key="channel.channelId" :value="channel.channelId">
-                  {{ channel.channelName }}
-                </option>
-              </select>
+                v-model="channelSearchText" 
+                @focus="showChannelDropdown = true"
+                @input="onChannelInput"
+                @blur="onChannelBlur"
+                placeholder="请输入或选择渠道名称"
+                :disabled="isViewMode"
+                autocomplete="off"
+              />
+              <ul v-if="showChannelDropdown" class="dropdown-list">
+                <li v-for="c in filteredChannels" :key="c.channelId" @mousedown.prevent="selectChannel(c)">
+                  {{ c.channelName }}
+                </li>
+                <li v-if="filteredChannels.length === 0" class="no-result">无匹配渠道</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -352,6 +370,11 @@ export default {
   data() {
     return {
       isSubmitting: false,
+      customerSearchText: '',
+      showCustomerDropdown: false,
+
+      channelSearchText: '',
+      showChannelDropdown: false,
       customers: [],
       users: [],
       products: [],
@@ -412,6 +435,16 @@ export default {
      */
     isConstructionLocked() {
       return this.isEdit && ((this.projectData && this.projectData.isCommitAfterSale) || this.form.projectState === '已完成')
+    },
+    filteredCustomers() {
+      if (!this.customerSearchText) return this.customers
+      const lower = this.customerSearchText.toLowerCase()
+      return this.customers.filter(c => c.customerName && c.customerName.toLowerCase().includes(lower))
+    },
+    filteredChannels() {
+      if (!this.channelSearchText) return this.channels
+      const lower = this.channelSearchText.toLowerCase()
+      return this.channels.filter(c => c.channelName && c.channelName.toLowerCase().includes(lower))
     }
   },
   watch: {
@@ -458,7 +491,70 @@ export default {
     }
   },
   methods: {
-    
+    onCustomerInput() {
+      this.form.customerId = ''
+      const match = this.customers.find(c => c.customerName === this.customerSearchText)
+      if (match) {
+        this.form.customerId = match.customerId
+      }
+    },
+    selectCustomer(customer) {
+      this.form.customerId = customer.customerId
+      this.customerSearchText = customer.customerName
+      this.showCustomerDropdown = false
+    },
+    onCustomerBlur() {
+      this.showCustomerDropdown = false
+      // 如果失焦时没有ID，且当前文本能匹配到，尝试匹配
+      if (!this.form.customerId && this.customerSearchText) {
+        const match = this.customers.find(c => c.customerName === this.customerSearchText)
+        if (match) {
+          this.form.customerId = match.customerId
+        }
+      }
+    },
+    updateCustomerSearchText() {
+      if (this.form.customerId && this.customers.length > 0) {
+        const c = this.customers.find(x => x.customerId === this.form.customerId)
+        if (c) {
+          this.customerSearchText = c.customerName
+        }
+      } else if (!this.form.customerId) {
+        this.customerSearchText = ''
+      }
+    },
+
+    onChannelInput() {
+      this.form.channelId = ''
+      const match = this.channels.find(c => c.channelName === this.channelSearchText)
+      if (match) {
+        this.form.channelId = match.channelId
+      }
+    },
+    selectChannel(channel) {
+      this.form.channelId = channel.channelId
+      this.channelSearchText = channel.channelName
+      this.showChannelDropdown = false
+    },
+    onChannelBlur() {
+      this.showChannelDropdown = false
+      if (!this.form.channelId && this.channelSearchText) {
+        const match = this.channels.find(c => c.channelName === this.channelSearchText)
+        if (match) {
+          this.form.channelId = match.channelId
+        }
+      }
+    },
+    updateChannelSearchText() {
+      if (this.form.channelId && this.channels.length > 0) {
+        const c = this.channels.find(x => x.channelId === this.form.channelId)
+        if (c) {
+          this.channelSearchText = c.channelName
+        }
+      } else if (!this.form.channelId) {
+        this.channelSearchText = ''
+      }
+    },
 
     /**
      * 加载表单数据
@@ -515,6 +611,8 @@ export default {
       } else {
         this.resetForm()
       }
+      this.updateCustomerSearchText()
+      this.updateChannelSearchText()
     },
 
     /**
@@ -560,6 +658,7 @@ export default {
     async loadCustomers() {
       try {
         this.customers = await getAllCustomers()
+        this.updateCustomerSearchText()
       } catch (error) {
         console.error('加载客户列表失败:', error)
         this.customers = []
@@ -574,7 +673,7 @@ export default {
         this.users = await getAllUsers()
         // 新建模式默认将项目负责人设置为当前登录用户
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const uid = info && (info.userId ?? info.id)
           if (!this.isEdit && (this.form.projectLeader === '' || this.form.projectLeader == null) && uid != null) {
@@ -612,6 +711,7 @@ export default {
     async loadChannels() {
       try {
         this.channels = await getAllChannelDistributors()
+        this.updateChannelSearchText()
       } catch (error) {
         console.error('加载渠道列表失败:', error)
         // 如果API不存在，使用默认数据
@@ -621,6 +721,7 @@ export default {
           { channelId: 3, channelName: '代理商B' },
           { channelId: 4, channelName: '合作伙伴' }
         ]
+        this.updateChannelSearchText()
       }
     },
 
@@ -952,6 +1053,43 @@ export default {
   cursor: not-allowed;
 }
 
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dropdown-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  color: #262626;
+}
+
+.dropdown-list li:hover {
+  background: #f5f5f5;
+  color: #1890ff;
+}
+
+.dropdown-list .no-result {
+  color: #999;
+  cursor: default;
+  text-align: center;
+  padding: 8px 12px;
+}
+
 .readonly-field {
   background-color: #f8f9fa !important;
   color: #6c757d !important;
@@ -1089,5 +1227,36 @@ fieldset[disabled] textarea {
   .checkbox-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  list-style: none;
+  padding: 0;
+}
+.dropdown-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.dropdown-list li:hover {
+  background-color: #f5f5f5;
+}
+.no-result {
+  color: #999;
+  cursor: default;
+  text-align: center;
+  padding: 12px !important;
 }
 </style>

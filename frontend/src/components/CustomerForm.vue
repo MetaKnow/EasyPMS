@@ -99,6 +99,55 @@
               {{ errors.saleLeader }}
             </span>
           </div>
+
+          <div class="form-group">
+            <label class="required">是否成交</label>
+            <select
+              v-model="formData.ifDeal"
+              class="form-select"
+            >
+              <option :value="true">是</option>
+              <option :value="false">否</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="required">客户归属</label>
+            <select
+              v-model="formData.customerOwner"
+              class="form-select"
+            >
+              <option value="自有客户">自有客户</option>
+              <option value="渠道客户">渠道客户</option>
+            </select>
+          </div>
+
+          <div class="form-group" v-if="formData.customerOwner === '渠道客户'" style="position: relative;">
+            <label for="channelId" class="required">渠道名称</label>
+            <input
+              id="channelId"
+              v-model="channelSearchText"
+              type="text"
+              class="form-input"
+              :class="{ error: errors.channelId }"
+              placeholder="请输入或选择渠道"
+              autocomplete="off"
+              @focus="showChannelDropdown = true"
+              @input="onChannelInput"
+              @blur="onChannelBlur"
+            />
+            <ul v-if="showChannelDropdown" class="dropdown-list">
+              <li v-for="channel in filteredChannels" :key="channel.channelId" @mousedown.prevent="selectChannel(channel)">
+                {{ channel.channelName }}
+              </li>
+              <li v-if="filteredChannels.length === 0" class="no-result">无匹配渠道</li>
+            </ul>
+            <span v-if="errors.channelId" class="error-message">
+              {{ errors.channelId }}
+            </span>
+          </div>
         </div>
 
         <div class="form-row">
@@ -183,6 +232,7 @@
 <script>
 import { checkCustomerNameAvailable } from '@/api/customer.js'
 import { getAllUsers } from '@/api/user.js'
+import { getAllChannelDistributors } from '@/api/channelDistributor.js'
 
 export default {
   name: 'CustomerForm',
@@ -202,6 +252,13 @@ export default {
     }
   },
   emits: ['close', 'save'],
+  computed: {
+    filteredChannels() {
+      if (!this.channelSearchText) return this.channels
+      const lower = this.channelSearchText.toLowerCase()
+      return this.channels.filter(c => c.channelName && c.channelName.toLowerCase().includes(lower))
+    }
+  },
   data() {
     return {
       // 表单数据
@@ -213,11 +270,20 @@ export default {
         province: '',
         customerRank: '',
         createTime: null,
-        saleLeader: null
+        saleLeader: null,
+        ifDeal: false,
+        customerOwner: '自有客户',
+        channelId: null
       },
       
       // 用户列表
       userList: [],
+      // 渠道列表
+      channels: [],
+      
+      // 渠道搜索相关
+      channelSearchText: '',
+      showChannelDropdown: false,
 
       // 表单验证错误
       errors: {},
@@ -260,8 +326,53 @@ export default {
       this.initForm()
     }
     this.fetchUserList()
+    this.fetchChannels()
   },
   methods: {
+    async fetchChannels() {
+      try {
+        this.channels = await getAllChannelDistributors()
+        this.updateChannelSearchText()
+      } catch (error) {
+        console.error('获取渠道列表失败', error)
+      }
+    },
+
+    onChannelInput() {
+      this.formData.channelId = null
+      const match = this.channels.find(c => c.channelName === this.channelSearchText)
+      if (match) {
+        this.formData.channelId = match.channelId
+      }
+    },
+
+    selectChannel(channel) {
+      this.formData.channelId = channel.channelId
+      this.channelSearchText = channel.channelName
+      this.showChannelDropdown = false
+    },
+
+    onChannelBlur() {
+      this.showChannelDropdown = false
+      if (!this.formData.channelId && this.channelSearchText) {
+        const match = this.channels.find(c => c.channelName === this.channelSearchText)
+        if (match) {
+          this.formData.channelId = match.channelId
+        }
+      }
+    },
+
+    updateChannelSearchText() {
+      if (this.formData.channelId && this.channels.length > 0) {
+        const c = this.channels.find(x => x.channelId === this.formData.channelId)
+        if (c) {
+          this.channelSearchText = c.channelName
+        }
+      } else if (!this.formData.channelId) {
+        this.channelSearchText = ''
+      }
+    },
+
     /**
      * 获取用户列表
      */
@@ -287,7 +398,10 @@ export default {
           province: this.customer.province || '',
           customerRank: this.customer.customerRank || '',
           createTime: this.customer.createTime,
-          saleLeader: this.customer.saleLeader || null
+          saleLeader: this.customer.saleLeader || null,
+          ifDeal: this.customer.ifDeal || false,
+          customerOwner: this.customer.customerOwner || '自有客户',
+          channelId: this.customer.channelId || null
         }
       } else {
         // 新增模式，重置表单
@@ -299,11 +413,14 @@ export default {
           province: '',
           customerRank: '',
           createTime: null,
-          saleLeader: null
+          saleLeader: null,
+          ifDeal: false,
+          customerOwner: '自有客户',
+          channelId: null
         }
         // 新增模式默认将销售负责人设置为当前登录用户
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const uid = info && (info.userId ?? info.id)
           if (uid != null) {
@@ -314,6 +431,7 @@ export default {
       
       // 清空错误信息
       this.errors = {}
+      this.updateChannelSearchText()
     },
 
     /**
@@ -358,6 +476,11 @@ export default {
       // 销售负责人验证
       if (!this.formData.saleLeader) {
         errors.saleLeader = '请选择销售负责人'
+      }
+
+      // 渠道名称验证
+      if (this.formData.customerOwner === '渠道客户' && !this.formData.channelId) {
+        errors.channelId = '请选择渠道名称'
       }
 
       // 客户等级验证
@@ -460,7 +583,10 @@ export default {
           phoneNumber: this.formData.phoneNumber.trim(),
           province: this.formData.province,
           customerRank: this.formData.customerRank,
-          saleLeader: this.formData.saleLeader
+          saleLeader: this.formData.saleLeader,
+          ifDeal: this.formData.ifDeal,
+          customerOwner: this.formData.customerOwner,
+          channelId: this.formData.customerOwner === '渠道客户' ? this.formData.channelId : null
         }
 
         // 如果是编辑模式，添加ID
@@ -806,5 +932,42 @@ export default {
   .form-select {
     font-size: 16px; /* 防止iOS缩放 */
   }
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dropdown-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  color: #262626;
+}
+
+.dropdown-list li:hover {
+  background: #f5f5f5;
+  color: #1890ff;
+}
+
+.dropdown-list .no-result {
+  color: #999;
+  cursor: default;
+  text-align: center;
+  padding: 8px 12px;
 }
 </style>

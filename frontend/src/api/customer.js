@@ -10,10 +10,12 @@ import request from './request.js'
  * @param {number} params.page 页码（从0开始）
  * @param {number} params.size 每页大小
  * @param {string} params.customerName 客户名称（可选）
- * @param {string} params.contact 联系人（可选）
  * @param {string} params.province 省份（可选）
  * @param {string} params.customerRank 客户等级（可选）
  * @param {number} [params.saleLeader] 销售负责人ID（可选；销售角色下用于数据范围控制）
+ * @param {boolean} [params.ifDeal] 是否成交（可选）
+ * @param {string} [params.customerOwner] 客户归属（可选）
+ * @param {number} [params.channelId] 渠道ID（可选）
  * @returns {Promise} 客户分页数据
  */
 export async function getCustomerList(params = {}) {
@@ -29,9 +31,6 @@ export async function getCustomerList(params = {}) {
     if (params.customerName) {
       queryParams.append('customerName', params.customerName)
     }
-    if (params.contact) {
-      queryParams.append('contact', params.contact)
-    }
     if (params.province) {
       queryParams.append('province', params.province)
     }
@@ -40,6 +39,15 @@ export async function getCustomerList(params = {}) {
     }
     if (params.saleLeader !== undefined && params.saleLeader !== null) {
       queryParams.append('saleLeader', params.saleLeader)
+    }
+    if (params.ifDeal !== undefined && params.ifDeal !== null) {
+      queryParams.append('ifDeal', params.ifDeal)
+    }
+    if (params.customerOwner) {
+      queryParams.append('customerOwner', params.customerOwner)
+    }
+    if (params.channelId !== undefined && params.channelId !== null) {
+      queryParams.append('channelId', params.channelId)
     }
     
     const response = await request({

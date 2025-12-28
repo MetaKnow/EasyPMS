@@ -86,6 +86,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/afterservice-events/**").permitAll()
                 // 允许访问运维事件附件上传/下载/预览接口（临时开放）
                 .requestMatchers("/api/afterservice-deliverable-files/**").permitAll()
+                // 允许访问系统备份接口（临时开放，后续可根据需要添加认证）
+                .requestMatchers("/api/backups/**").permitAll()
                 // 允许访问静态资源
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 其他所有请求都需要认证

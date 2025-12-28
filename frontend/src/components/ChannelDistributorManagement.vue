@@ -12,6 +12,21 @@
           <i class="icon-delete"></i>
           删除渠道商
         </button>
+        <button v-if="canExport" class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".csv"
+          style="display: none"
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -64,6 +79,7 @@
               <th>渠道名称</th>
               <th>联系人</th>
               <th>联系方式</th>
+              <th>销售负责人</th>
               <th>创建时间</th>
               <th>操作</th>
             </tr>
@@ -86,6 +102,7 @@
               <td>{{ channel.channelName }}</td>
               <td>{{ channel.contactor || '-' }}</td>
               <td>{{ channel.phoneNumber || '-' }}</td>
+              <td>{{ getSaleDirectorName(channel.saleDirector) }}</td>
               <td>{{ formatDate(channel.createdAt) }}</td>
               <td>
                 <button class="btn-small btn-primary" @click.stop="editChannel(channel)">
@@ -97,7 +114,7 @@
               </td>
             </tr>
             <tr v-if="channels.length === 0">
-              <td colspan="7" class="no-data">暂无数据</td>
+              <td colspan="8" class="no-data">暂无数据</td>
             </tr>
           </tbody>
         </table>
@@ -170,9 +187,11 @@
 import ChannelDistributorForm from './ChannelDistributorForm.vue'
 import { 
   getChannelDistributorList, 
+  createChannelDistributor,
   deleteChannelDistributor, 
   batchDeleteChannelDistributors 
 } from '../api/channelDistributor.js'
+import { getAllUsers } from '../api/user.js'
 
 export default {
   name: 'ChannelDistributorManagement',
@@ -185,6 +204,10 @@ export default {
        * 渠道商列表数据
        */
       channels: [],
+      /**
+       * 用户列表数据（用于显示销售负责人姓名）
+       */
+      users: [],
       /**
        * 选中的渠道商
        */
@@ -236,12 +259,290 @@ export default {
      */
     isAllSelected() {
       return this.channels.length > 0 && this.selectedChannels.length === this.channels.length
+    },
+    canExport() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const role = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = role.toLowerCase()
+        const isSales = role === '销售' || role === '销售角色' || roleLower === 'sales'
+        return !isSales
+      } catch (_) {
+        return true
+      }
     }
   },
   mounted() {
     this.loadChannels()
+    this.loadUsers()
   },
   methods: {
+    /**
+     * 加载用户列表
+     */
+    async loadUsers() {
+      try {
+        this.users = await getAllUsers()
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+      }
+    },
+
+    /**
+     * 获取销售负责人姓名
+     */
+    getSaleDirectorName(saleDirectorId) {
+      if (!saleDirectorId) return '-'
+      const user = this.users.find(u => u.userId === saleDirectorId)
+      return user ? (user.name || user.userName) : '-'
+    },
+
+    exportTable() {
+      if (!Array.isArray(this.channels) || this.channels.length === 0) {
+        this.showMessage('当前没有数据可导出', 'error')
+        return
+      }
+
+      try {
+        const exportData = this.channels.map((c) => ({
+          '渠道名称': c.channelName || '',
+          '联系人': c.contactor || '',
+          '联系方式': c.phoneNumber || '',
+          '销售负责人': this.getSaleDirectorName(c.saleDirector)
+        }))
+        const csvContent = this.convertToCSV(exportData)
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `渠道商维护_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        this.showMessage('表格导出成功', 'success')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        this.showMessage('导出表格失败: ' + error.message, 'error')
+      }
+    },
+
+    triggerImport() {
+      this.$refs.fileInput?.click()
+    },
+
+    async handleFileImport(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+
+      try {
+        if (!Array.isArray(this.users) || this.users.length === 0) {
+          await this.loadUsers()
+        }
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+        if (!Array.isArray(importData) || importData.length === 0) {
+          this.showMessage('文件中没有有效数据', 'error')
+          return
+        }
+
+        const headers = Object.keys(importData[0] || {})
+        const requiredHeaders = ['渠道名称', '联系人', '联系方式']
+        const missing = requiredHeaders.filter(h => !headers.includes(h))
+        if (missing.length > 0) {
+          this.showMessage(`文件缺少必须的列: ${missing.join(', ')}`, 'error')
+          return
+        }
+
+        const validData = this.validateChannelImportData(importData)
+        if (validData.length === 0) {
+          this.showMessage('文件格式不正确或数据无效', 'error')
+          return
+        }
+
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importChannels(validData)
+        }
+      } catch (error) {
+        console.error('导入表格失败:', error)
+        this.showMessage('导入表格失败: ' + error.message, 'error')
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    validateChannelImportData(rows) {
+      const list = []
+      for (const row of rows || []) {
+        const channelName = (row['渠道名称'] || '').trim()
+        const contactor = (row['联系人'] || '').trim()
+        const phoneNumber = (row['联系方式'] || '').trim()
+        if (!channelName || !contactor || !phoneNumber) continue
+
+        const saleDirector = this.parseUserId(row['销售负责人'])
+        list.push({
+          channelName,
+          contactor,
+          phoneNumber,
+          saleDirector: saleDirector || null
+        })
+      }
+      return list
+    },
+
+    async importChannels(data) {
+      let successCount = 0
+      let errorCount = 0
+      for (const item of data) {
+        try {
+          await createChannelDistributor(item)
+          successCount++
+        } catch (error) {
+          console.error('导入渠道商失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        this.showMessage(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`, 'success')
+        this.loadChannels()
+      } else {
+        this.showMessage('导入失败，请检查数据格式', 'error')
+      }
+    },
+
+    parseUserId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const user = (this.users || []).find(u => (u?.name && String(u.name).trim() === raw) || (u?.userName && String(u.userName).trim() === raw))
+      return user ? user.userId : null
+    },
+
+    convertToCSV(data) {
+      if (!Array.isArray(data) || data.length === 0) return ''
+      const headers = Object.keys(data[0])
+      const rows = [headers.join(',')]
+      for (const row of data) {
+        const values = headers.map(h => {
+          const v = row[h] == null ? '' : String(row[h])
+          if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`
+          return v
+        })
+        rows.push(values.join(','))
+      }
+      return rows.join('\n')
+    },
+
+    async readFileAsText(file) {
+      const buffer = await this.readFileAsArrayBuffer(file)
+      let utf8 = ''
+      try {
+        utf8 = new TextDecoder('utf-8').decode(buffer)
+      } catch (_) {}
+      if (this.isLikelyChineseCSV(utf8)) return utf8
+      try {
+        const gb18030 = new TextDecoder('gb18030').decode(buffer)
+        if (this.isLikelyChineseCSV(gb18030)) return gb18030
+      } catch (_) {}
+      try {
+        const gbk = new TextDecoder('gbk').decode(buffer)
+        if (this.isLikelyChineseCSV(gbk)) return gbk
+      } catch (_) {}
+      try {
+        return await this.readAsTextLegacy(file, 'utf-8')
+      } catch (_) {}
+      return utf8
+    },
+
+    readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
+    },
+
+    readAsTextLegacy(file, encoding) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, encoding)
+      })
+    },
+
+    isLikelyChineseCSV(text) {
+      if (!text || typeof text !== 'string') return false
+      const firstLine = (text.split(/\r?\n/).find(line => line.trim().length > 0) || '')
+      const delimiter = firstLine.includes(',') ? ',' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : firstLine.includes('，') ? '，' : ','
+      const tokens = this.parseCSVLine(firstLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+      const replacementCount = (text.match(/\uFFFD/g) || []).length
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text)
+      const headerOk = tokens.includes('渠道名称') || tokens.includes('联系人') || tokens.includes('联系方式')
+      return (headerOk && replacementCount === 0) || (hasChinese && replacementCount < 5)
+    },
+
+    parseCSV(text) {
+      const lines = (text || '').split(/\r?\n/).filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      const headerLine = lines[0]
+      const candidates = [',', ';', '\t', '，', '；', '|']
+      let delimiter = ','
+      let bestCount = -1
+      const stripped = headerLine.replace(/"[^"]*"/g, '')
+      for (const d of candidates) {
+        const count = stripped.split(d).length - 1
+        if (count > bestCount) {
+          bestCount = count
+          delimiter = d
+        }
+      }
+      const headers = this.parseCSVLine(headerLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = this.parseCSVLine(lines[i], delimiter)
+        const row = {}
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] !== undefined ? String(values[idx]).trim().replace(/^\ufeff/, '') : ''
+        })
+        data.push(row)
+      }
+      return data
+    },
+
+    parseCSVLine(line, delimiter = ',') {
+      const result = []
+      let current = ''
+      let inQuotes = false
+      const s = String(line || '')
+      for (let i = 0; i < s.length; i++) {
+        const char = s[i]
+        if (char === '"') {
+          if (inQuotes && s[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      result.push(current)
+      return result.map(x => String(x).trim())
+    },
+
     /**
      * 加载渠道商列表
      */
@@ -253,6 +554,33 @@ export default {
           size: this.pageSize,
           ...this.searchForm
         }
+
+        try {
+          const raw = sessionStorage.getItem('userInfo')
+          const info = raw ? JSON.parse(raw) : null
+          const roleName = info && info.roleName ? String(info.roleName).trim() : ''
+          const roleLower = roleName.toLowerCase()
+          const userNameLower = info && info.userName ? String(info.userName).trim().toLowerCase() : ''
+          const uid = info && (info.userId ?? info.id)
+
+          const isAdminUser = userNameLower === 'admin'
+          const isPrivileged = (
+            roleName.includes('管理员') ||
+            roleName.includes('公司领导') ||
+            roleName.includes('销售总监') ||
+            roleName.includes('超级管理员') ||
+            roleLower.includes('admin') ||
+            roleLower.includes('leader') ||
+            roleLower.includes('sales director') ||
+            roleLower.includes('super admin') ||
+            roleLower.includes('superadmin')
+          )
+          const isSalesRole = roleName.includes('销售') || roleLower.includes('sales')
+
+          if (!isAdminUser && !isPrivileged && isSalesRole && uid != null) {
+            params.saleDirector = Number(uid)
+          }
+        } catch (_) {}
         
         const response = await getChannelDistributorList(params)
         this.channels = response.content || []
@@ -630,15 +958,28 @@ export default {
   border-color: #40a9ff;
 }
 
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #218838;
+  color: #fff;
+}
+
 .btn-warning {
-  background: #fa8c16;
-  border-color: #fa8c16;
-  color: white;
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
 }
 
 .btn-warning:hover {
-  background: #ffa940;
-  border-color: #ffa940;
+  background-color: #e0a800;
+  border-color: #e0a800;
+  color: #212529;
 }
 
 .btn-danger {
@@ -859,6 +1200,8 @@ export default {
 .icon-delete::before { content: '🗑️'; }
 .icon-search::before { content: '🔍'; }
 .icon-refresh::before { content: '🔄'; }
+.icon-download::before { content: "↓"; display: inline-block; margin-right: 4px; }
+.icon-upload::before { content: "↑"; display: inline-block; margin-right: 4px; }
 
 /* 响应式设计 */
 @media (max-width: 768px) {

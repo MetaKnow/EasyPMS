@@ -19,7 +19,7 @@ export async function uploadAfterserviceDeliverableFiles(projectId, eventId, fil
   let uploaderId = options.uploaderId
   if (uploaderId == null) {
     try {
-      const raw = localStorage.getItem('userInfo')
+      const raw = sessionStorage.getItem('userInfo')
       const userInfo = raw ? JSON.parse(raw) : null
       if (userInfo && userInfo.userId != null) uploaderId = userInfo.userId
     } catch (_) {}

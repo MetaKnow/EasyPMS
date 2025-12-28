@@ -85,11 +85,13 @@ public interface ChannelDistributorRepository extends JpaRepository<ChannelDistr
     @Query("SELECT cd FROM ChannelDistributor cd WHERE " +
            "(:channelName IS NULL OR LOWER(cd.channelName) LIKE LOWER(CONCAT('%', :channelName, '%'))) AND " +
            "(:contactor IS NULL OR LOWER(cd.contactor) LIKE LOWER(CONCAT('%', :contactor, '%'))) AND " +
-           "(:phoneNumber IS NULL OR LOWER(cd.phoneNumber) LIKE LOWER(CONCAT('%', :phoneNumber, '%')))")
+           "(:phoneNumber IS NULL OR LOWER(cd.phoneNumber) LIKE LOWER(CONCAT('%', :phoneNumber, '%'))) AND " +
+           "(:saleDirector IS NULL OR cd.saleDirector = :saleDirector)")
     Page<ChannelDistributor> findByMultipleConditions(
             @Param("channelName") String channelName,
             @Param("contactor") String contactor,
             @Param("phoneNumber") String phoneNumber,
+            @Param("saleDirector") Long saleDirector,
             Pageable pageable);
 
     /**

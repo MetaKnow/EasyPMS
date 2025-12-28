@@ -13,6 +13,21 @@
           <i class="icon-delete"></i>
           删除客户
         </button>
+        <button v-if="canExport" class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".csv"
+          style="display: none"
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -25,12 +40,12 @@
           placeholder="客户名称"
           class="search-input"
         />
-        <input 
-          v-model="searchForm.contact" 
-          type="text" 
-          placeholder="联系人"
-          class="search-input"
-        />
+        <select v-model="searchForm.saleLeader" class="search-select">
+          <option value="">全部销售负责人</option>
+          <option v-for="user in users" :key="user.userId" :value="user.userId">
+            {{ user.name }}
+          </option>
+        </select>
         <select v-model="searchForm.province" class="search-select">
           <option value="">全部省份</option>
           <option v-for="province in provinces" :key="province" :value="province">
@@ -42,6 +57,22 @@
           <option value="战略客户">战略客户</option>
           <option value="重要客户">重要客户</option>
           <option value="一般客户">一般客户</option>
+        </select>
+        <select v-model="searchForm.ifDeal" class="search-select">
+          <option value="">是否成交</option>
+          <option :value="true">是</option>
+          <option :value="false">否</option>
+        </select>
+        <select v-model="searchForm.customerOwner" class="search-select">
+          <option value="">客户归属</option>
+          <option value="自有客户">自有客户</option>
+          <option value="渠道客户">渠道客户</option>
+        </select>
+        <select v-if="searchForm.customerOwner === '渠道客户'" v-model="searchForm.channelId" class="search-select">
+          <option value="">全部渠道</option>
+          <option v-for="channel in channels" :key="channel.channelId" :value="channel.channelId">
+            {{ channel.channelName }}
+          </option>
         </select>
         <button class="btn btn-primary" @click="searchCustomers">
           <i class="icon-search"></i>
@@ -73,8 +104,9 @@
               <th>联系方式</th>
               <th>销售负责人</th>
               <th>省份</th>
+              <th>是否成交</th>
+              <th>客户归属</th>
               <th>客户等级</th>
-              <th>创建时间</th>
               <th width="120">操作</th>
             </tr>
           </thead>
@@ -99,11 +131,20 @@
               <td>{{ getUserName(customer.saleLeader) }}</td>
               <td>{{ customer.province || '-' }}</td>
               <td>
+                <span :class="['status-badge', customer.ifDeal ? 'status-success' : 'status-info']">
+                  {{ customer.ifDeal ? '是' : '否' }}
+                </span>
+              </td>
+              <td>
+                <span class="owner-text">
+                  {{ customer.customerOwner || '自有客户' }}
+                </span>
+              </td>
+              <td>
                 <span class="rank-badge" :class="getRankClass(customer.customerRank)">
                   {{ customer.customerRank || '-' }}
                 </span>
               </td>
-              <td>{{ formatDate(customer.createTime) }}</td>
               <td>
                 <button class="btn-small btn-primary" @click.stop="editCustomer(customer)">
                   编辑
@@ -190,6 +231,7 @@
 import CustomerForm from './CustomerForm.vue'
 import { getCustomerList, createCustomer, updateCustomer, deleteCustomer, batchDeleteCustomers, checkCustomerNameAvailable } from '../api/customer.js'
 import { getAllUsers } from '../api/user.js'
+import { getAllChannelDistributors } from '../api/channelDistributor.js'
 
 export default {
   name: 'CustomerManagement',
@@ -200,16 +242,23 @@ export default {
     return {
       // 客户列表数据
       customers: [],
-      // 用户映射表 (userId -> userName)
-      userMap: {},
+      // 渠道映射表 (channelId -> channelName)
+      channelMap: {},
+      // 渠道列表数据（用于筛选）
+      channels: [],
+      // 用户列表（用于筛选）
+      users: [],
       selectedCustomers: [], // 改为数组，支持多选
       
       // 搜索表单
       searchForm: {
         customerName: '',
-        contact: '',
+        saleLeader: '',
         province: '',
-        customerRank: ''
+        customerRank: '',
+        ifDeal: '',
+        customerOwner: '',
+        channelId: ''
       },
       
       // 分页
@@ -250,11 +299,25 @@ export default {
      */
     isAllSelected() {
       return this.customers.length > 0 && this.selectedCustomers.length === this.customers.length
+    },
+    canExport() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const role = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = role.toLowerCase()
+        const isSales = role === '销售' || role === '销售角色' || roleLower === 'sales'
+        return !isSales
+      } catch (_) {
+        return true
+      }
     }
   },
   mounted() {
     this.fetchUsers().then(() => {
-      this.loadCustomers()
+      this.fetchChannels().then(() => {
+        this.loadCustomers()
+      })
     })
   },
   methods: {
@@ -264,12 +327,29 @@ export default {
     async fetchUsers() {
       try {
         const users = await getAllUsers()
+        this.users = users
         this.userMap = users.reduce((map, user) => {
           map[user.userId] = user.name
           return map
         }, {})
       } catch (error) {
         console.error('获取用户列表失败:', error)
+      }
+    },
+
+    /**
+     * 获取所有渠道并建立映射
+     */
+    async fetchChannels() {
+      try {
+        const channels = await getAllChannelDistributors()
+        this.channels = channels
+        this.channelMap = channels.reduce((map, channel) => {
+          map[channel.channelId] = channel.channelName
+          return map
+        }, {})
+      } catch (error) {
+        console.error('获取渠道列表失败:', error)
       }
     },
 
@@ -296,14 +376,23 @@ export default {
         if (this.searchForm.customerName) {
           params.customerName = this.searchForm.customerName;
         }
-        if (this.searchForm.contact) {
-          params.contact = this.searchForm.contact;
+        if (this.searchForm.saleLeader) {
+          params.saleLeader = this.searchForm.saleLeader;
         }
         if (this.searchForm.province) {
           params.province = this.searchForm.province;
         }
         if (this.searchForm.customerRank) {
           params.customerRank = this.searchForm.customerRank;
+        }
+        if (this.searchForm.ifDeal !== '') {
+          params.ifDeal = this.searchForm.ifDeal;
+        }
+        if (this.searchForm.customerOwner) {
+          params.customerOwner = this.searchForm.customerOwner;
+        }
+        if (this.searchForm.channelId) {
+          params.channelId = this.searchForm.channelId;
         }
 
         /**
@@ -312,7 +401,7 @@ export default {
          * - 销售角色：仅查看“销售负责人”为自己的数据
          */
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const roleName = info && info.roleName ? String(info.roleName).trim() : ''
           const roleLower = roleName.toLowerCase()
@@ -368,12 +457,313 @@ export default {
     resetSearch() {
       this.searchForm = {
         customerName: '',
-        contact: '',
+        saleLeader: '',
         province: '',
-        customerRank: ''
+        customerRank: '',
+        ifDeal: '',
+        customerOwner: '',
+        channelId: ''
       }
       this.currentPage = 1
       this.loadCustomers()
+    },
+
+    exportTable() {
+      if (!Array.isArray(this.customers) || this.customers.length === 0) {
+        this.$message?.warning('当前没有数据可导出') || alert('当前没有数据可导出')
+        return
+      }
+
+      try {
+        const exportData = this.customers.map((c) => ({
+          '客户名称': c.customerName || '',
+          '联系人': c.contact || '',
+          '联系方式': c.phoneNumber || '',
+          '省份': c.province || '',
+          '客户等级': c.customerRank || '',
+          '销售负责人': this.getUserName(c.saleLeader),
+          '是否成交': c.ifDeal ? '是' : '否',
+          '客户归属': c.customerOwner || '自有客户',
+          '渠道名称': c.channelId ? (this.channelMap?.[c.channelId] || '') : ''
+        }))
+
+        const csvContent = this.convertToCSV(exportData)
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `客户管理_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        this.$message?.success('表格导出成功') || alert('表格导出成功')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        this.$message?.error('导出表格失败: ' + error.message) || alert('导出表格失败: ' + error.message)
+      }
+    },
+
+    triggerImport() {
+      this.$refs.fileInput?.click()
+    },
+
+    async handleFileImport(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+
+      try {
+        if (!Array.isArray(this.users) || this.users.length === 0) {
+          await this.fetchUsers()
+        }
+        if (!Array.isArray(this.channels) || this.channels.length === 0) {
+          await this.fetchChannels()
+        }
+
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+        if (!Array.isArray(importData) || importData.length === 0) {
+          this.$message?.warning('文件中没有有效数据') || alert('文件中没有有效数据')
+          return
+        }
+
+        const headers = Object.keys(importData[0] || {})
+        const requiredHeaders = ['客户名称', '联系人', '联系方式', '省份', '客户等级']
+        const missing = requiredHeaders.filter(h => !headers.includes(h))
+        if (missing.length > 0) {
+          const msg = `文件缺少必须的列: ${missing.join(', ')}`
+          this.$message?.error(msg) || alert(msg)
+          return
+        }
+
+        const validData = this.validateCustomerImportData(importData)
+        if (validData.length === 0) {
+          this.$message?.error('文件格式不正确或数据无效') || alert('文件格式不正确或数据无效')
+          return
+        }
+
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importCustomers(validData)
+        }
+      } catch (error) {
+        console.error('导入表格失败:', error)
+        this.$message?.error('导入表格失败: ' + error.message) || alert('导入表格失败: ' + error.message)
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    async importCustomers(data) {
+      let successCount = 0
+      let errorCount = 0
+
+      for (const item of data) {
+        try {
+          await createCustomer(item)
+          successCount++
+        } catch (error) {
+          console.error('导入客户失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        this.$message?.success(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`) || alert(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`)
+        this.loadCustomers()
+      } else {
+        this.$message?.error('导入失败，请检查数据格式') || alert('导入失败，请检查数据格式')
+      }
+    },
+
+    validateCustomerImportData(rows) {
+      const list = []
+
+      for (const row of rows || []) {
+        const customerName = (row['客户名称'] || '').trim()
+        const contact = (row['联系人'] || '').trim()
+        const phoneNumber = (row['联系方式'] || '').trim()
+        const province = (row['省份'] || '').trim()
+        const customerRank = (row['客户等级'] || '').trim()
+        if (!customerName || !contact || !phoneNumber || !province || !customerRank) continue
+
+        const saleLeader = this.parseUserId(row['销售负责人'])
+        const ifDeal = this.parseBoolean(row['是否成交'])
+        const customerOwner = ((row['客户归属'] || '').trim()) || '自有客户'
+
+        let channelId = null
+        if (customerOwner === '渠道客户') {
+          channelId = this.parseChannelId(row['渠道名称'])
+          if (!channelId) continue
+        } else {
+          channelId = this.parseChannelId(row['渠道名称'])
+        }
+
+        list.push({
+          customerName,
+          contact,
+          phoneNumber,
+          province,
+          customerRank,
+          saleLeader: saleLeader || null,
+          ifDeal: ifDeal === null ? false : ifDeal,
+          customerOwner,
+          channelId: channelId || null
+        })
+      }
+
+      return list
+    },
+
+    parseUserId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const user = (this.users || []).find(u => (u?.name && String(u.name).trim() === raw) || (u?.userName && String(u.userName).trim() === raw))
+      return user ? user.userId : null
+    },
+
+    parseChannelId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const channel = (this.channels || []).find(c => c?.channelName && String(c.channelName).trim() === raw)
+      return channel ? channel.channelId : null
+    },
+
+    parseBoolean(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const lower = raw.toLowerCase()
+      if (raw === '是' || raw === '1' || lower === 'true' || lower === 'yes') return true
+      if (raw === '否' || raw === '0' || lower === 'false' || lower === 'no') return false
+      return null
+    },
+
+    convertToCSV(data) {
+      if (!Array.isArray(data) || data.length === 0) return ''
+      const headers = Object.keys(data[0])
+      const rows = [headers.join(',')]
+      for (const row of data) {
+        const values = headers.map(h => {
+          const v = row[h] == null ? '' : String(row[h])
+          if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`
+          return v
+        })
+        rows.push(values.join(','))
+      }
+      return rows.join('\n')
+    },
+
+    async readFileAsText(file) {
+      const buffer = await this.readFileAsArrayBuffer(file)
+      let utf8 = ''
+      try {
+        utf8 = new TextDecoder('utf-8').decode(buffer)
+      } catch (_) {}
+      if (this.isLikelyChineseCSV(utf8)) return utf8
+      try {
+        const gb18030 = new TextDecoder('gb18030').decode(buffer)
+        if (this.isLikelyChineseCSV(gb18030)) return gb18030
+      } catch (_) {}
+      try {
+        const gbk = new TextDecoder('gbk').decode(buffer)
+        if (this.isLikelyChineseCSV(gbk)) return gbk
+      } catch (_) {}
+      try {
+        return await this.readAsTextLegacy(file, 'utf-8')
+      } catch (_) {}
+      return utf8
+    },
+
+    readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
+    },
+
+    readAsTextLegacy(file, encoding) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, encoding)
+      })
+    },
+
+    isLikelyChineseCSV(text) {
+      if (!text || typeof text !== 'string') return false
+      const firstLine = (text.split(/\r?\n/).find(line => line.trim().length > 0) || '')
+      const delimiter = firstLine.includes(',') ? ',' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : firstLine.includes('，') ? '，' : ','
+      const tokens = this.parseCSVLine(firstLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+      const replacementCount = (text.match(/\uFFFD/g) || []).length
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text)
+      const headerOk = tokens.includes('客户名称') || tokens.includes('联系人') || tokens.includes('联系方式')
+      return (headerOk && replacementCount === 0) || (hasChinese && replacementCount < 5)
+    },
+
+    parseCSV(text) {
+      const lines = (text || '').split(/\r?\n/).filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      const headerLine = lines[0]
+      const candidates = [',', ';', '\t', '，', '；', '|']
+      let delimiter = ','
+      let bestCount = -1
+      const stripped = headerLine.replace(/"[^"]*"/g, '')
+      for (const d of candidates) {
+        const count = stripped.split(d).length - 1
+        if (count > bestCount) {
+          bestCount = count
+          delimiter = d
+        }
+      }
+      const headers = this.parseCSVLine(headerLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = this.parseCSVLine(lines[i], delimiter)
+        const row = {}
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] !== undefined ? String(values[idx]).trim().replace(/^\ufeff/, '') : ''
+        })
+        data.push(row)
+      }
+      return data
+    },
+
+    parseCSVLine(line, delimiter = ',') {
+      const result = []
+      let current = ''
+      let inQuotes = false
+      const s = String(line || '')
+      for (let i = 0; i < s.length; i++) {
+        const char = s[i]
+        if (char === '"') {
+          if (inQuotes && s[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      result.push(current)
+      return result.map(x => String(x).trim())
     },
 
     /**
@@ -620,6 +1010,32 @@ export default {
   overflow: hidden;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-success {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.status-info {
+  background-color: #f5f5f5;
+  color: #8c8c8c;
+  border: 1px solid #d9d9d9;
+}
+
+.owner-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
 /* 页面头部 */
 .page-header {
   display: flex;
@@ -660,11 +1076,11 @@ export default {
 }
 
 .search-input, .search-select {
-  min-width: 200px;
+  min-width: 140px;
   padding: 6px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.3s;
 }
 
@@ -806,15 +1222,28 @@ export default {
   border-color: #40a9ff;
 }
 
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #218838;
+  color: #fff;
+}
+
 .btn-warning {
-  background: #fa8c16;
-  border-color: #fa8c16;
-  color: white;
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
 }
 
 .btn-warning:hover {
-  background: #ffa940;
-  border-color: #ffa940;
+  background-color: #e0a800;
+  border-color: #e0a800;
+  color: #212529;
 }
 
 .btn-danger {
@@ -918,6 +1347,8 @@ export default {
 .icon-delete::before { content: "🗑️"; }
 .icon-search::before { content: "🔍"; }
 .icon-refresh::before { content: "🔄"; }
+.icon-download::before { content: "↓"; display: inline-block; margin-right: 4px; }
+.icon-upload::before { content: "↑"; display: inline-block; margin-right: 4px; }
 
 /* 响应式设计 */
 @media (max-width: 768px) {

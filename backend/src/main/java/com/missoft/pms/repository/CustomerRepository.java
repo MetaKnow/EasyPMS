@@ -89,31 +89,34 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     boolean existsByPhoneNumberAndCustomerIdNot(String phoneNumber, Long customerId);
 
     /**
-     * 多条件查询客户（支持客户名称、联系人、省份、客户等级的组合查询）
+     * 多条件查询客户（支持客户名称、省份、客户等级、销售负责人、是否成交、客户归属、渠道的组合查询）
      *
-     * @param customerName 客户名称（可为空）
-     * @param contact      联系人（可为空）
-     * @param province     省份（可为空）
-     * @param customerRank 客户等级（可为空）
-     * @param pageable     分页参数
+     * @param customerName  客户名称（可为空）
+     * @param province      省份（可为空）
+     * @param customerRank  客户等级（可为空）
+     * @param saleLeader    销售负责人（可为空）
+     * @param ifDeal        是否成交（可为空）
+     * @param customerOwner 客户归属（可为空）
+     * @param channelId     渠道ID（可为空）
+     * @param pageable      分页参数
      * @return 客户分页列表
-     */
-    /**
-     * 函数级注释：多条件查询客户（支持销售负责人过滤）
-     * - 当 saleLeader 不为 null 时，仅返回销售负责人为该用户的客户数据
      */
     @Query("SELECT c FROM Customer c WHERE " +
             "(:customerName IS NULL OR LOWER(c.customerName) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
-            "(:contact IS NULL OR LOWER(c.contact) LIKE LOWER(CONCAT('%', :contact, '%'))) AND " +
             "(:province IS NULL OR c.province = :province) AND " +
             "(:customerRank IS NULL OR c.customerRank = :customerRank) AND " +
-            "(:saleLeader IS NULL OR c.saleLeader = :saleLeader)")
+            "(:saleLeader IS NULL OR c.saleLeader = :saleLeader) AND " +
+            "(:ifDeal IS NULL OR c.ifDeal = :ifDeal) AND " +
+            "(:customerOwner IS NULL OR c.customerOwner = :customerOwner) AND " +
+            "(:channelId IS NULL OR c.channelId = :channelId)")
     Page<Customer> findByMultipleConditions(
             @Param("customerName") String customerName,
-            @Param("contact") String contact,
             @Param("province") String province,
             @Param("customerRank") String customerRank,
             @Param("saleLeader") Long saleLeader,
+            @Param("ifDeal") Boolean ifDeal,
+            @Param("customerOwner") String customerOwner,
+            @Param("channelId") Long channelId,
             Pageable pageable
     );
 

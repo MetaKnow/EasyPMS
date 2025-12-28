@@ -19,7 +19,7 @@ const request = axios.create({
 request.interceptors.request.use(
   config => {
     // 添加token到请求头
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -43,8 +43,8 @@ request.interceptors.response.use(
     
     // 处理401未授权错误
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('userInfo')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('userInfo')
       window.location.href = '/'
     }
     

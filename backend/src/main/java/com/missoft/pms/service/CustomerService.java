@@ -28,41 +28,40 @@ public class CustomerService {
     /**
      * 分页查询客户列表
      *
-     * @param page         页码（从0开始）
-     * @param size         每页大小
-     * @param customerName 客户名称（可选）
-     * @param contact      联系人（可选）
-     * @param province     省份（可选）
-     * @param customerRank 客户等级（可选）
-     * @param sortBy       排序字段
-     * @param sortDir      排序方向（asc/desc）
+     * @param page          页码（从0开始）
+     * @param size          每页大小
+     * @param customerName  客户名称（可选）
+     * @param province      省份（可选）
+     * @param customerRank  客户等级（可选）
+     * @param sortBy        排序字段
+     * @param sortDir       排序方向（asc/desc）
+     * @param saleLeader    销售负责人（可选）
+     * @param ifDeal        是否成交（可选）
+     * @param customerOwner 客户归属（可选）
+     * @param channelId     渠道ID（可选）
      * @return 客户分页数据
      */
     @Transactional(readOnly = true)
-    /**
-     * 函数级注释：分页查询客户列表（支持按销售负责人过滤）
-     * @param saleLeader 销售负责人用户ID（可为null；销售角色用户传入自身ID以限定数据范围）
-     */
-    public Page<Customer> getCustomers(int page, int size, String customerName, String contact,
+    public Page<Customer> getCustomers(int page, int size, String customerName,
                                        String province, String customerRank, String sortBy, String sortDir,
-                                       Long saleLeader) {
+                                       Long saleLeader, Boolean ifDeal, String customerOwner, Long channelId) {
         // 创建排序对象
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // 处理空字符串为null
         customerName = StringUtils.hasText(customerName) ? customerName.trim() : null;
-        contact = StringUtils.hasText(contact) ? contact.trim() : null;
         province = StringUtils.hasText(province) ? province.trim() : null;
         customerRank = StringUtils.hasText(customerRank) ? customerRank.trim() : null;
+        customerOwner = StringUtils.hasText(customerOwner) ? customerOwner.trim() : null;
 
         // 如果所有查询条件都为空，返回所有客户
-        if (customerName == null && contact == null && province == null && customerRank == null && saleLeader == null) {
+        if (customerName == null && province == null && customerRank == null && saleLeader == null && ifDeal == null && customerOwner == null && channelId == null) {
             return customerRepository.findAll(pageable);
         }
 
-        // 使用多条件查询（包含销售负责人）
-        return customerRepository.findByMultipleConditions(customerName, contact, province, customerRank, saleLeader, pageable);
+        // 使用多条件查询
+        return customerRepository.findByMultipleConditions(customerName, province, customerRank, saleLeader, ifDeal, customerOwner, channelId, pageable);
     }
 
     /**
@@ -129,6 +128,9 @@ public class CustomerService {
         existingCustomer.setProvince(customer.getProvince());
         existingCustomer.setCustomerRank(customer.getCustomerRank());
         existingCustomer.setSaleLeader(customer.getSaleLeader());
+        existingCustomer.setIfDeal(customer.getIfDeal());
+        existingCustomer.setCustomerOwner(customer.getCustomerOwner());
+        existingCustomer.setChannelId(customer.getChannelId());
 
         return customerRepository.save(existingCustomer);
     }

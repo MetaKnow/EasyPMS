@@ -320,7 +320,7 @@ public class UserController {
     @GetMapping("/all")
     public ResponseEntity<Map<String, Object>> getAllUsers() {
         try {
-            List<User> users = userService.getAllUsers();
+            List<UserWithRoleDTO> users = userService.getAllUsersWithRole();
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", users);

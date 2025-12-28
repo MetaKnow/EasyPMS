@@ -21,8 +21,8 @@ const userInfo = ref(null)
  * 组件挂载时获取用户信息
  */
 onMounted(() => {
-  // 从localStorage获取用户信息
-  const storedUserInfo = localStorage.getItem('userInfo')
+  // 从sessionStorage获取用户信息
+  const storedUserInfo = sessionStorage.getItem('userInfo')
   if (storedUserInfo) {
     try {
       userInfo.value = JSON.parse(storedUserInfo)

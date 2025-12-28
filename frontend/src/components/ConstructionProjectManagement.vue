@@ -12,10 +12,25 @@
           <i class="icon-delete"></i>
           删除项目
         </button>
-        <button class="btn btn-warning" @click="openHandover" :disabled="!handoverEnabled">
+        <button class="btn btn-transfer" @click="openHandover" :disabled="!handoverEnabled">
           <i class="icon-transfer"></i>
           移交运维
         </button>
+        <button v-if="canExport" class="btn btn-success" @click="exportTable">
+          <i class="icon-download"></i>
+          导出表格
+        </button>
+        <button class="btn btn-warning" @click="triggerImport">
+          <i class="icon-upload"></i>
+          导入表格
+        </button>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".csv"
+          style="display: none"
+          @change="handleFileImport"
+        />
       </div>
     </div>
 
@@ -187,6 +202,8 @@
 <script>
 import { 
   getConstructingProjects, 
+  getConstructingProjectById,
+  createConstructingProject,
   deleteConstructingProject, 
   batchDeleteConstructingProjects,
   getProjectSummary
@@ -194,6 +211,9 @@ import {
 import ProjectCreateForm from './ProjectCreateForm.vue'
 import ProjectHandoverForm from './ProjectHandoverForm.vue'
 import { getAllUsers } from '../api/user'
+import { getAllCustomers } from '../api/customer.js'
+import { getAllChannelDistributors } from '../api/channelDistributor.js'
+import { getAllProducts } from '../api/product.js'
 
 export default {
   name: 'ConstructionProjectManagement',
@@ -230,6 +250,9 @@ export default {
       handoverFormVisible: false,
       handoverProject: null,
       users: [],
+      customers: [],
+      channels: [],
+      products: [],
       // 单元格悬浮提示
       tooltipVisible: false,
       tooltipText: '',
@@ -258,6 +281,20 @@ export default {
       if (this.selectedProjects.length !== 1) return false
       const p = this.projectList.find(x => x.projectId === this.selectedProjects[0])
       return !!p && p.projectState === '进行中'
+    },
+    canExport() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const role = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = role.toLowerCase()
+        const isSales = role === '销售' || role === '销售角色' || roleLower === 'sales'
+        const isAfterSales = role === '售后' || role.includes('售后') || roleLower === 'afterservice' || roleLower === 'after service'
+        const isPM = role === '项目经理' || role.includes('项目经理') || roleLower === 'project manager' || roleLower === 'pm'
+        return !(isSales || isAfterSales || isPM)
+      } catch (_) {
+        return true
+      }
     }
   },
   mounted() {
@@ -288,7 +325,7 @@ export default {
           ...this.searchForm
         }
         try {
-          const raw = localStorage.getItem('userInfo')
+          const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const name = info && info.roleName ? String(info.roleName).trim() : ''
           const lower = name.toLowerCase()
@@ -350,6 +387,488 @@ export default {
         softName: ''
       }
       this.searchProjects()
+    },
+
+    async exportTable() {
+      if (!Array.isArray(this.projectList) || this.projectList.length === 0) {
+        alert('当前没有数据可导出')
+        return
+      }
+
+      try {
+        await this.ensureImportLookups()
+
+        const details = await Promise.all(
+          (this.projectList || []).map(async (p) => {
+            const id = p && p.projectId != null ? p.projectId : null
+            if (!id) return null
+            try {
+              const resp = await getConstructingProjectById(id)
+              const data = resp && resp.data ? resp.data : null
+              if (data && data.success === true) return data.data || null
+              return data && data.data ? data.data : null
+            } catch (_) {
+              return null
+            }
+          })
+        )
+
+        const userNameById = (id) => {
+          if (!id) return ''
+          const u = (this.users || []).find(x => x && x.userId === id)
+          return u ? (u.name || u.userName || '') : ''
+        }
+        const customerNameById = (id) => {
+          if (!id) return ''
+          const c = (this.customers || []).find(x => x && x.customerId === id)
+          return c ? (c.customerName || '') : ''
+        }
+        const channelNameById = (id) => {
+          if (!id) return ''
+          const c = (this.channels || []).find(x => x && x.channelId === id)
+          return c ? (c.channelName || '') : ''
+        }
+        const softLabelById = (id) => {
+          if (!id) return ''
+          const p = (this.products || []).find(x => x && x.softId === id)
+          if (!p) return ''
+          const name = p.softName || ''
+          const ver = p.softVersion || ''
+          return name ? (name + (ver ? ` (${ver})` : '')) : ''
+        }
+        const boolToCN = (v) => (v === true ? '是' : v === false ? '否' : '')
+        const dateStr = (v) => (v == null ? '' : String(v))
+
+        const exportData = details
+          .filter(Boolean)
+          .map((d) => ({
+            '项目ID': d.projectId != null ? String(d.projectId) : '',
+            '项目编号': d.projectNum || '',
+            '年度': d.year != null ? String(d.year) : '',
+            '项目名称': d.projectName || '',
+            '项目类型': d.projectType || '',
+            '项目状态': d.projectState || '',
+            '项目负责人ID': d.projectLeader != null ? String(d.projectLeader) : '',
+            '项目负责人': userNameById(d.projectLeader),
+            '商务负责人ID': d.saleLeader != null ? String(d.saleLeader) : '',
+            '商务负责人': userNameById(d.saleLeader),
+            '客户ID': d.customerId != null ? String(d.customerId) : '',
+            '客户名称': customerNameById(d.customerId),
+            '档案系统ID': d.softId != null ? String(d.softId) : '',
+            '档案系统': softLabelById(d.softId),
+            '开始日期': dateStr(d.startDate),
+            '计划结束日期': dateStr(d.planEndDate),
+            '实际结束日期': dateStr(d.actualEndDate),
+            '预计工期(天)': d.planPeriod != null ? String(d.planPeriod) : '',
+            '实际工期(天)': d.actualPeriod != null ? String(d.actualPeriod) : '',
+            '是否渠道项目': d.isAgent != null ? (Number(d.isAgent) === 1 ? '是' : '否') : '',
+            '渠道ID': d.channelId != null ? String(d.channelId) : '',
+            '渠道名称': channelNameById(d.channelId),
+            '项目金额': d.value != null ? String(d.value) : '',
+            '已回款金额': d.receivedMoney != null ? String(d.receivedMoney) : '',
+            '未回款金额': d.unreceiveMoney != null ? String(d.unreceiveMoney) : '',
+            '验收日期': dateStr(d.acceptanceDate),
+            '建设内容': d.constructContent || '',
+            '是否移交运维': boolToCN(d.isCommitAfterSale),
+            '创建时间': dateStr(d.createTime),
+            '更新时间': dateStr(d.updateTime)
+          }))
+
+        const csvContent = this.convertToCSV(exportData)
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `在建项目管理_${new Date().toISOString().slice(0, 10)}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        alert('表格导出成功')
+      } catch (error) {
+        console.error('导出表格失败:', error)
+        alert('导出表格失败: ' + error.message)
+      }
+    },
+
+    triggerImport() {
+      this.$refs.fileInput?.click()
+    },
+
+    async handleFileImport(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+
+      try {
+        await this.ensureImportLookups()
+
+        const text = await this.readFileAsText(file)
+        const importData = this.parseCSV(text)
+        if (!Array.isArray(importData) || importData.length === 0) {
+          alert('文件中没有有效数据')
+          return
+        }
+
+        const headers = Object.keys(importData[0] || {})
+        const requiredHeaders = ['项目名称', '年度', '项目类型']
+        const missing = requiredHeaders.filter(h => !headers.includes(h))
+        if (missing.length > 0) {
+          alert(`文件缺少必须的列: ${missing.join(', ')}`)
+          return
+        }
+
+        const validData = this.validateConstructingProjectImportData(importData)
+        if (validData.length === 0) {
+          alert('文件格式不正确或数据无效')
+          return
+        }
+
+        if (confirm(`确定要导入 ${validData.length} 条数据吗？`)) {
+          await this.importConstructingProjects(validData)
+        }
+      } catch (error) {
+        console.error('导入表格失败:', error)
+        alert('导入表格失败: ' + error.message)
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    async ensureImportLookups() {
+      if (!Array.isArray(this.users) || this.users.length === 0) {
+        try {
+          this.users = await getAllUsers()
+        } catch (_) {
+          this.users = []
+        }
+      }
+      if (!Array.isArray(this.customers) || this.customers.length === 0) {
+        try {
+          this.customers = await getAllCustomers()
+        } catch (_) {
+          this.customers = []
+        }
+      }
+      if (!Array.isArray(this.channels) || this.channels.length === 0) {
+        try {
+          this.channels = await getAllChannelDistributors()
+        } catch (_) {
+          this.channels = []
+        }
+      }
+      if (!Array.isArray(this.products) || this.products.length === 0) {
+        try {
+          this.products = await getAllProducts()
+        } catch (_) {
+          this.products = []
+        }
+      }
+    },
+
+    validateConstructingProjectImportData(rows) {
+      const list = []
+      for (const row of rows || []) {
+        const projectName = (row['项目名称'] || '').trim()
+        const year = this.parseYear(row['年度'])
+        const projectType = (row['项目类型'] || '').trim()
+        if (!projectName || !year || !projectType) continue
+
+        const projectNum = (row['项目编号'] || '').trim()
+        const projectState = (row['项目状态'] || '').trim()
+        if (projectState === '已完成') continue
+
+        const projectLeader = this.parseUserId(row['项目负责人ID']) || this.parseUserId(row['项目负责人'])
+        const saleLeader = this.parseUserId(row['商务负责人ID']) || this.parseUserId(row['商务负责人'])
+        const customerId = this.parseCustomerId(row['客户ID']) || this.parseCustomerId(row['客户名称'])
+        const softId = this.parseSoftId(row['档案系统ID']) || this.parseSoftId(row['档案系统']) || this.parseSoftId(row['软件系统'])
+
+        const isAgent = this.parseBoolean(row['是否渠道项目'])
+        const channelId = this.parseChannelId(row['渠道ID']) || this.parseChannelId(row['渠道名称'])
+        const startDate = this.parseDate(row['开始日期'])
+        const planEndDate = this.parseDate(row['计划结束日期'])
+        const actualEndDate = this.parseDate(row['实际结束日期'])
+        const acceptanceDate = this.parseDate(row['验收日期'])
+        const planPeriod = this.parseInt(row['预计工期(天)']) ?? this.parseInt(row['预计工期'])
+        const actualPeriod = this.parseInt(row['实际工期(天)']) ?? this.parseInt(row['实际工期'])
+        const value = this.parseDecimal(row['项目金额'])
+        const receivedMoney = this.parseDecimal(row['已回款金额'])
+        const unreceiveMoney = this.parseDecimal(row['未回款金额'])
+        const constructContent = (row['建设内容'] || '').trim()
+        const isCommitAfterSale = this.parseBoolean(row['是否移交运维'])
+
+        if (isAgent === true && !channelId) continue
+
+        const payload = {
+          projectName,
+          year,
+          projectType
+        }
+
+        if (projectNum) payload.projectNum = projectNum
+        if (projectState) payload.projectState = projectState
+        if (projectLeader) payload.projectLeader = projectLeader
+        if (saleLeader) payload.saleLeader = saleLeader
+        if (customerId) payload.customerId = customerId
+        if (softId) payload.softId = softId
+        if (startDate) payload.startDate = startDate
+        if (planEndDate) payload.planEndDate = planEndDate
+        if (actualEndDate) payload.actualEndDate = actualEndDate
+        if (acceptanceDate) payload.acceptanceDate = acceptanceDate
+        if (planPeriod != null) payload.planPeriod = planPeriod
+        if (actualPeriod != null) payload.actualPeriod = actualPeriod
+        if (value != null) payload.value = value
+        if (receivedMoney != null) payload.receivedMoney = receivedMoney
+        if (unreceiveMoney != null) payload.unreceiveMoney = unreceiveMoney
+        if (constructContent) payload.constructContent = constructContent
+        if (isCommitAfterSale !== null) payload.isCommitAfterSale = isCommitAfterSale
+        if (isAgent !== null) payload.isAgent = isAgent ? 1 : 0
+        if (channelId) payload.channelId = channelId
+
+        list.push(payload)
+      }
+      return list
+    },
+
+    async importConstructingProjects(data) {
+      let successCount = 0
+      let errorCount = 0
+      for (const item of data) {
+        try {
+          const resp = await createConstructingProject(item)
+          if (resp?.data?.success === false) throw new Error(resp?.data?.error || resp?.data?.message || '创建失败')
+          successCount++
+        } catch (error) {
+          console.error('导入在建项目失败:', error)
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`成功导入 ${successCount} 条数据${errorCount > 0 ? `，失败 ${errorCount} 条` : ''}`)
+        this.loadProjects()
+      } else {
+        alert('导入失败，请检查数据格式')
+      }
+    },
+
+    parseYear(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const y = Number(raw)
+      if (Number.isNaN(y) || !Number.isFinite(y)) return null
+      return Math.trunc(y)
+    },
+
+    parseInt(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const n = Number(raw)
+      if (Number.isNaN(n) || !Number.isFinite(n)) return null
+      return Math.trunc(n)
+    },
+
+    parseDecimal(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const n = Number(raw)
+      if (Number.isNaN(n) || !Number.isFinite(n)) return null
+      return n
+    },
+
+    parseDate(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const m = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+      if (!m) return null
+      const y = String(m[1]).padStart(4, '0')
+      const mm = String(m[2]).padStart(2, '0')
+      const dd = String(m[3]).padStart(2, '0')
+      return `${y}-${mm}-${dd}`
+    },
+
+    parseUserId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const user = (this.users || []).find(u => (u?.name && String(u.name).trim() === raw) || (u?.userName && String(u.userName).trim() === raw))
+      return user ? user.userId : null
+    },
+
+    parseCustomerId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const c = (this.customers || []).find(x => x?.customerName && String(x.customerName).trim() === raw)
+      return c ? c.customerId : null
+    },
+
+    parseChannelId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+      const c = (this.channels || []).find(x => x?.channelName && String(x.channelName).trim() === raw)
+      return c ? c.channelId : null
+    },
+
+    parseSoftId(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const asNum = Number(raw)
+      if (!Number.isNaN(asNum) && Number.isFinite(asNum) && asNum > 0) return asNum
+
+      const match = raw.match(/^(.+?)(?:\s*\((.+)\))?$/)
+      const softName = match ? String(match[1] || '').trim() : raw
+      const softVersion = match && match[2] != null ? String(match[2]).trim() : ''
+      const p = (this.products || []).find(x => {
+        const n = x?.softName ? String(x.softName).trim() : ''
+        const v = x?.softVersion ? String(x.softVersion).trim() : ''
+        if (!n) return false
+        if (softVersion) return n === softName && v === softVersion
+        return n === softName
+      })
+      return p ? p.softId : null
+    },
+
+    parseBoolean(value) {
+      if (value === undefined || value === null) return null
+      const raw = String(value).trim()
+      if (!raw) return null
+      const lower = raw.toLowerCase()
+      if (raw === '是' || raw === '1' || lower === 'true' || lower === 'yes') return true
+      if (raw === '否' || raw === '0' || lower === 'false' || lower === 'no') return false
+      return null
+    },
+
+    convertToCSV(data) {
+      if (!Array.isArray(data) || data.length === 0) return ''
+      const headers = Object.keys(data[0])
+      const rows = [headers.join(',')]
+      for (const row of data) {
+        const values = headers.map(h => {
+          const v = row[h] == null ? '' : String(row[h])
+          if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`
+          return v
+        })
+        rows.push(values.join(','))
+      }
+      return rows.join('\n')
+    },
+
+    async readFileAsText(file) {
+      const buffer = await this.readFileAsArrayBuffer(file)
+      let utf8 = ''
+      try {
+        utf8 = new TextDecoder('utf-8').decode(buffer)
+      } catch (_) {}
+      if (this.isLikelyChineseCSV(utf8)) return utf8
+      try {
+        const gb18030 = new TextDecoder('gb18030').decode(buffer)
+        if (this.isLikelyChineseCSV(gb18030)) return gb18030
+      } catch (_) {}
+      try {
+        const gbk = new TextDecoder('gbk').decode(buffer)
+        if (this.isLikelyChineseCSV(gbk)) return gbk
+      } catch (_) {}
+      try {
+        return await this.readAsTextLegacy(file, 'utf-8')
+      } catch (_) {}
+      return utf8
+    },
+
+    readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
+    },
+
+    readAsTextLegacy(file, encoding) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsText(file, encoding)
+      })
+    },
+
+    isLikelyChineseCSV(text) {
+      if (!text || typeof text !== 'string') return false
+      const firstLine = (text.split(/\r?\n/).find(line => line.trim().length > 0) || '')
+      const delimiter = firstLine.includes(',') ? ',' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : firstLine.includes('，') ? '，' : ','
+      const tokens = this.parseCSVLine(firstLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+      const replacementCount = (text.match(/\uFFFD/g) || []).length
+      const hasChinese = /[\u4e00-\u9fa5]/.test(text)
+      const headerOk = tokens.includes('项目名称') || tokens.includes('项目类型') || tokens.includes('年度')
+      return (headerOk && replacementCount === 0) || (hasChinese && replacementCount < 5)
+    },
+
+    parseCSV(text) {
+      const lines = (text || '').split(/\r?\n/).filter(line => line.trim())
+      if (lines.length < 2) return []
+
+      const headerLine = lines[0]
+      const candidates = [',', ';', '\t', '，', '；', '|']
+      let delimiter = ','
+      let bestCount = -1
+      const stripped = headerLine.replace(/"[^"]*"/g, '')
+      for (const d of candidates) {
+        const count = stripped.split(d).length - 1
+        if (count > bestCount) {
+          bestCount = count
+          delimiter = d
+        }
+      }
+      const headers = this.parseCSVLine(headerLine, delimiter).map(h => (h || '').replace(/^\ufeff/, '').replace(/["“”]/g, '').trim())
+
+      const data = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = this.parseCSVLine(lines[i], delimiter)
+        const row = {}
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] !== undefined ? String(values[idx]).trim().replace(/^\ufeff/, '') : ''
+        })
+        data.push(row)
+      }
+      return data
+    },
+
+    parseCSVLine(line, delimiter = ',') {
+      const result = []
+      let current = ''
+      let inQuotes = false
+      const s = String(line || '')
+      for (let i = 0; i < s.length; i++) {
+        const char = s[i]
+        if (char === '"') {
+          if (inQuotes && s[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      result.push(current)
+      return result.map(x => String(x).trim())
     },
 
     /**
@@ -821,12 +1340,36 @@ export default {
 }
 
 .btn-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+  border-color: #e0a800;
+  color: #212529;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #218838;
+  color: #fff;
+}
+
+.btn-transfer {
   background: #fa8c16;
   border-color: #fa8c16;
   color: white;
 }
 
-.btn-warning:hover {
+.btn-transfer:hover {
   background: #ffa940;
   border-color: #ffa940;
 }
@@ -933,6 +1476,18 @@ export default {
 
 .icon-refresh::before {
   content: '↻';
+}
+
+.icon-download::before {
+  content: "↓";
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.icon-upload::before {
+  content: "↑";
+  display: inline-block;
+  margin-right: 4px;
 }
 
 /* 悬浮提示样式：与其他模块一致 */

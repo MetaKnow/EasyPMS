@@ -28,35 +28,36 @@ public class CustomerController {
     /**
      * 分页查询客户列表
      *
-     * @param page         页码（从0开始，默认0）
-     * @param size         每页大小（默认10）
-     * @param customerName 客户名称（可选）
-     * @param contact      联系人（可选）
-     * @param province     省份（可选）
-     * @param customerRank 客户等级（可选）
-     * @param sortBy       排序字段（默认customerId）
-     * @param sortDir      排序方向（默认desc）
+     * @param page          页码（从0开始，默认0）
+     * @param size          每页大小（默认10）
+     * @param customerName  客户名称（可选）
+     * @param province      省份（可选）
+     * @param customerRank  客户等级（可选）
+     * @param sortBy        排序字段（默认customerId）
+     * @param sortDir       排序方向（默认desc）
+     * @param saleLeader    销售负责人（可选）
+     * @param ifDeal        是否成交（可选）
+     * @param customerOwner 客户归属（可选）
+     * @param channelId     渠道ID（可选）
      * @return 客户分页数据
      */
     @GetMapping
-    /**
-     * 函数级注释：分页查询客户列表
-     * - 支持按销售负责人 `saleLeader` 过滤，满足销售角色仅查看自身数据的要求
-     */
     public ResponseEntity<Map<String, Object>> getCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String customerName,
-            @RequestParam(required = false) String contact,
             @RequestParam(required = false) String province,
             @RequestParam(required = false) String customerRank,
             @RequestParam(defaultValue = "customerId") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
-            @RequestParam(required = false) Long saleLeader) {
+            @RequestParam(required = false) Long saleLeader,
+            @RequestParam(required = false) Boolean ifDeal,
+            @RequestParam(required = false) String customerOwner,
+            @RequestParam(required = false) Long channelId) {
 
         try {
             Page<Customer> customerPage = customerService.getCustomers(
-                    page, size, customerName, contact, province, customerRank, sortBy, sortDir, saleLeader);
+                    page, size, customerName, province, customerRank, sortBy, sortDir, saleLeader, ifDeal, customerOwner, channelId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("customers", customerPage.getContent());

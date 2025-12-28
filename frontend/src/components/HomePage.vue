@@ -162,10 +162,14 @@ export default {
             { id: 'steps', name: '标准交付步骤', icon: 'icon-steps', path: '/home/system/steps' },
             { id: 'deliverables', name: '标准交付物', icon: 'icon-deliverable', path: '/home/system/deliverables' },
             { id: 'products', name: '基础产品维护', icon: 'icon-product', path: '/home/system/products' },
-            { id: 'partners', name: '渠道商维护', icon: 'icon-partner', path: '/home/system/partners' }
+            { id: 'partners', name: '渠道商维护', icon: 'icon-partner', path: '/home/system/partners' },
+            { id: 'backup', name: '系统备份', icon: 'icon-backup', path: '/home/system/backup' }
           ]
         }
       ],
+      menuGroupExpanded: {
+        system: false
+      },
       // 表单显示状态
       constructingProjectFormVisible: false,
       constructingProjectIsViewMode: false,
@@ -195,7 +199,7 @@ export default {
      * 加载用户信息
      */
     loadUserInfo() {
-      const userInfo = localStorage.getItem('userInfo');
+      const userInfo = sessionStorage.getItem('userInfo');
       if (userInfo) {
         this.userInfo = JSON.parse(userInfo);
       }
@@ -212,15 +216,17 @@ export default {
      * 切换菜单组的展开/折叠状态
      */
     toggleMenuGroup(item) {
-      item.expanded = !item.expanded;
+      const id = item && item.id ? String(item.id) : ''
+      if (!id) return
+      this.menuGroupExpanded[id] = !this.menuGroupExpanded[id]
     },
 
     /**
      * 退出登录
      */
     logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userInfo');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('userInfo');
       this.$router.push('/');
     },
 
@@ -372,10 +378,20 @@ export default {
       const n = this.userDisplayName || ''
       return n.trim() ? n.trim().charAt(0).toUpperCase() : 'U'
     },
+    canViewSystemBackup() {
+      const role = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
+      const userNameLower = (this.userInfo && this.userInfo.userName) ? String(this.userInfo.userName).trim().toLowerCase() : ''
+      const isAdminUser = userNameLower === 'admin'
+      const isAdminRole = role === '管理员'
+      return isAdminUser || isAdminRole
+    },
     isAdminOrLeader() {
-      const name = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
-      const lower = name.toLowerCase()
-      return name === '管理员' || name === '公司领导' || name === '超级管理员' || name === '销售总监' || name === '项目总监' || lower === 'admin' || lower === 'leader' || lower === 'super admin' || lower === 'superadmin' || lower === 'sales director' || lower === 'project director'
+      const role = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
+      const roleLower = role.toLowerCase()
+      const userNameLower = (this.userInfo && this.userInfo.userName) ? String(this.userInfo.userName).trim().toLowerCase() : ''
+      const isAdminUser = userNameLower === 'admin'
+      const isAdminRole = role.includes('管理员') || role.includes('超级管理员') || roleLower.includes('admin') || roleLower.includes('super admin') || roleLower.includes('superadmin')
+      return isAdminUser || isAdminRole
     },
     isProjectManager() {
       const name = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim().toLowerCase() : ''
@@ -390,22 +406,48 @@ export default {
       const roleLower = role.toLowerCase()
       const isAdminUser = (this.userInfo && this.userInfo.userName) ? String(this.userInfo.userName).trim().toLowerCase() === 'admin' : false
       const isAdminRole = role === '管理员' || role === '超级管理员' || roleLower.includes('admin') || roleLower.includes('super admin') || roleLower.includes('superadmin')
-      const isLeaderRole = role === '公司领导' || roleLower.includes('leader')
-      const isSalesDirector = role === '销售总监' || roleLower.includes('sales director')
+      const isLeaderRole = role === '公司领导' || role.includes('公司领导') || roleLower.includes('leader')
+      const isSalesDirector = role === '销售总监' || role.includes('销售总监') || roleLower.includes('sales director')
       const isSalesRole = role.includes('销售') || roleLower.includes('sales')
       return isAdminUser || isAdminRole || isLeaderRole || isSalesDirector || isSalesRole
     },
     visibleMenuItems() {
-      // 非管理员/领导用户，限制菜单，但根据角色允许“客户管理”
       if (this.isAdminOrLeader) {
-        return this.menuItems
+        return this.menuItems.map(item => {
+          if (!item || !item.isGroup) return item
+          const expanded = this.menuGroupExpanded && this.menuGroupExpanded[item.id] !== undefined ? this.menuGroupExpanded[item.id] : !!item.expanded
+          if (item.id === 'system') {
+            const children = Array.isArray(item.children)
+              ? item.children.filter(c => c && (c.id !== 'backup' || this.canViewSystemBackup))
+              : item.children
+            return { ...item, expanded, children }
+          }
+          return { ...item, expanded }
+        })
       }
       const allowed = new Set(['dashboard', 'construction', 'maintenance'])
-      // 条件加入“客户管理”
       if (this.canViewCustomers) {
         allowed.add('customers')
       }
-      return this.menuItems.filter(item => allowed.has(item.id))
+      const role = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
+      const roleLower = role.toLowerCase()
+      const canViewPartners = role.includes('销售') || role.includes('公司领导') || role.includes('销售总监') || roleLower.includes('sales') || roleLower.includes('leader') || roleLower.includes('sales director')
+
+      const items = []
+      for (const item of this.menuItems) {
+        if (!item.isGroup) {
+          if (allowed.has(item.id)) items.push(item)
+          continue
+        }
+        if (item.id === 'system' && canViewPartners) {
+          const children = Array.isArray(item.children) ? item.children.filter(c => c && c.id === 'partners') : []
+          if (children.length > 0) {
+            const expanded = this.menuGroupExpanded && this.menuGroupExpanded[item.id] !== undefined ? this.menuGroupExpanded[item.id] : !!item.expanded
+            items.push({ ...item, expanded, children })
+          }
+        }
+      }
+      return items
     }
   }
 }
@@ -699,6 +741,7 @@ export default {
 .icon-deliverable::before { content: '📦'; }
 .icon-product::before { content: '📱'; }
 .icon-partner::before { content: '🤝'; }
+.icon-backup::before { content: '💾'; }
 
 /* 主内容区域 */
 .main-content {
