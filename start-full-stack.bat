@@ -87,7 +87,7 @@ echo.
 REM Start backend via embedded JDK
 echo Starting backend...
 powershell -NoProfile -Command ^
-  "$p=Start-Process -FilePath '%EMBEDDED_JAVA%' -ArgumentList @('-jar','%ROOT%backend\target\pms-1.0.0.jar') -WorkingDirectory '%ROOT%' -PassThru; $p.Id"
+  "$p=Start-Process -FilePath '%EMBEDDED_JAVA%' -ArgumentList @('-jar','%ROOT%backend\target\pms-1.0.0.jar') -WorkingDirectory '%ROOT%' -NoNewWindow -PassThru; $p.Id"
 REM 等待后端初始化片刻
 timeout /t 5 /nobreak >nul
 REM 同窗并发启动前端（如Node/npm可用）
