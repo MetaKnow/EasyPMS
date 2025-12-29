@@ -62,7 +62,6 @@
 
 <script>
 import request from '../api/request'
-import moment from 'moment'
 
 export default {
   name: 'SystemBackup',
@@ -131,7 +130,23 @@ export default {
     },
     formatTime(time) {
       if (!time) return '-'
-      return moment(time).format('YYYY-MM-DD HH:mm:ss')
+      let date
+      if (Array.isArray(time)) {
+        const [y, m, d, hh = 0, mm = 0, ss = 0] = time
+        date = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss))
+      } else if (typeof time === 'string') {
+        date = new Date(time)
+        if (Number.isNaN(date.getTime()) && time.includes(' ')) {
+          date = new Date(time.replace(' ', 'T'))
+        }
+      } else {
+        date = new Date(time)
+      }
+
+      if (Number.isNaN(date.getTime())) return String(time)
+
+      const pad2 = n => String(n).padStart(2, '0')
+      return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
     },
     getStatusClass(state) {
       return state === '成功' ? 'text-success' : 'text-danger'
