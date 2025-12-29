@@ -268,6 +268,14 @@ public class ConstructDeliverableFileService {
      * @param projectStepId 项目-步骤关系ID（可选）
      * @return 文件信息列表（包含 projectStepId、deliverableId、milestoneId、尺寸等）
      */
+    private Path getProjectRoot() {
+        Path cwd = Paths.get("").toAbsolutePath();
+        if (cwd.endsWith("backend")) {
+            return cwd.getParent();
+        }
+        return cwd;
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listFiles(Long projectId, Long deliverableId, Long projectStepId) {
         List<ConstructDeliverableFile> records;
@@ -277,7 +285,7 @@ public class ConstructDeliverableFileService {
             records = fileRepository.findByProjectIdAndDeliverableId(projectId, deliverableId);
         }
         List<Map<String, Object>> files = new ArrayList<>();
-        Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+        Path projectRoot = getProjectRoot();
         for (ConstructDeliverableFile r : records) {
             Map<String, Object> info = new HashMap<>();
             // 函数级注释：为前端查看弹窗提供必要的上下文字段
@@ -308,7 +316,7 @@ public class ConstructDeliverableFileService {
     public Path resolveFilePath(Long fileId) {
         ConstructDeliverableFile r = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("文件记录不存在，ID: " + fileId));
-        Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+        Path projectRoot = getProjectRoot();
         return projectRoot.resolve(r.getFilePath()).normalize();
     }
 

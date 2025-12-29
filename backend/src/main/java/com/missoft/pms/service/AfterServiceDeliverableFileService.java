@@ -7,16 +7,11 @@ import com.missoft.pms.repository.AfterServiceDeliverableRepository;
 import com.missoft.pms.repository.AfterServiceEventRepository;
 import com.missoft.pms.repository.AfterServiceProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,17 +36,19 @@ public class AfterServiceDeliverableFileService {
     @Autowired
     private AfterServiceEventRepository eventRepository;
 
+    private Path getProjectRoot() {
+        Path cwd = Paths.get("").toAbsolutePath();
+        if (cwd.endsWith("backend")) {
+            return cwd.getParent();
+        }
+        return cwd;
+    }
+
     /**
-     * 上传运维事件附件，保存到项目根目录 afterServiceDeliverableFiles/<项目编号-项目名称>/<事件时间-事件名称>/ 下。
-     * 文件名重命名为 “事件名称-yyyyMMdd-HHmmss” 保留扩展名。
+     * 上传附件（可多文件）
      */
     public List<AfterServiceDeliverable> upload(Long projectId, Long eventId, Long uploaderId, MultipartFile[] files) {
-        if (projectId == null || eventId == null) {
-            throw new RuntimeException("项目ID和事件ID不能为空");
-        }
-        if (uploaderId == null) {
-            throw new RuntimeException("上传人ID不能为空");
-        }
+        if (files == null || files.length == 0) return new ArrayList<>();
 
         AfterServiceProject project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("运维项目不存在，ID: " + projectId));
@@ -67,7 +64,7 @@ public class AfterServiceDeliverableFileService {
         String safeEventDate = safe(eventDateStr);
         String eventFolder = safeEventDate + "-" + eventName;
 
-        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+        Path repoRoot = getProjectRoot();
         Path root = repoRoot.resolve("afterServiceDeliverableFiles").resolve(projectKey).resolve(eventFolder);
         try {
             Files.createDirectories(root);
@@ -131,7 +128,7 @@ public class AfterServiceDeliverableFileService {
 
     public Path resolveFilePath(Long fileId) {
         var rec = fileRepository.findById(fileId).orElseThrow(() -> new RuntimeException("文件记录不存在"));
-        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+        Path repoRoot = getProjectRoot();
         Path target = repoRoot.resolve(rec.getFilePath()).normalize();
         if (!target.startsWith(repoRoot)) {
             throw new RuntimeException("非法路径");
@@ -141,7 +138,7 @@ public class AfterServiceDeliverableFileService {
 
     public void delete(Long fileId) {
         var rec = fileRepository.findById(fileId).orElseThrow(() -> new RuntimeException("文件记录不存在"));
-        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+        Path repoRoot = getProjectRoot();
         Path target = repoRoot.resolve(rec.getFilePath()).normalize();
         try {
             Files.deleteIfExists(target);
@@ -162,7 +159,7 @@ public class AfterServiceDeliverableFileService {
         if (list == null || list.isEmpty()) {
             return 0;
         }
-        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+        Path repoRoot = getProjectRoot();
         for (AfterServiceDeliverable rec : list) {
             String path = rec != null ? rec.getFilePath() : null;
             if (path == null || path.isBlank()) continue;

@@ -499,6 +499,14 @@ public class ConstructingProjectService {
         } catch (Exception ignore) {}
     }
 
+    private Path getProjectRoot() {
+        Path cwd = Paths.get("").toAbsolutePath();
+        if (cwd.endsWith("backend")) {
+            return cwd.getParent();
+        }
+        return cwd;
+    }
+
     /**
      * 删除项目
      *
@@ -529,7 +537,7 @@ public class ConstructingProjectService {
         // 删除物理目录 deliverableFiles/<项目编号-项目名称>/
         try {
             String projectKey = buildProjectKey(project);
-            Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+            Path repoRoot = getProjectRoot();
             Path projectDir = repoRoot.resolve("deliverableFiles").resolve(projectKey);
             deleteDirectoryRecursively(projectDir);
         } catch (Exception ignore) {
@@ -572,7 +580,7 @@ public class ConstructingProjectService {
                 if (project != null) {
                     try {
                         String projectKey = buildProjectKey(project);
-                        Path repoRoot = Paths.get("").toAbsolutePath().getParent();
+                        Path repoRoot = getProjectRoot();
                         Path projectDir = repoRoot.resolve("deliverableFiles").resolve(projectKey);
                         deleteDirectoryRecursively(projectDir);
                     } catch (Exception ignore) {}

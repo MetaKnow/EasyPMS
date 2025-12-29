@@ -84,23 +84,10 @@ if not defined RUN_FRONTEND (
 )
 echo.
 
-REM Start backend via embedded Java (capture PID) and frontend
-set "BACKEND_PID_FILE=%TEMP%\MissoftPMS_backend.pid"
-if exist "%BACKEND_PID_FILE%" del /f /q "%BACKEND_PID_FILE%" >nul 2>&1
-
-echo Starting backend (java -jar) and frontend in current window...
-REM 同窗并发启动后端（使用内置 JDK，避免依赖 Maven，并记录 PID 便于停止时精确关闭）
-for /f "usebackq tokens=* delims=" %%P in (`
-  powershell -NoProfile -Command ^
-    "$p=Start-Process -FilePath '%EMBEDDED_JAVA%' -ArgumentList @('-jar','%ROOT%backend\\target\\pms-1.0.0.jar') -WorkingDirectory '%ROOT%backend' -PassThru; $p.Id"
-`) do set "BACKEND_PID=%%P"
-if defined BACKEND_PID (
-  echo %BACKEND_PID%>"%BACKEND_PID_FILE%"
-  echo [OK] Backend PID: %BACKEND_PID%
-) else (
-  echo [ERROR] Failed to start backend
-  goto :halt
-)
+REM Start backend via embedded JDK
+echo Starting backend...
+powershell -NoProfile -Command ^
+  "$p=Start-Process -FilePath '%EMBEDDED_JAVA%' -ArgumentList @('-jar','%ROOT%backend\target\pms-1.0.0.jar') -WorkingDirectory '%ROOT%' -PassThru; $p.Id"
 REM 等待后端初始化片刻
 timeout /t 5 /nobreak >nul
 REM 同窗并发启动前端（如Node/npm可用）
@@ -125,18 +112,9 @@ REM -------- Stop services --------
 echo.
 echo Stopping services...
 
-REM Stop backend Java process started by this script (precise kill by PID)
-set "BACKEND_PID="
-if exist "%BACKEND_PID_FILE%" (
-  for /f "usebackq tokens=* delims=" %%P in ("%BACKEND_PID_FILE%") do set "BACKEND_PID=%%P"
-)
-if defined BACKEND_PID (
-  taskkill /pid %BACKEND_PID% /t /f >nul 2>&1
-)
-
-REM Best-effort stop for frontend dev server started by this script
+REM Try friendly kill by image names (may kill other dev java/node processes)
+taskkill /im java.exe /f >nul 2>&1
 taskkill /im node.exe /f >nul 2>&1
-if exist "%BACKEND_PID_FILE%" del /f /q "%BACKEND_PID_FILE%" >nul 2>&1
 
 REM Also close the started windows by title (best effort)
 taskkill /fi "WINDOWTITLE eq MissoftPMS-Backend*" /f >nul 2>&1
@@ -150,7 +128,7 @@ exit /b 0
 
 :halt
 echo.
-echo [HINT] Please ensure Node.js and npm are installed and in PATH (for frontend).
+echo [HINT] Please ensure Java, Maven, Node.js, and npm are installed and in PATH.
 echo [HINT] Run this script from a normal Windows filesystem path (not WSL).
 echo Press any key to exit...
 pause
