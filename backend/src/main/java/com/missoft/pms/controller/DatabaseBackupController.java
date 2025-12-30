@@ -49,11 +49,22 @@ public class DatabaseBackupController {
     // 手动触发备份（用于测试）
     @PostMapping("/trigger")
     public ResponseEntity<Map<String, Object>> triggerBackup() {
-        backupService.performBackup();
-        backupService.cleanupOldBackups();
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Backup triggered successfully");
-        return ResponseEntity.ok(response);
+        try {
+            DatabaseBackupService.BackupResult result = backupService.performBackup();
+            backupService.cleanupOldBackups();
+            if (result == null || !result.isSuccess()) {
+                response.put("success", false);
+                response.put("message", result == null ? "触发备份失败" : result.getMessage());
+                return ResponseEntity.ok(response);
+            }
+            response.put("success", true);
+            response.put("message", result.getMessage());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage() == null ? "触发备份失败" : e.getMessage());
+            return ResponseEntity.ok(response);
+        }
     }
 }

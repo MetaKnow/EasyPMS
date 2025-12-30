@@ -10,11 +10,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -35,6 +37,9 @@ public class DatabaseBackupService {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    @Value("${pms.backup.mysqldump:}")
+    private String mysqldumpPath;
+
     // 每天凌晨1点执行
     @Scheduled(cron = "0 0 1 * * ?")
     public void scheduledBackup() {
@@ -43,7 +48,7 @@ public class DatabaseBackupService {
         cleanupOldBackups();
     }
 
-    public void performBackup() {
+    public BackupResult performBackup() {
         LocalDateTime now = LocalDateTime.now();
         String fileName = "pms_backup_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".sql";
         
@@ -53,7 +58,7 @@ public class DatabaseBackupService {
         } catch (Exception e) {
             logger.error("Failed to create backup directory: " + backupDir.toAbsolutePath(), e);
             saveBackupRecord(fileName, now, "失败");
-            return;
+            return BackupResult.failure("备份目录创建失败");
         }
 
         File backupFile = backupDir.resolve(fileName).toFile();
@@ -63,17 +68,22 @@ public class DatabaseBackupService {
             String host = extractHost(dbUrl);
             String port = extractPort(dbUrl);
 
-            // 构建 mysqldump 命令
-            // 注意：生产环境应考虑安全性，避免在命令行暴露密码。但此处为简化实现。
-            // 使用 ProcessBuilder
-            ProcessBuilder pb = new ProcessBuilder(
-                    "mysqldump",
-                    "-h" + host,
-                    "-P" + port,
-                    "-u" + dbUser,
-                    "-p" + dbPassword,
-                    dbName
-            );
+            String mysqldumpExe = resolveMysqldumpExecutable();
+            List<String> command = new ArrayList<>();
+            command.add(mysqldumpExe);
+            command.add("-h");
+            command.add(host);
+            command.add("-P");
+            command.add(port);
+            command.add("-u");
+            command.add(dbUser);
+            command.add("--single-transaction");
+            command.add(dbName);
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            if (dbPassword != null) {
+                pb.environment().put("MYSQL_PWD", dbPassword);
+            }
             
             // 重定向输出到文件
             pb.redirectOutput(backupFile);
@@ -85,6 +95,7 @@ public class DatabaseBackupService {
             if (finished && process.exitValue() == 0) {
                 logger.info("Database backup successful: " + backupFile.getAbsolutePath());
                 saveBackupRecord(fileName, now, "成功");
+                return BackupResult.success(fileName, backupFile.getAbsolutePath());
             } else {
                 logger.error("Database backup failed. Exit code: " + (finished ? process.exitValue() : "timeout"));
                 saveBackupRecord(fileName, now, "失败");
@@ -92,11 +103,21 @@ public class DatabaseBackupService {
                 if (backupFile.exists() && backupFile.length() == 0) {
                     backupFile.delete();
                 }
+                return BackupResult.failure("备份失败");
             }
 
+        } catch (IOException e) {
+            String msg = e.getMessage() == null ? "" : e.getMessage();
+            logger.error("Error during database backup", e);
+            saveBackupRecord(fileName, now, "失败");
+            if (msg.contains("CreateProcess error=2") || msg.contains("error=2")) {
+                return BackupResult.failure("系统未找到mysqldump，请安装MySQL客户端工具或配置pms.backup.mysqldump为mysqldump绝对路径");
+            }
+            return BackupResult.failure("备份执行失败：" + (msg.isEmpty() ? "IO异常" : msg));
         } catch (Exception e) {
             logger.error("Error during database backup", e);
             saveBackupRecord(fileName, now, "失败");
+            return BackupResult.failure("备份执行失败");
         }
     }
 
@@ -159,6 +180,22 @@ public class DatabaseBackupService {
         return Paths.get(System.getProperty("user.dir")).toAbsolutePath();
     }
 
+    private String resolveMysqldumpExecutable() {
+        String configured = mysqldumpPath == null ? "" : mysqldumpPath.trim();
+        if (!configured.isEmpty()) {
+            boolean looksLikePath = configured.contains(File.separator) || configured.contains("/") || configured.matches("^[A-Za-z]:\\\\.*");
+            if (looksLikePath) {
+                File f = new File(configured);
+                if (!f.exists() || !f.isFile()) {
+                    throw new IllegalStateException("配置的mysqldump路径不存在：" + configured);
+                }
+                return f.getAbsolutePath();
+            }
+            return configured;
+        }
+        return "mysqldump";
+    }
+
     private String extractDatabaseName(String url) {
         // jdbc:mysql://localhost:3306/pms_db?...
         int queryStart = url.indexOf('?');
@@ -192,5 +229,43 @@ public class DatabaseBackupService {
             return clean.substring(portIdx + 1);
         }
         return "3306";
+    }
+
+    public static class BackupResult {
+        private final boolean success;
+        private final String message;
+        private final String fileName;
+        private final String filePath;
+
+        private BackupResult(boolean success, String message, String fileName, String filePath) {
+            this.success = success;
+            this.message = message;
+            this.fileName = fileName;
+            this.filePath = filePath;
+        }
+
+        public static BackupResult success(String fileName, String filePath) {
+            return new BackupResult(true, "备份成功", fileName, filePath);
+        }
+
+        public static BackupResult failure(String message) {
+            return new BackupResult(false, message == null ? "备份失败" : message, null, null);
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public String getFilePath() {
+            return filePath;
+        }
     }
 }

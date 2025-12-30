@@ -4,3 +4,4 @@ tools/
 *.log
 afterServiceDeliverableFiles/
 backend/logs/
+database/backup
