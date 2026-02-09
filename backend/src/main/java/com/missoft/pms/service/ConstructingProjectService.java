@@ -613,6 +613,10 @@ public class ConstructingProjectService {
             throw new RuntimeException("项目类型不能为空");
         }
 
+        if (constructingProject.getSoftId() == null) {
+            throw new RuntimeException("软件系统不能为空");
+        }
+
         if (constructingProject.getYear() == null) {
             throw new RuntimeException("年度不能为空");
         }
@@ -621,6 +625,10 @@ public class ConstructingProjectService {
         int currentYear = LocalDate.now().getYear();
         if (constructingProject.getYear() < 2000 || constructingProject.getYear() > currentYear + 10) {
             throw new RuntimeException("年度必须在2000年到" + (currentYear + 10) + "年之间");
+        }
+
+        if (constructingProject.getProjectLeader() == null) {
+            throw new RuntimeException("项目负责人不能为空");
         }
 
         // 验证金额字段

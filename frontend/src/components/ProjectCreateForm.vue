@@ -633,6 +633,10 @@ export default {
       if (!this.form.projectType.trim()) {
         errors.push('项目类型不能为空')
       }
+
+      if (!this.form.softId) {
+        errors.push('软件系统不能为空')
+      }
       
       if (!this.form.customerId) {
         errors.push('客户名称不能为空')

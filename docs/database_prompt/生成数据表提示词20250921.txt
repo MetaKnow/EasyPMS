@@ -19,3 +19,29 @@
 请在数据库中增加一张运维交付物表，表名为afterService_deliverable，字段包括：deliverableId（主键）、deliverableName（交付物名称）、filePath（文件路径）、fileSize（文件大小）、projectId（运维项目ID，afterService_project表外键，必填）、eventId（运维事件ID，afterService_event表外键）、uploadUser（上传人，user表外键，必填）
 
 
+修改standard_construct_step表：去掉director、planStartDate、planEndDate、actualStartDate、actualEndDate、planPeriod、actualPeriod、afterServiceProjectId字段；增加type字段。
+
+修改project_relations表：表名改为project_sstep_relations，去掉milestoneId、nstepId字段；增加director（user表外键）、planStartDate、planEndDate、actualStartDate、actualEndDate、planPeriod、actualPeriod字段。
+
+修改nonstandard_construct_step表：增加projectId字段（constructing_project表外键）。
+
+修改construct_milestone表：增加projectId（constructing_project表外键）、milestoneName（必填）字段。
+
+修改construct_deliverable表：表名改为construct_standard_deliverable，去掉filePath、fileSize、uploadUser字段；增加isMustLoad、sstepId（standard_construct_step表外键）、milestoneId（construct_milestone表外键）字段。
+
+增加construct_deliverableFiles表：字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、deliverableId（construct_standard_deliverable表外键）、projectId（constructing_project表外键）、sstepId（standard_construct_step表外键）、nstepId（nonstandard_construct_step表外键）。
+
+增加archieveSoft表：字段包括softId（主键）、softName（必填）、softVersion（必填）。
+
+增加standard_milestone表：字段包括milestoneId（主键）、milestoneName（里程碑名称）、createTime、updateTime。
+
+增加interface表：字段包括interfaceId（主键）、projectId（constructing_project表外键）、interfaceType（接口类型，必填）、integrationSysName（集成系统名称，必填）、integrationSysManufacturer（集成系统厂商，必填）、archieveDataCategory（归档数据类别）、archieveInterfaceImpl（归档接口实现方式）、milestoneId（construct_milestone表外键）、sstepId（standard_construct_step表外键）。
+
+standard_construct_step表中增加字段：smilestoneId（standard_milestone表外键）
+
+nonstandard_construct_step表中增加字段：smilestoneId（standard_milestone表外键）
+
+增加extra_requirement表，字段包括requirementId（主键）、requirementName（需求名称）、isPay(是否付费)、payAmount（付费金额）、isDeliver（是否交付）、isComplete（是否完成）、isProductization（是否产品化）、workload（工作量）、developer（开发负责人，user表外键）
+
+增加extra_requirement_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、projectId（constructing_project表外键）、requirementId（extra_requirement表外键）。
+

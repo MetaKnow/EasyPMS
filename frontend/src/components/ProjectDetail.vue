@@ -6,6 +6,9 @@
         <span class="name">{{ project?.projectName || '项目详情' }}</span>
         <span class="num" v-if="project?.projectNum">编号：{{ project.projectNum }}</span>
       </div>
+      <div class="actions">
+        <button v-if="activeTab === 'out_contract'" class="add-btn" @click="openExtraDialog('create')">添加需求</button>
+      </div>
     </div>
 
     <div v-if="loading" class="state">正在加载...</div>
@@ -74,7 +77,7 @@
                         {{ u.name || u.userName }}
                       </option>
                     </select>
-                  </template>
+                    </template>
                   <template v-else>
                     {{ row.directorName ?? '-' }}
                   </template>
@@ -359,6 +362,66 @@
           </table>
         </div>
       </section>
+    </div>
+
+      <!-- 合同外需求 -->
+    <div v-show="activeTab === 'out_contract'" class="content-grid">
+        <section class="card wide">
+          <div class="table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th width="60">序号</th>
+                  <th>需求名称</th>
+                  <th width="90">是否付费</th>
+                  <th width="120">付费金额（元）</th>
+                  <th width="90">是否交付</th>
+                  <th width="90">是否完成</th>
+                  <th width="100">是否产品化</th>
+                  <th width="120">工作量</th>
+                  <th width="160">开发负责人</th>
+                  <th width="120">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(r, idx) in extraRequirements" :key="r.requirementId || (r.id ?? idx)">
+                  <td>{{ idx + 1 }}</td>
+                  <td>{{ r.requirementName }}</td>
+                  <td>{{ r.isPay ? '是' : '否' }}</td>
+                  <td>{{ r.payAmount != null ? String(r.payAmount) : '-' }}</td>
+                  <td>{{ r.isDeliver ? '是' : '否' }}</td>
+                  <td>{{ r.isComplete ? '是' : '否' }}</td>
+                  <td>{{ r.isProductization ? '是' : '否' }}</td>
+                  <td>{{ r.workload != null ? String(r.workload) : '-' }}</td>
+                  <td>{{ userName(r.developer) || '-' }}</td>
+                  <td class="deliverable-actions">
+                    <div class="actions-inner">
+                      <button class="icon-btn" title="查看" @click="viewExtra(r)">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="编辑" @click="editExtra(r)" :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="删除" @click="deleteExtra(r)" :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
+                        <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!extraRequirements || extraRequirements.length === 0">
+                  <td colspan="10" class="empty">当前暂无合同外需求</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button class="btn" disabled>上一页</button>
+            <span class="page-info">共 {{ extraRequirements.length }} 条</span>
+            <button class="btn" disabled>下一页</button>
+          </div>
+        </section>
+    </div>
+
 
       <!-- 新增接口弹窗 -->
       <div v-if="showInterfaceDialog" class="dialog-mask" @click.self="closeInterfaceDialog">
@@ -547,12 +610,131 @@
         </div>
         
         <!-- 其他标签页空白占位 -->
-        <div v-show="activeTab !== 'contract'" class="empty-tab">
+        <div v-show="activeTab !== 'contract' && activeTab !== 'out_contract'" class="empty-tab">
            <div class="empty-state">
              <div class="empty-icon">📂</div>
              <h3>{{ getTabName(activeTab) }}</h3>
              <p>该模块正在建设中...</p>
            </div>
+        </div>
+    </div>
+    <!-- 新增合同外需求弹窗 -->
+    <div v-if="showExtraDialog" class="dialog-mask extra-modal-overlay">
+      <div class="extra-modal">
+        <div class="extra-modal-header">
+          <h3>{{ extraDialogMode === 'create' ? '新增合同外需求' : (extraDialogMode === 'edit' ? '编辑合同外需求' : '查看合同外需求') }}</h3>
+          <button class="extra-close" @click="closeExtraDialog">&times;</button>
+        </div>
+        <div class="extra-modal-body">
+          <form class="extra-form" @submit.prevent>
+            <div class="extra-section">
+              <div class="extra-grid">
+                <div class="extra-group">
+                  <label>需求名称 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <input type="text" v-model.trim="extraForm.requirementName" placeholder="请输入需求名称" :disabled="extraDialogMode === 'view'" />
+                </div>
+                <div class="extra-group">
+                  <label>是否付费 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <select v-model="extraForm.isPay" :disabled="extraDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option :value="false">否</option>
+                    <option :value="true">是</option>
+                  </select>
+                </div>
+                <div class="extra-group" v-if="extraForm.isPay">
+                  <label>付费金额 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <input type="number" v-model.number="extraForm.payAmount" step="0.01" placeholder="请输入金额（元）" :disabled="extraDialogMode === 'view'" />
+                </div>
+                <div class="extra-group">
+                  <label>是否交付 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <select v-model="extraForm.isDeliver" :disabled="extraDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option :value="false">否</option>
+                    <option :value="true">是</option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>是否完成 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <select v-model="extraForm.isComplete" :disabled="extraDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option :value="false">否</option>
+                    <option :value="true">是</option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>是否产品化 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                  <select v-model="extraForm.isProductization" :disabled="extraDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option :value="false">否</option>
+                    <option :value="true">是</option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>工作量</label>
+                  <input type="number" v-model.number="extraForm.workload" step="0.01" placeholder="请输入工作量（人天）" :disabled="extraDialogMode === 'view'" />
+                </div>
+                <div class="extra-group">
+                  <label>开发负责人</label>
+                  <select v-model="extraForm.developer" :disabled="extraDialogMode === 'view'">
+                    <option :value="null">请选择负责人</option>
+                    <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                      {{ u.name || u.userName }}
+                    </option>
+                  </select>
+                </div>
+                <div class="extra-group full-width">
+                  <div class="extra-section-title">上传附件</div>
+                  <div class="extra-upload-card">
+                    <div class="extra-upload-head" v-if="extraDialogMode === 'edit' || extraDialogMode === 'create'">
+                      <button type="button" class="btn primary select-btn" @click="triggerExtraAttachmentInput">选择文件</button>
+                      <input ref="extraAttachmentInput" type="file" multiple class="hidden-file" @change="onExtraFilesSelected($event)" />
+                    </div>
+                    <div class="extra-upload-body">
+                      <div class="progress" v-if="extraUploading">
+                        <div class="bar" :style="{ width: extraUploadProgress + '%' }"></div>
+                        <span class="percent">{{ extraUploadProgress }}%</span>
+                      </div>
+                      <div class="uploaded-list" v-if="extraDialogMode === 'create' && extraPendingFiles.length">
+                        <div class="template-title">待上传附件：</div>
+                        <ul class="file-list compact">
+                          <li v-for="(f, idx) in extraPendingFiles" :key="f.name + '-' + idx" class="file-item">
+                            <span class="file-link">{{ f.name }}</span>
+                            <span class="size">{{ prettySize(f.size) }}</span>
+                            <button class="icon-btn danger" title="移除" @click="removeExtraPendingFile(idx)">
+                              <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-if="extraAttachments.length">
+                        <ul class="file-list compact">
+                          <li v-for="f in extraAttachments" :key="f.fileId" class="file-item">
+                            <button type="button" class="file-link preview-link" @click="onPreviewExtraFile(f)">{{ fileBaseName(f.filePath) }}</button>
+                            <span class="size">{{ prettySize(f.fileSize) }}</span>
+                            <a class="icon-btn" :href="convertExtraDownloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                              <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                            </a>
+                            <button class="icon-btn danger" v-if="extraDialogMode === 'edit'" title="删除" @click="onDeleteExtraFile(f)">
+                              <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-else-if="!extraPendingFiles.length">
+                        <div class="template-title" style="color:#999">暂无附件</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="extra-modal-footer">
+          <div class="extra-actions">
+            <button class="btn primary" @click="confirmExtra">{{ extraDialogMode === 'view' ? '关闭' : '确定' }}</button>
+            <button class="btn ghost" @click="closeExtraDialog" v-if="extraDialogMode !== 'view'">取消</button>
+          </div>
         </div>
       </div>
     </div>
@@ -567,6 +749,7 @@ import { getAllStandardMilestones } from '../api/standardMilestone';
 import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverableTemplates, downloadDeliverableTemplate, getStandardDeliverablesByProjectAndMilestoneName } from '../api/standardDeliverable';
 import { createInterface, listInterfacesByProject, deleteInterface } from '../api/interface';
 import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
+import { createExtraRequirement, listExtraRequirementsByProject, updateExtraRequirement, deleteExtraRequirement, uploadExtraRequirementFiles, listExtraRequirementFiles, deleteExtraRequirementFile } from '../api/extraRequirement';
 import request from '../api/request'
 // 引入预览依赖：Mammoth（docx→HTML）、XLSX
 import mammoth from 'mammoth/mammoth.browser'
@@ -670,6 +853,25 @@ export default {
       previewError: '',
       // 预览缩放（非 PDF 内置工具）
       previewScale: 1.0
+      ,
+      // 合同外需求数据与表单
+      extraRequirements: [],
+      showExtraDialog: false,
+      extraDialogMode: 'create', // create | edit | view
+      extraAttachments: [],
+      extraPendingFiles: [],
+      extraUploading: false,
+      extraUploadProgress: 0,
+      extraForm: {
+        requirementName: '',
+        isPay: null,
+        payAmount: null,
+        isDeliver: null,
+        isComplete: null,
+        isProductization: null,
+        workload: null,
+        developer: null
+      }
     };
   },
   computed: {
@@ -1632,6 +1834,10 @@ export default {
             this.personalBlocks = [];
           }
         }
+          // 加载合同外需求列表
+          try {
+            await this.loadExtraRequirements();
+          } catch (_) {}
       } catch (err) {
         const backendMsg = err?.response?.data?.message || err?.response?.data?.error;
         this.error = backendMsg ? `加载失败：${backendMsg}` : (err?.message || '加载失败');
@@ -2325,6 +2531,443 @@ export default {
       } catch (e) {
         this.showError('删除个性化需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
       }
+    },
+    /**
+     * 函数级注释：加载合同外需求列表（按项目）
+     */
+    async loadExtraRequirements() {
+      if (!this.project || !this.project.projectId) return
+      try {
+        const resp = await listExtraRequirementsByProject(this.project.projectId)
+        const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.extraRequirements || resp || [])
+        this.extraRequirements = list || []
+      } catch (e) {
+        this.extraRequirements = []
+      }
+    },
+    /**
+     * 函数级注释：加载合同外需求附件列表
+     * @param {number} requirementId 需求ID
+     */
+    async loadExtraRequirementFiles(requirementId) {
+      if (!requirementId) {
+        this.extraAttachments = []
+        return
+      }
+      try {
+        const resp = await listExtraRequirementFiles(requirementId)
+        const files = resp?.data?.files || resp?.data || []
+        this.extraAttachments = Array.isArray(files) ? files : []
+      } catch (_) {
+        this.extraAttachments = []
+      }
+    },
+    /**
+     * 函数级注释：打开添加/编辑/查看合同外需求弹窗
+     * @param {string} mode 模式：create|edit|view
+     * @param {Object} row 行数据（仅edit/view时需要）
+     */
+    openExtraDialog(mode = 'create', row = null) {
+      this.extraDialogMode = mode
+      this.showExtraDialog = true
+      this.extraAttachments = []
+      this.extraPendingFiles = []
+      this.extraUploading = false
+      this.extraUploadProgress = 0
+      if (mode === 'create') {
+        this.extraForm = {
+          requirementName: '',
+          isPay: null,
+          payAmount: null,
+          isDeliver: null,
+          isComplete: null,
+          isProductization: null,
+          workload: null,
+          developer: null
+        }
+      } else if (row) {
+        // 复制数据
+        this.extraForm = {
+          requirementId: row.requirementId,
+          requirementName: row.requirementName,
+          isPay: row.isPay,
+          payAmount: row.payAmount,
+          isDeliver: row.isDeliver,
+          isComplete: row.isComplete,
+          isProductization: row.isProductization,
+          workload: row.workload,
+          developer: row.developer
+        }
+        this.loadExtraRequirementFiles(row.requirementId)
+      }
+    },
+    /**
+     * 函数级注释：查看合同外需求
+     * @param {Object} row 
+     */
+    viewExtra(row) {
+      this.openExtraDialog('view', row)
+    },
+    /**
+     * 函数级注释：编辑合同外需求
+     * @param {Object} row 
+     */
+    editExtra(row) {
+      this.openExtraDialog('edit', row)
+    },
+    /**
+     * 函数级注释：删除合同外需求
+     * @param {Object} row
+     */
+    async deleteExtra(row) {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能删除合同外需求')
+      }
+      const ok = this.$confirm ? await this.$confirm('确认删除该合同外需求及其附件？') : window.confirm('确认删除该合同外需求及其附件？')
+      if (!ok) return
+      try {
+        await deleteExtraRequirement(row.requirementId)
+        this.$message && this.$message.success('合同外需求已删除')
+        await this.loadExtraRequirements()
+      } catch (e) {
+        this.showError('删除合同外需求失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：关闭添加合同外需求弹窗
+     */
+    closeExtraDialog() {
+      this.showExtraDialog = false
+      this.extraAttachments = []
+      this.extraPendingFiles = []
+      this.extraUploading = false
+      this.extraUploadProgress = 0
+    },
+    /**
+     * 函数级注释：提交合同外需求
+     */
+    async confirmExtra() {
+      if (this.extraDialogMode === 'view') {
+        this.closeExtraDialog()
+        return
+      }
+
+      const name = (this.extraForm.requirementName || '').trim()
+      if (!name) {
+        this.showError('请填写需求名称')
+        return
+      }
+      if (this.extraForm.isPay === null) {
+        this.showError('请选择是否付费')
+        return
+      }
+      if (this.extraForm.isPay && (this.extraForm.payAmount == null || this.extraForm.payAmount === '')) {
+        this.showError('请填写付费金额')
+        return
+      }
+      if (this.extraForm.isDeliver === null) {
+        this.showError('请选择是否交付')
+        return
+      }
+      if (this.extraForm.isComplete === null) {
+        this.showError('请选择是否完成')
+        return
+      }
+      if (this.extraForm.isProductization === null) {
+        this.showError('请选择是否产品化')
+        return
+      }
+      const payload = {
+        projectId: this.project?.projectId,
+        requirementName: name,
+        isPay: !!this.extraForm.isPay,
+        payAmount: this.extraForm.isPay ? (this.extraForm.payAmount ?? null) : null,
+        isDeliver: !!this.extraForm.isDeliver,
+        isComplete: !!this.extraForm.isComplete,
+        isProductization: !!this.extraForm.isProductization,
+        workload: this.extraForm.workload ?? null,
+        developer: this.extraForm.developer ?? null
+      }
+      try {
+        let resp
+        if (this.extraDialogMode === 'edit') {
+          resp = await updateExtraRequirement(this.extraForm.requirementId, payload)
+        } else {
+          resp = await createExtraRequirement(payload)
+        }
+
+        if (resp?.data?.success) {
+          this.$message && this.$message.success(this.extraDialogMode === 'edit' ? '合同外需求已更新' : '合同外需求已添加')
+        } else {
+          this.$message && this.$message.success(this.extraDialogMode === 'edit' ? '合同外需求已更新' : '合同外需求已添加')
+        }
+
+        if (this.extraDialogMode === 'create' && this.extraPendingFiles.length) {
+          const createdId = resp?.data?.extraRequirement?.requirementId
+          if (createdId) {
+            await this.uploadExtraRequirementFiles(createdId, this.extraPendingFiles)
+            this.extraPendingFiles = []
+          }
+        }
+
+        this.showExtraDialog = false
+        await this.loadExtraRequirements()
+      } catch (e) {
+        const msg = e?.response?.data?.error || e?.message || (this.extraDialogMode === 'edit' ? '更新失败' : '添加失败')
+        this.showError(msg)
+      }
+    },
+    /**
+     * 函数级注释：选择合同外需求附件
+     * @param {Event} evt 选择事件
+     */
+    onExtraFilesSelected(evt) {
+      const files = Array.from(evt?.target?.files || [])
+      if (evt?.target) evt.target.value = ''
+      if (!files.length) return
+
+      if (this.extraDialogMode === 'create') {
+        this.extraPendingFiles = this.extraPendingFiles.concat(files)
+        return
+      }
+
+      const requirementId = this.extraForm.requirementId
+      if (!requirementId) {
+        this.showError('请先保存需求后再上传附件')
+        return
+      }
+      this.uploadExtraRequirementFiles(requirementId, files)
+    },
+    triggerExtraAttachmentInput() {
+      try {
+        this.$refs.extraAttachmentInput && this.$refs.extraAttachmentInput.click()
+      } catch (_) {}
+    },
+    /**
+     * 函数级注释：上传合同外需求附件并刷新列表
+     * @param {number} requirementId 需求ID
+     * @param {File[]} files 文件列表
+     */
+    async uploadExtraRequirementFiles(requirementId, files) {
+      if (!this.project?.projectId) return
+      this.extraUploading = true
+      this.extraUploadProgress = 0
+      try {
+        await uploadExtraRequirementFiles(this.project.projectId, requirementId, files, {
+          onProgress: (percent) => {
+            this.extraUploadProgress = percent
+          }
+        })
+        await this.loadExtraRequirementFiles(requirementId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '附件上传失败')
+      } finally {
+        this.extraUploading = false
+      }
+    },
+    /**
+     * 函数级注释：删除合同外需求附件
+     * @param {Object} file 文件记录
+     */
+    async onDeleteExtraFile(file) {
+      try {
+        await deleteExtraRequirementFile(file.fileId)
+        this.$message && this.$message.success('附件已删除')
+        await this.loadExtraRequirementFiles(this.extraForm.requirementId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '删除附件失败')
+      }
+    },
+    /**
+     * 函数级注释：移除待上传附件
+     * @param {number} idx 索引
+     */
+    removeExtraPendingFile(idx) {
+      this.extraPendingFiles.splice(idx, 1)
+    },
+    /**
+     * 函数级注释：合同外需求附件下载URL
+     * @param {number} fileId 文件ID
+     * @returns {string} URL
+     */
+    convertExtraDownloadURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/extra-requirement-files/download/${fileId}`
+    },
+    /**
+     * 函数级注释：合同外需求附件 PDF 预览URL
+     */
+    convertExtraPreviewPdfURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/extra-requirement-files/preview/pdf/${fileId}`
+    },
+    /**
+     * 函数级注释：合同外需求附件视频预览URL
+     */
+    convertExtraPreviewVideoURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/extra-requirement-files/preview/video/${fileId}`
+    },
+    /**
+     * 函数级注释：获取合同外需求附件的二进制
+     * @param {number} fileId 文件ID
+     * @returns {Promise<Blob>}
+     */
+    async fetchExtraBlob(fileId) {
+      const url = this.convertExtraDownloadURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：获取合同外需求附件 PDF 预览二进制
+     * @param {number} fileId 文件ID
+     * @returns {Promise<Blob>}
+     */
+    async fetchExtraPreviewPdfBlob(fileId) {
+      const url = this.convertExtraPreviewPdfURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('PDF 预览失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：预览合同外需求附件
+     * @param {{fileId:number,filePath:string}} file 文件记录
+     */
+    async onPreviewExtraFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchExtraBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchExtraBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = this.convertExtraPreviewVideoURL(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          const pdfBlob = await this.fetchExtraPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchExtraBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'docx'
+              this.previewHTML = result.value || '<div>该文档无法转换为HTML</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'xls' || ext === 'xlsx') {
+        try {
+          const pdfBlob = await this.fetchExtraPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || 'Excel 预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchExtraBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'ppt' || ext === 'pptx') {
+        try {
+          const pdfBlob = await this.fetchExtraPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '演示文稿预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      this.previewType = 'unsupported'
+      this.previewLoading = false
+    },
+    /**
+     * 函数级注释：根据用户ID显示姓名
+     * @param {number} uid 用户ID
+     * @returns {string} 用户姓名或用户名
+     */
+    userName(uid) {
+      const u = (this.allUsers || []).find(x => x && x.userId === uid)
+      return u ? (u.name || u.userName || '') : ''
     }
   }
 }
@@ -2407,6 +3050,35 @@ export default {
 .dialog.view-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
 .dialog h4 { margin:0 0 12px; }
 .dialog-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.extra-modal { background:#fff; border-radius:12px; width:90%; max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e8e8e8; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+.extra-modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e8e8e8; background:#fafafa; }
+.extra-modal-header h3 { margin:0; font-size:18px; font-weight:600; color:#262626; }
+.extra-close { background:none; border:none; font-size:24px; cursor:pointer; color:#999; padding:0; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:all .2s; }
+.extra-close:hover { background:#f0f0f0; color:#666; }
+.extra-modal-body { flex:1; overflow-y:auto; }
+.extra-modal-footer { flex-shrink:0; padding:16px 24px; border-top:1px solid #e8e8e8; background:#fafafa; }
+.extra-form { padding:24px; }
+.extra-section { margin-bottom:24px; }
+.extra-section-title { font-size:16px; font-weight:600; color:#262626; margin:0 0 16px 0; padding-bottom:8px; border-bottom:2px solid #1890ff; display:inline-block; }
+.extra-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+.extra-group { display:flex; flex-direction:column; }
+.extra-group.full-width { grid-column:1 / -1; }
+.extra-group label { font-weight:500; margin-bottom:6px; color:#262626; font-size:14px; }
+.extra-group input,
+.extra-group select,
+.extra-group textarea { padding:8px 12px; border:1px solid #d9d9d9; border-radius:6px; font-size:14px; transition:border-color .2s; }
+.extra-group input:focus,
+.extra-group select:focus,
+.extra-group textarea:focus { outline:none; border-color:#1890ff; box-shadow:0 0 0 2px rgba(24,144,255,0.2); }
+.extra-group input:disabled,
+.extra-group select:disabled,
+.extra-group textarea:disabled { color:#262626; background-color:#f5f5f5; -webkit-text-fill-color:#262626; opacity:1; cursor:default; }
+.extra-actions { display:flex; justify-content:flex-end; gap:12px; }
+.extra-upload-card { border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:12px; }
+.extra-upload-head { display:flex; align-items:center; justify-content:flex-start; margin-bottom:8px; }
+.extra-upload-body .uploaded-list { margin-top:8px; }
+.hidden-file { display:none; }
+.select-btn { padding:6px 12px; }
 .context-chips { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .chip.primary { background:#eef2ff; border-color:#c7d2fe; color:#1d4ed8; }
 .segmented { display:inline-flex; align-items:center; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
@@ -2649,4 +3321,11 @@ export default {
 .empty-state p {
   margin: 0;
 }
+
+/* 合同外需求样式补充 */
+.actions { display:flex; gap:8px; }
+.add-btn { padding:6px 12px; border:1px solid #2563eb; color:#2563eb; background:#fff; border-radius:4px; cursor:pointer; }
+.add-btn:hover { background:#eff6ff; }
+.pagination { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding-top:8px; }
+.page-info { color:#666; font-size:12px; }
 </style>

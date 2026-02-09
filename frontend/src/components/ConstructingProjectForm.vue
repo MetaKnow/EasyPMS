@@ -785,7 +785,7 @@ export default {
       }
       
       if (!this.form.softId) {
-        errors.push('档案产品不能为空')
+        errors.push('软件系统不能为空')
       }
       
       if (!this.form.customerId) {

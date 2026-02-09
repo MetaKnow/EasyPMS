@@ -2,6 +2,7 @@ package com.missoft.pms.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -70,8 +71,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/standard-deliverables/**").permitAll()
                 // 允许访问接口开发管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/interfaces", "/api/interfaces/**").permitAll()
-                // 允许访问个性化开发管理接口（临时开放，后续可根据需要添加认证）
+                // 允许访问个性化开发接口（临时开放）
                 .requestMatchers("/api/personal-developes", "/api/personal-developes/**").permitAll()
+                // 允许访问合同外需求接口（临时开放）
+                .requestMatchers("/api/extra-requirements", "/api/extra-requirements/**").permitAll()
+                // 显式允许删除请求
+                .requestMatchers(HttpMethod.DELETE, "/api/extra-requirements/**").permitAll()
+                // 允许访问合同外需求附件接口（临时开放）
+                .requestMatchers("/api/extra-requirement-files/**").permitAll()
                 // 允许访问项目交付文件上传/下载接口（临时开放）
                 .requestMatchers("/api/construct-deliverable-files/**").permitAll()
                 // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
