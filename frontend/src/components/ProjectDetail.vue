@@ -396,7 +396,7 @@
                   <td>{{ userName(r.developer) || '-' }}</td>
                   <td class="deliverable-actions">
                     <div class="actions-inner">
-                      <button class="icon-btn" title="查看" @click="viewExtra(r)">
+                      <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewExtra(r)">
                         <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                       </button>
                       <button class="icon-btn" title="编辑" @click="editExtra(r)" :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
@@ -2540,7 +2540,8 @@ export default {
       try {
         const resp = await listExtraRequirementsByProject(this.project.projectId)
         const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.extraRequirements || resp || [])
-        this.extraRequirements = list || []
+        this.extraRequirements = Array.isArray(list) ? list.map(r => ({ ...r })) : []
+        await this.refreshExtraHasFiles()
       } catch (e) {
         this.extraRequirements = []
       }
@@ -2558,9 +2559,34 @@ export default {
         const resp = await listExtraRequirementFiles(requirementId)
         const files = resp?.data?.files || resp?.data || []
         this.extraAttachments = Array.isArray(files) ? files : []
+        this.updateExtraHasFiles(requirementId, this.extraAttachments.length > 0)
       } catch (_) {
         this.extraAttachments = []
+        this.updateExtraHasFiles(requirementId, false)
       }
+    },
+    updateExtraHasFiles(requirementId, hasFiles) {
+      const rid = Number(requirementId)
+      if (!rid || !Array.isArray(this.extraRequirements) || !this.extraRequirements.length) return
+      const idx = this.extraRequirements.findIndex(r => Number(r?.requirementId) === rid)
+      if (idx >= 0) {
+        this.extraRequirements[idx].hasFiles = !!hasFiles
+      }
+    },
+    async refreshExtraHasFiles() {
+      if (!Array.isArray(this.extraRequirements) || !this.extraRequirements.length) return
+      const tasks = this.extraRequirements.map(async (r) => {
+        const rid = Number(r?.requirementId)
+        if (!rid || r?.hasFiles != null) return
+        try {
+          const resp = await listExtraRequirementFiles(rid)
+          const files = resp?.data?.files || resp?.data || []
+          this.updateExtraHasFiles(rid, Array.isArray(files) && files.length > 0)
+        } catch (_) {
+          this.updateExtraHasFiles(rid, false)
+        }
+      })
+      await Promise.all(tasks)
     },
     /**
      * 函数级注释：打开添加/编辑/查看合同外需求弹窗
@@ -3142,6 +3168,9 @@ export default {
   background: #dcfce7;  /* green-200 */
 }
 .icon-btn.success:hover { background: #bbf7d0; border-color: #22c55e; }
+.icon-btn.has-files { border-color: #ef4444; background: #fee2e2; }
+.icon-btn.has-files:hover { background: #fecaca; border-color: #ef4444; }
+.icon-btn.has-files svg { fill: #ef4444; }
 .icon-btn svg {
   width: 18px;
   height: 18px;

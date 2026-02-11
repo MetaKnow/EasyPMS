@@ -102,19 +102,127 @@
           </div>
         </div>
 
-        <div v-show="activeTab === 'visits'" class="empty-tab">
-          <div class="empty-state">
-            <i class="empty-icon">📞</i>
-            <h3>售后（销售）回访</h3>
-            <p>该模块正在建设中...</p>
+        <div v-show="activeTab === 'visits'" class="card wide">
+          <div v-if="visitsLoading" class="state">回访记录加载中...</div>
+          <div v-else-if="visitsError" class="state error">{{ visitsError }}</div>
+          <div v-else class="table-scroll">
+            <table class="table">
+              <colgroup>
+                <col style="width:6%">
+                <col style="width:12%">
+                <col style="width:12%">
+                <col style="width:12%">
+                <col style="width:28%">
+                <col style="width:15%">
+                <col style="width:15%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>序号</th>
+                  <th>回访日期</th>
+                  <th>回访方式</th>
+                  <th>回访人</th>
+                  <th>回访描述</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, idx) in visits" :key="item.recordId">
+                  <td>{{ visitRowIndex(idx) }}</td>
+                  <td @mouseenter="showTooltip($event, formatDate(item.followUpDate))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ formatDate(item.followUpDate) }}</div></td>
+                  <td @mouseenter="showTooltip($event, item.followUpWay || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.followUpWay || '—' }}</div></td>
+                  <td @mouseenter="showTooltip($event, item.followUpPersonName || item.followUpPerson || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.followUpPersonName || item.followUpPerson || '—' }}</div></td>
+                  <td @mouseenter="showTooltip($event, item.description || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.description || '—' }}</div></td>
+                  <td @mouseenter="showTooltip($event, formatDateTime(item.createTime))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ formatDateTime(item.createTime) }}</div></td>
+                  <td>
+                    <div class="action-group">
+                      <button class="icon-btn" :class="{ 'has-files': item.hasFiles }" title="查看" @click="viewVisit(item)" :disabled="visitsLoading" aria-label="查看">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn warning" title="修改" @click="editVisit(item)" :disabled="visitsLoading" aria-label="修改">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.83H5v-1.92l8.06-8.06 1.92 1.92-8.06 8.06zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.82 1.82 3.75 3.75 1.82-1.82z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="删除" @click="deleteVisit(item)" :disabled="visitsLoading" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!visits.length">
+                  <td class="empty" colspan="7">暂无回访记录</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button class="btn" :disabled="visitsPage <= 1 || visitsLoading" @click="prevVisitsPage">上一页</button>
+            <span class="page-info">第 {{ visitsPage }} / {{ visitsPages }} 页，共 {{ visitsTotal }} 条</span>
+            <button class="btn" :disabled="visitsPage >= visitsPages || visitsLoading" @click="nextVisitsPage">下一页</button>
           </div>
         </div>
 
-        <div v-show="activeTab === 'opportunities'" class="empty-tab">
-          <div class="empty-state">
-            <i class="empty-icon">💡</i>
-            <h3>销售机会</h3>
-            <p>该模块正在建设中...</p>
+        <div v-show="activeTab === 'opportunities'" class="card wide">
+          <div v-if="leadsLoading" class="state">销售线索加载中...</div>
+          <div v-else-if="leadsError" class="state error">{{ leadsError }}</div>
+          <div v-else class="table-scroll">
+            <table class="table">
+              <colgroup>
+                <col style="width:6%">
+                <col style="width:14%">
+                <col style="width:30%">
+                <col style="width:14%">
+                <col style="width:10%">
+                <col style="width:16%">
+                <col style="width:10%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>序号</th>
+                  <th>线索来源</th>
+                  <th>线索描述</th>
+                  <th>线索挖掘人</th>
+                  <th>是否转化</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, idx) in leads" :key="item.leadsId">
+                  <td>{{ leadRowIndex(idx) }}</td>
+                  <td @mouseenter="showTooltip($event, item.leadsSource || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.leadsSource || '—' }}</div></td>
+                  <td @mouseenter="showTooltip($event, item.leadsDescript || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.leadsDescript || '—' }}</div></td>
+                  <td @mouseenter="showTooltip($event, item.leadsFinderName || item.leadsFinder || '—')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ item.leadsFinderName || item.leadsFinder || '—' }}</div></td>
+                  <td>
+                    <span :class="item.isTransform ? 'status-done' : 'status-pending'">
+                      {{ item.isTransform ? '是' : '否' }}
+                    </span>
+                  </td>
+                  <td @mouseenter="showTooltip($event, formatDateTime(item.createTime))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition"><div class="text-truncate">{{ formatDateTime(item.createTime) }}</div></td>
+                  <td>
+                    <div class="action-group">
+                      <button class="icon-btn" :class="{ 'has-files': item.hasFiles }" title="查看" @click="viewLead(item)" :disabled="leadsLoading" aria-label="查看">
+                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
+                      </button>
+                      <button class="icon-btn warning" title="修改" @click="editLead(item)" :disabled="leadsLoading" aria-label="修改">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.83H5v-1.92l8.06-8.06 1.92 1.92-8.06 8.06zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.82 1.82 3.75 3.75 1.82-1.82z"/></svg>
+                      </button>
+                      <button class="icon-btn" title="删除" @click="deleteLead(item)" :disabled="leadsLoading" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!leads.length">
+                  <td class="empty" colspan="7">暂无销售线索</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button class="btn" :disabled="leadsPage <= 1 || leadsLoading" @click="prevLeadsPage">上一页</button>
+            <span class="page-info">第 {{ leadsPage }} / {{ leadsPages }} 页，共 {{ leadsTotal }} 条</span>
+            <button class="btn" :disabled="leadsPage >= leadsPages || leadsLoading" @click="nextLeadsPage">下一页</button>
           </div>
         </div>
       </div>
@@ -474,6 +582,538 @@
       </div>
     </div>
   </div>
+  <!-- 查看回访弹窗 -->
+  <div v-if="showVisitViewDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>查看回访记录</h3>
+        <button class="close-btn" @click="closeVisitView">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>回访日期 <span class="required">*</span></label>
+                <input type="date" v-model="visitViewForm.followUpDate" disabled />
+              </div>
+              <div class="form-group">
+                <label>回访方式 <span class="required">*</span></label>
+                <select v-model="visitViewForm.followUpWay" disabled>
+                  <option value="电话回访">电话回访</option>
+                  <option value="现场回访">现场回访</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>回访人 <span class="required">*</span></label>
+                <select v-model.number="visitViewForm.followUpPerson" disabled>
+                  <option value="" disabled>请选择回访人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>回访描述 <span class="required">*</span></label>
+                <textarea rows="4" v-model="visitViewForm.description" disabled></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">附件</h4>
+            <div class="upload-card">
+              <div class="upload-body">
+                <div class="uploaded-list" v-if="visitViewAttachments.length">
+                  <div class="file-row" v-for="f in visitViewAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewVisitFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <a class="mini-icon" :href="getVisitDownloadUrl(f.fileId)" title="下载" aria-label="下载">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="empty" v-else>暂无附件</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeVisitView">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 新增回访弹窗 -->
+  <div v-if="showVisitAddDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>新增回访记录</h3>
+        <button class="close-btn" @click="closeVisitAdd">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form @submit.prevent="saveVisitAdd" class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>回访日期 <span class="required">*</span></label>
+                <input type="date" v-model="visitAddForm.followUpDate" />
+              </div>
+              <div class="form-group">
+                <label>回访方式 <span class="required">*</span></label>
+                <select v-model="visitAddForm.followUpWay">
+                  <option value="电话回访">电话回访</option>
+                  <option value="现场回访">现场回访</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>回访人 <span class="required">*</span></label>
+                <select v-model.number="visitAddForm.followUpPerson">
+                  <option value="" disabled>请选择回访人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>回访描述 <span class="required">*</span></label>
+                <textarea rows="4" v-model="visitAddForm.description" placeholder="请输入回访描述"></textarea>
+              </div>
+              <div class="form-group full-width" v-if="visitAddFormError">
+                <div class="form-error">{{ visitAddFormError }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">上传附件</h4>
+            <div class="upload-card">
+              <div class="upload-head">
+                <div class="head-right">
+                  <button type="button" class="btn primary select-btn" @click="triggerVisitAttachmentInput">选择文件</button>
+                  <input ref="visitAttachmentInput" type="file" multiple class="hidden-file" @change="onSelectVisitAttachmentFiles" />
+                </div>
+              </div>
+
+              <div class="upload-body">
+                <div class="selected-files" v-if="visitSelectedAttachmentFiles.length">
+                  <div class="selected-list">
+                    <div class="selected-file-row" v-for="(f, idx) in visitSelectedAttachmentFiles" :key="f.name + '-' + idx">
+                      <span class="file-name" :title="f.name">{{ f.name }}</span>
+                      <button class="mini-icon danger" @click="removeVisitSelectedFile(idx)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress" v-if="visitUploading">
+                  <div class="bar" :style="{ width: visitUploadProgress + '%' }"></div>
+                  <div class="percent">{{ visitUploadProgress }}%</div>
+                </div>
+
+                <div class="uploaded-list" v-if="visitAttachments.length">
+                  <div class="file-row" v-for="f in visitAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewVisitFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <button class="mini-icon danger" @click="onDeleteVisitAttachment(f)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeVisitAdd" :disabled="visitAddSubmitting">取消</button>
+          <button type="submit" class="btn btn-primary" @click="saveVisitAdd" :disabled="visitAddSubmitting">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 编辑回访弹窗 -->
+  <div v-if="showVisitEditDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>编辑回访记录</h3>
+        <button class="close-btn" @click="closeVisitEdit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form @submit.prevent="saveVisitEdit" class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>回访日期 <span class="required">*</span></label>
+                <input type="date" v-model="visitEditForm.followUpDate" />
+              </div>
+              <div class="form-group">
+                <label>回访方式 <span class="required">*</span></label>
+                <select v-model="visitEditForm.followUpWay">
+                  <option value="电话回访">电话回访</option>
+                  <option value="现场回访">现场回访</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>回访人 <span class="required">*</span></label>
+                <select v-model.number="visitEditForm.followUpPerson">
+                  <option value="" disabled>请选择回访人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>回访描述 <span class="required">*</span></label>
+                <textarea rows="4" v-model="visitEditForm.description" placeholder="请输入回访描述"></textarea>
+              </div>
+              <div class="form-group full-width" v-if="visitEditFormError">
+                <div class="form-error">{{ visitEditFormError }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">附件</h4>
+            <div class="upload-card">
+              <div class="upload-head">
+                <div class="head-right">
+                  <button type="button" class="btn primary select-btn" @click="triggerVisitEditAttachmentInput">选择文件</button>
+                  <input ref="visitEditAttachmentInput" type="file" multiple class="hidden-file" @change="onSelectVisitEditAttachmentFiles" />
+                </div>
+              </div>
+
+              <div class="upload-body">
+                <div class="selected-files" v-if="visitEditSelectedAttachmentFiles.length">
+                  <div class="selected-list">
+                    <div class="selected-file-row" v-for="(f, idx) in visitEditSelectedAttachmentFiles" :key="f.name + '-' + idx">
+                      <span class="file-name" :title="f.name">{{ f.name }}</span>
+                      <button type="button" class="mini-icon danger" @click="removeVisitEditSelectedFile(idx)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress" v-if="visitEditUploading">
+                  <div class="bar" :style="{ width: visitEditUploadProgress + '%' }"></div>
+                  <div class="percent">{{ visitEditUploadProgress }}%</div>
+                </div>
+
+                <div class="uploaded-list" v-if="visitEditAttachments.length">
+                  <div class="file-row" v-for="f in visitEditAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewVisitFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <button type="button" class="mini-icon danger" @click="onDeleteVisitEditAttachment(f)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="empty" v-else>暂无附件</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeVisitEdit" :disabled="visitEditSubmitting">取消</button>
+          <button type="submit" class="btn btn-primary" @click="saveVisitEdit" :disabled="visitEditSubmitting">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 查看线索弹窗 -->
+  <div v-if="showLeadViewDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>查看销售线索</h3>
+        <button class="close-btn" @click="closeLeadView">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>线索来源 <span class="required">*</span></label>
+                <select v-model="leadViewForm.leadsSource" disabled>
+                  <option value="用户主动寻求">用户主动寻求</option>
+                  <option value="销售回访">销售回访</option>
+                  <option value="售后维护">售后维护</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>线索挖掘人 <span class="required">*</span></label>
+                <select v-model.number="leadViewForm.leadsFinder" disabled>
+                  <option value="" disabled>请选择线索挖掘人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>是否转化商机 <span class="required">*</span></label>
+                <select v-model="leadViewForm.isTransform" disabled>
+                  <option :value="true">已转化</option>
+                  <option :value="false">未转化</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>线索描述</label>
+                <textarea rows="4" v-model="leadViewForm.leadsDescript" disabled></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">附件</h4>
+            <div class="upload-card">
+              <div class="upload-body">
+                <div class="uploaded-list" v-if="leadViewAttachments.length">
+                  <div class="file-row" v-for="f in leadViewAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewLeadFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <a class="mini-icon" :href="getLeadDownloadUrl(f.fileId)" title="下载" aria-label="下载">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="empty" v-else>暂无附件</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeLeadView">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 新增线索弹窗 -->
+  <div v-if="showLeadAddDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>新增销售线索</h3>
+        <button class="close-btn" @click="closeLeadAdd">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form @submit.prevent="saveLeadAdd" class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>线索来源 <span class="required">*</span></label>
+                <select v-model="leadAddForm.leadsSource">
+                  <option value="用户主动寻求">用户主动寻求</option>
+                  <option value="销售回访">销售回访</option>
+                  <option value="售后维护">售后维护</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>线索挖掘人 <span class="required">*</span></label>
+                <select v-model.number="leadAddForm.leadsFinder">
+                  <option value="" disabled>请选择线索挖掘人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>是否转化商机 <span class="required">*</span></label>
+                <select v-model="leadAddForm.isTransform">
+                  <option :value="true">已转化</option>
+                  <option :value="false">未转化</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>线索描述 <span class="required">*</span></label>
+                <textarea rows="4" v-model="leadAddForm.leadsDescript" placeholder="请输入线索描述"></textarea>
+              </div>
+              <div class="form-group full-width" v-if="leadAddFormError">
+                <div class="form-error">{{ leadAddFormError }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">上传附件</h4>
+            <div class="upload-card">
+              <div class="upload-head">
+                <div class="head-right">
+                  <button type="button" class="btn primary select-btn" @click="triggerLeadAttachmentInput">选择文件</button>
+                  <input ref="leadAttachmentInput" type="file" multiple class="hidden-file" @change="onSelectLeadAttachmentFiles" />
+                </div>
+              </div>
+
+              <div class="upload-body">
+                <div class="selected-files" v-if="leadSelectedAttachmentFiles.length">
+                  <div class="selected-list">
+                    <div class="selected-file-row" v-for="(f, idx) in leadSelectedAttachmentFiles" :key="f.name + '-' + idx">
+                      <span class="file-name" :title="f.name">{{ f.name }}</span>
+                      <button class="mini-icon danger" @click="removeLeadSelectedFile(idx)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress" v-if="leadUploading">
+                  <div class="bar" :style="{ width: leadUploadProgress + '%' }"></div>
+                  <div class="percent">{{ leadUploadProgress }}%</div>
+                </div>
+
+                <div class="uploaded-list" v-if="leadAttachments.length">
+                  <div class="file-row" v-for="f in leadAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewLeadFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <a class="mini-icon" :href="getLeadDownloadUrl(f.fileId)" title="下载" aria-label="下载">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </a>
+                      <button class="mini-icon danger" @click="onDeleteLeadAttachment(f)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeLeadAdd" :disabled="leadAddSubmitting">取消</button>
+          <button type="submit" class="btn btn-primary" @click="saveLeadAdd" :disabled="leadAddSubmitting">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 编辑线索弹窗 -->
+  <div v-if="showLeadEditDialog" class="modal-overlay">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>编辑销售线索</h3>
+        <button class="close-btn" @click="closeLeadEdit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form @submit.prevent="saveLeadEdit" class="project-form">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>线索来源 <span class="required">*</span></label>
+                <select v-model="leadEditForm.leadsSource">
+                  <option value="用户主动寻求">用户主动寻求</option>
+                  <option value="销售回访">销售回访</option>
+                  <option value="售后维护">售后维护</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>线索挖掘人 <span class="required">*</span></label>
+                <select v-model.number="leadEditForm.leadsFinder">
+                  <option value="" disabled>请选择线索挖掘人</option>
+                  <option v-for="u in users" :key="u.userId" :value="u.userId">{{ u.name || u.userName || u.userId }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>是否转化商机 <span class="required">*</span></label>
+                <select v-model="leadEditForm.isTransform">
+                  <option :value="true">已转化</option>
+                  <option :value="false">未转化</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label>线索描述 <span class="required">*</span></label>
+                <textarea rows="4" v-model="leadEditForm.leadsDescript" placeholder="请输入线索描述"></textarea>
+              </div>
+              <div class="form-group full-width" v-if="leadEditFormError">
+                <div class="form-error">{{ leadEditFormError }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section attachments-section">
+            <h4 class="section-title">附件</h4>
+            <div class="upload-card">
+              <div class="upload-head">
+                <div class="head-right">
+                  <button type="button" class="btn primary select-btn" @click="triggerLeadEditAttachmentInput">选择文件</button>
+                  <input ref="leadEditAttachmentInput" type="file" multiple class="hidden-file" @change="onSelectLeadEditAttachmentFiles" />
+                </div>
+              </div>
+
+              <div class="upload-body">
+                <div class="selected-files" v-if="leadEditSelectedAttachmentFiles.length">
+                  <div class="selected-list">
+                    <div class="selected-file-row" v-for="(f, idx) in leadEditSelectedAttachmentFiles" :key="f.name + '-' + idx">
+                      <span class="file-name" :title="f.name">{{ f.name }}</span>
+                      <button type="button" class="mini-icon danger" @click="removeLeadEditSelectedFile(idx)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress" v-if="leadEditUploading">
+                  <div class="bar" :style="{ width: leadEditUploadProgress + '%' }"></div>
+                  <div class="percent">{{ leadEditUploadProgress }}%</div>
+                </div>
+
+                <div class="uploaded-list" v-if="leadEditAttachments.length">
+                  <div class="file-row" v-for="f in leadEditAttachments" :key="f.fileId">
+                    <div class="file-meta">
+                      <span class="file-link" @click="onPreviewLeadFile(f)" :title="fileBaseName(f.filePath)">
+                        {{ fileBaseName(f.filePath) }}
+                      </span>
+                      <span class="file-size">{{ prettySize(f.fileSize) }}</span>
+                    </div>
+                    <div class="file-actions">
+                      <a class="mini-icon" :href="getLeadDownloadUrl(f.fileId)" title="下载" aria-label="下载">
+                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                      </a>
+                      <button type="button" class="mini-icon danger" @click="onDeleteLeadEditAttachment(f)" title="删除" aria-label="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="empty" v-else>暂无附件</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="closeLeadEdit" :disabled="leadEditSubmitting">取消</button>
+          <button type="submit" class="btn btn-primary" @click="saveLeadEdit" :disabled="leadEditSubmitting">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- 文件预览弹窗 -->
   <!-- 全屏文件预览弹窗 (与 ProjectDetail 保持一致) -->
   <div v-if="showPreviewDialog" class="preview-overlay">
@@ -509,7 +1149,30 @@
 <script>
 import { getAfterserviceProjectById } from '../api/afterserviceProject'
 import { getAfterserviceEvents, deleteAfterserviceEvent, createAfterserviceEvent } from '../api/afterserviceEvent'
+import { getAfterserviceLeads, createAfterserviceLead, updateAfterserviceLead, deleteAfterserviceLead } from '../api/afterserviceLead'
+import {
+  uploadAfterserviceLeadFiles,
+  listAfterserviceLeadFiles,
+  deleteAfterserviceLeadFile,
+  getAfterserviceLeadPreviewUrl,
+  getAfterserviceLeadPreviewPdfUrl,
+  getAfterserviceLeadPreviewVideoUrl,
+  getAfterserviceLeadDownloadUrl
+} from '../api/afterserviceLeadFile'
 import { getAllUsers } from '../api/user'
+import {
+  getCustomerFollowUps,
+  createCustomerFollowUp,
+  updateCustomerFollowUp,
+  deleteCustomerFollowUp,
+  uploadCustomerFollowUpFiles,
+  listCustomerFollowUpFiles,
+  deleteCustomerFollowUpFile,
+  getCustomerFollowUpPreviewUrl,
+  getCustomerFollowUpPreviewPdfUrl,
+  getCustomerFollowUpPreviewVideoUrl,
+  getCustomerFollowUpDownloadUrl
+} from '../api/customerFollowUp'
 import {
   uploadAfterserviceDeliverableFiles,
   listAfterserviceDeliverableFiles,
@@ -529,7 +1192,7 @@ export default {
       tabs: [
         { id: 'events', name: '运维事件' },
         { id: 'visits', name: '售后（销售）回访' },
-        { id: 'opportunities', name: '销售机会' }
+        { id: 'opportunities', name: '销售线索' }
       ],
       loading: true,
       error: '',
@@ -543,6 +1206,102 @@ export default {
       eventsPages: 1,
       eventsTotal: 0
       ,
+      // 售后回访列表状态
+      visits: [],
+      visitsLoading: true,
+      visitsError: '',
+      visitsPage: 1,
+      visitsSize: 10,
+      visitsPages: 1,
+      visitsTotal: 0,
+      // 销售线索列表状态
+      leads: [],
+      leadsLoading: true,
+      leadsError: '',
+      leadsPage: 1,
+      leadsSize: 10,
+      leadsPages: 1,
+      leadsTotal: 0,
+      // 线索查看弹窗
+      showLeadViewDialog: false,
+      leadViewForm: {
+        leadsSource: '用户主动寻求',
+        leadsFinder: '',
+        isTransform: false,
+        leadsDescript: ''
+      },
+      leadViewAttachments: [],
+      // 线索新增弹窗与表单
+      showLeadAddDialog: false,
+      leadAddSubmitting: false,
+      leadAddFormError: '',
+      leadAddForm: {
+        leadsSource: '用户主动寻求',
+        leadsFinder: '',
+        isTransform: false,
+        leadsDescript: ''
+      },
+      createdLeadId: null,
+      leadSelectedAttachmentFiles: [],
+      leadAttachments: [],
+      leadUploading: false,
+      leadUploadProgress: 0,
+      leadUploadPending: false,
+      // 线索编辑弹窗与表单
+      showLeadEditDialog: false,
+      leadEditSubmitting: false,
+      leadEditFormError: '',
+      leadEditId: null,
+      leadEditForm: {
+        leadsSource: '用户主动寻求',
+        leadsFinder: '',
+        isTransform: false,
+        leadsDescript: ''
+      },
+      leadEditSelectedAttachmentFiles: [],
+      leadEditAttachments: [],
+      leadEditUploading: false,
+      leadEditUploadProgress: 0,
+      // 回访查看弹窗
+      showVisitViewDialog: false,
+      visitViewForm: {
+        followUpDate: '',
+        followUpWay: '',
+        followUpPerson: '',
+        description: ''
+      },
+      visitViewAttachments: [],
+      // 回访新增弹窗与表单
+      showVisitAddDialog: false,
+      visitAddSubmitting: false,
+      visitAddFormError: '',
+      visitAddForm: {
+        followUpDate: '',
+        followUpWay: '电话回访',
+        followUpPerson: '',
+        description: ''
+      },
+      createdVisitRecordId: null,
+      visitSelectedAttachmentFiles: [],
+      visitAttachments: [],
+      visitUploading: false,
+      visitUploadProgress: 0,
+      visitUploadPending: false,
+      // 回访编辑弹窗与表单
+      showVisitEditDialog: false,
+      visitEditSubmitting: false,
+      visitEditFormError: '',
+      visitEditId: null,
+      visitEditForm: {
+        followUpDate: '',
+        followUpWay: '电话回访',
+        followUpPerson: '',
+        description: ''
+      },
+      visitEditSelectedAttachmentFiles: [],
+      visitEditAttachments: [],
+      visitEditUploading: false,
+      visitEditUploadProgress: 0,
       // 查看弹窗
       showViewDialog: false,
       viewEventData: null,
@@ -616,6 +1375,8 @@ export default {
   async mounted() {
     await this.loadProject()
     await this.loadEvents()
+    await this.loadVisits()
+    await this.loadLeads()
     await this.loadUsers()
   },
   beforeUnmount() {
@@ -683,6 +1444,57 @@ export default {
         this.eventsLoading = false
       }
     },
+    async loadVisits() {
+      const afterServiceProjectId = this.$route.params.projectId
+      this.visitsLoading = true
+      this.visitsError = ''
+      try {
+        const res = await getCustomerFollowUps({ afterServiceProjectId, page: this.visitsPage, size: this.visitsSize })
+        const data = res?.data?.data || {}
+        const list = data.list || []
+        this.visits = Array.isArray(list) ? list : []
+        this.visitsTotal = Number(data.total || 0)
+        this.visitsPages = Number(data.pages || 1)
+      } catch (e) {
+        this.visitsError = e?.response?.data?.message || e?.message || '加载回访记录失败'
+      } finally {
+        this.visitsLoading = false
+      }
+    },
+    async loadLeads() {
+      const afterServiceProjectId = this.$route.params.projectId
+      this.leadsLoading = true
+      this.leadsError = ''
+      try {
+        const res = await getAfterserviceLeads({ afterServiceProjectId, page: this.leadsPage, size: this.leadsSize })
+        const data = res?.data?.data || {}
+        const list = data.list || []
+        this.leads = Array.isArray(list) ? list : []
+        this.leadsTotal = Number(data.total || 0)
+        this.leadsPages = Number(data.pages || 1)
+        await this.ensureLeadHasFiles()
+      } catch (e) {
+        this.leadsError = e?.response?.data?.message || e?.message || '加载销售线索失败'
+      } finally {
+        this.leadsLoading = false
+      }
+    },
+    async ensureLeadHasFiles() {
+      if (!Array.isArray(this.leads) || !this.leads.length) return
+      const tasks = this.leads.map(async (item) => {
+        if (!item || item.hasFiles != null) return
+        const lid = Number(item.leadsId)
+        if (!lid) return
+        try {
+          const list = await listAfterserviceLeadFiles(lid)
+          const hasFiles = Array.isArray(list) && list.length > 0
+          this.updateLeadHasFiles(lid, hasFiles)
+        } catch (_) {
+          this.updateLeadHasFiles(lid, false)
+        }
+      })
+      await Promise.all(tasks)
+    },
     async loadUsers() {
       try {
         const list = await getAllUsers()
@@ -695,6 +1507,30 @@ export default {
       if (this.eventsPage > 1) {
         this.eventsPage -= 1
         this.loadEvents()
+      }
+    },
+    prevVisitsPage() {
+      if (this.visitsPage > 1) {
+        this.visitsPage -= 1
+        this.loadVisits()
+      }
+    },
+    prevLeadsPage() {
+      if (this.leadsPage > 1) {
+        this.leadsPage -= 1
+        this.loadLeads()
+      }
+    },
+    nextVisitsPage() {
+      if (this.visitsPage < this.visitsPages) {
+        this.visitsPage += 1
+        this.loadVisits()
+      }
+    },
+    nextLeadsPage() {
+      if (this.leadsPage < this.leadsPages) {
+        this.leadsPage += 1
+        this.loadLeads()
       }
     },
     nextEventsPage() {
@@ -723,6 +1559,12 @@ export default {
     },
     rowIndex(idx) {
       return (this.eventsPage - 1) * this.eventsSize + idx + 1
+    },
+    visitRowIndex(idx) {
+      return (this.visitsPage - 1) * this.visitsSize + idx + 1
+    },
+    leadRowIndex(idx) {
+      return (this.leadsPage - 1) * this.leadsSize + idx + 1
     },
     formatDateTime(val) {
       if (!val) return '—'
@@ -761,6 +1603,32 @@ export default {
       this.viewEventId = null
       this.viewAttachments = []
     },
+    viewVisit(item) {
+      if (!item) return
+      this.visitViewForm = {
+        followUpDate: item.followUpDate || '',
+        followUpWay: item.followUpWay || '',
+        followUpPerson: item.followUpPerson || '',
+        description: item.description || ''
+      }
+      this.showVisitViewDialog = true
+      this.loadVisitViewAttachments(item.recordId)
+    },
+    closeVisitView() {
+      this.showVisitViewDialog = false
+      this.visitViewForm = { followUpDate: '', followUpWay: '', followUpPerson: '', description: '' }
+      this.visitViewAttachments = []
+    },
+    async loadVisitViewAttachments(recordId) {
+      const rid = Number(recordId)
+      if (!rid) { this.visitViewAttachments = []; return }
+      try {
+        const list = await listCustomerFollowUpFiles(rid)
+        this.visitViewAttachments = Array.isArray(list) ? list : []
+      } catch (_) {
+        this.visitViewAttachments = []
+      }
+    },
     async loadViewAttachments() {
       const pid = Number(this.$route.params.projectId)
       const eid = Number(this.viewEventId)
@@ -772,12 +1640,564 @@ export default {
         this.viewAttachments = []
       }
     },
-    onAddClick() {
-      if (this.activeTab !== 'events') {
-        alert('当前标签暂未实现“添加记录”功能，请切换到“运维事件”标签。')
+    async saveVisitAdd() {
+      if (this.visitAddSubmitting) return
+      this.visitAddFormError = ''
+      const f = this.visitAddForm
+      if (!f.followUpDate || !f.followUpWay || !f.followUpPerson || !String(f.description || '').trim()) {
+        this.visitAddFormError = '请完整填写必填字段（回访日期、回访方式、回访人、回访描述）'
         return
       }
-      this.openAdd()
+      const payload = {
+        ...this.visitAddForm,
+        afterServiceProjectId: Number(this.$route.params.projectId)
+      }
+      this.visitAddSubmitting = true
+      try {
+        const res = await createCustomerFollowUp(payload)
+        const ok = res?.data?.success
+        if (ok) {
+          const created = res?.data?.data || {}
+          this.createdVisitRecordId = created?.recordId || null
+          if (this.createdVisitRecordId && this.visitSelectedAttachmentFiles.length) {
+            try {
+              await this.onUploadVisitAttachments()
+            } catch (uploadErr) {
+              alert('回访记录创建成功，但附件上传失败：' + (uploadErr?.message || '未知错误'))
+            }
+          }
+          await this.loadVisits()
+          this.showVisitAddDialog = false
+          this.visitUploadPending = false
+        } else {
+          this.visitAddFormError = res?.data?.message || '创建失败'
+        }
+      } catch (e) {
+        this.visitAddFormError = e?.response?.data?.message || e?.message || '创建失败'
+      } finally {
+        this.visitAddSubmitting = false
+      }
+    },
+    editVisit(item) {
+      if (!item) return
+      this.visitEditFormError = ''
+      this.visitEditSubmitting = false
+      this.visitEditId = item.recordId || null
+      this.visitEditForm = {
+        followUpDate: item.followUpDate || '',
+        followUpWay: item.followUpWay || '电话回访',
+        followUpPerson: item.followUpPerson != null ? Number(item.followUpPerson) : '',
+        description: item.description || ''
+      }
+      this.visitEditSelectedAttachmentFiles = []
+      this.visitEditAttachments = []
+      this.visitEditUploading = false
+      this.visitEditUploadProgress = 0
+      this.loadVisitEditAttachments()
+      this.showVisitEditDialog = true
+    },
+    closeVisitAdd() {
+      this.showVisitAddDialog = false
+      this.createdVisitRecordId = null
+      this.visitSelectedAttachmentFiles = []
+      this.visitAttachments = []
+    },
+    closeVisitEdit() {
+      this.showVisitEditDialog = false
+      this.visitEditId = null
+      this.visitEditSelectedAttachmentFiles = []
+      this.visitEditAttachments = []
+    },
+    async saveVisitEdit() {
+      if (this.visitEditSubmitting) return
+      if (!this.visitEditId) return
+      this.visitEditFormError = ''
+      const f = this.visitEditForm
+      if (!f.followUpDate || !f.followUpWay || !f.followUpPerson || !String(f.description || '').trim()) {
+        this.visitEditFormError = '请完整填写必填字段（回访日期、回访方式、回访人、回访描述）'
+        return
+      }
+      const payload = {
+        ...this.visitEditForm,
+        afterServiceProjectId: Number(this.$route.params.projectId)
+      }
+      this.visitEditSubmitting = true
+      try {
+        const res = await updateCustomerFollowUp(this.visitEditId, payload)
+        const ok = res?.data?.success
+        if (ok) {
+          if (this.visitEditSelectedAttachmentFiles.length > 0) {
+            this.visitEditUploading = true
+            this.visitEditUploadProgress = 0
+            try {
+              const pid = Number(this.$route.params.projectId)
+              await uploadCustomerFollowUpFiles(pid, Number(this.visitEditId), this.visitEditSelectedAttachmentFiles, {
+                onProgress: (p) => { this.visitEditUploadProgress = p }
+              })
+              this.visitEditSelectedAttachmentFiles = []
+            } catch (uploadErr) {
+              const msg = uploadErr?.response?.data?.message || uploadErr?.message || '未知错误'
+              alert('回访记录更新成功，但附件上传失败：' + msg)
+            } finally {
+              this.visitEditUploading = false
+            }
+          }
+          await this.loadVisits()
+          this.showVisitEditDialog = false
+        } else {
+          this.visitEditFormError = res?.data?.message || '更新失败'
+        }
+      } catch (e) {
+        this.visitEditFormError = e?.response?.data?.message || e?.message || '更新失败'
+      } finally {
+        this.visitEditSubmitting = false
+      }
+    },
+    async deleteVisit(item) {
+      if (!item?.recordId) return
+      const ok = window.confirm('确认删除该回访记录吗？此操作不可恢复。')
+      if (!ok) return
+      try {
+        await deleteCustomerFollowUp(item.recordId)
+        await this.loadVisits()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    async saveLeadAdd() {
+      if (this.leadAddSubmitting) return
+      this.leadAddFormError = ''
+      const f = this.leadAddForm
+      if (!f.leadsSource || !f.leadsFinder || !String(f.leadsDescript || '').trim()) {
+        this.leadAddFormError = '请完整填写必填字段（线索来源、线索挖掘人、线索描述）'
+        return
+      }
+      const payload = {
+        ...this.leadAddForm,
+        afterServiceProjectId: Number(this.$route.params.projectId)
+      }
+      this.leadAddSubmitting = true
+      try {
+        const res = await createAfterserviceLead(payload)
+        const ok = res?.data?.success
+        if (ok) {
+          const created = res?.data?.data || {}
+          this.createdLeadId = created?.leadsId || null
+          if (this.createdLeadId && this.leadSelectedAttachmentFiles.length) {
+            try {
+              await this.onUploadLeadAttachments()
+            } catch (uploadErr) {
+              alert('销售线索创建成功，但附件上传失败：' + (uploadErr?.message || '未知错误'))
+            }
+          }
+          await this.loadLeads()
+          this.showLeadAddDialog = false
+          this.leadUploadPending = false
+        } else {
+          this.leadAddFormError = res?.data?.message || '创建失败'
+        }
+      } catch (e) {
+        this.leadAddFormError = e?.response?.data?.message || e?.message || '创建失败'
+      } finally {
+        this.leadAddSubmitting = false
+      }
+    },
+    editLead(item) {
+      if (!item) return
+      this.leadEditFormError = ''
+      this.leadEditSubmitting = false
+      this.leadEditId = item.leadsId || null
+      this.leadEditForm = {
+        leadsSource: item.leadsSource || '用户主动寻求',
+        leadsFinder: item.leadsFinder != null ? Number(item.leadsFinder) : '',
+        isTransform: item.isTransform != null ? item.isTransform : false,
+        leadsDescript: item.leadsDescript || ''
+      }
+      this.leadEditSelectedAttachmentFiles = []
+      this.leadEditAttachments = []
+      this.leadEditUploading = false
+      this.leadEditUploadProgress = 0
+      this.loadLeadEditAttachments()
+      this.showLeadEditDialog = true
+    },
+    closeLeadEdit() {
+      this.showLeadEditDialog = false
+      this.leadEditId = null
+      this.leadEditSelectedAttachmentFiles = []
+      this.leadEditAttachments = []
+    },
+    async saveLeadEdit() {
+      if (this.leadEditSubmitting) return
+      if (!this.leadEditId) return
+      this.leadEditFormError = ''
+      const f = this.leadEditForm
+      if (!f.leadsSource || !f.leadsFinder || !String(f.leadsDescript || '').trim()) {
+        this.leadEditFormError = '请完整填写必填字段（线索来源、线索挖掘人、线索描述）'
+        return
+      }
+      const payload = {
+        ...this.leadEditForm,
+        afterServiceProjectId: Number(this.$route.params.projectId)
+      }
+      this.leadEditSubmitting = true
+      try {
+        const res = await updateAfterserviceLead(this.leadEditId, payload)
+        const ok = res?.data?.success
+        if (ok) {
+          if (this.leadEditSelectedAttachmentFiles.length > 0) {
+            this.leadEditUploading = true
+            this.leadEditUploadProgress = 0
+            try {
+              const pid = Number(this.$route.params.projectId)
+              await uploadAfterserviceLeadFiles(pid, Number(this.leadEditId), this.leadEditSelectedAttachmentFiles, {
+                onProgress: (p) => { this.leadEditUploadProgress = p }
+              })
+              this.leadEditSelectedAttachmentFiles = []
+              await this.loadLeadEditAttachments()
+            } catch (uploadErr) {
+              const msg = uploadErr?.response?.data?.message || uploadErr?.message || '未知错误'
+              alert('销售线索更新成功，但附件上传失败：' + msg)
+            } finally {
+              this.leadEditUploading = false
+            }
+          }
+          await this.loadLeads()
+          this.showLeadEditDialog = false
+        } else {
+          this.leadEditFormError = res?.data?.message || '更新失败'
+        }
+      } catch (e) {
+        this.leadEditFormError = e?.response?.data?.message || e?.message || '更新失败'
+      } finally {
+        this.leadEditSubmitting = false
+      }
+    },
+    async deleteLead(item) {
+      if (!item?.leadsId) return
+      const ok = window.confirm('确认删除该销售线索吗？此操作不可恢复。')
+      if (!ok) return
+      try {
+        await deleteAfterserviceLead(item.leadsId)
+        await this.loadLeads()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    triggerVisitAttachmentInput() {
+      try {
+        if (this.$refs.visitAttachmentInput && this.$refs.visitAttachmentInput.click) {
+          this.$refs.visitAttachmentInput.click()
+        }
+      } catch (_) {}
+    },
+    onSelectVisitAttachmentFiles(e) {
+      const incoming = (e && e.target && e.target.files) ? Array.from(e.target.files) : []
+      if (incoming.length) {
+        const existing = this.visitSelectedAttachmentFiles ? Array.from(this.visitSelectedAttachmentFiles) : []
+        const byKey = new Map()
+        for (const f of existing) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          byKey.set(k, f)
+        }
+        for (const f of incoming) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          if (!byKey.has(k)) byKey.set(k, f)
+        }
+        this.visitSelectedAttachmentFiles = Array.from(byKey.values())
+      }
+      if (this.createdVisitRecordId && this.visitSelectedAttachmentFiles && this.visitSelectedAttachmentFiles.length) {
+        this.onUploadVisitAttachments()
+      } else if (this.visitSelectedAttachmentFiles && this.visitSelectedAttachmentFiles.length) {
+        this.visitUploadPending = true
+      }
+      if (e && e.target) e.target.value = ''
+    },
+    removeVisitSelectedFile(idx) {
+      if (typeof idx !== 'number') return
+      if (idx < 0 || idx >= this.visitSelectedAttachmentFiles.length) return
+      this.visitSelectedAttachmentFiles.splice(idx, 1)
+      if (!this.visitSelectedAttachmentFiles.length) {
+        this.visitUploadPending = false
+      }
+    },
+    async onUploadVisitAttachments() {
+      if (!this.createdVisitRecordId) return
+      const pid = Number(this.$route.params.projectId)
+      const rid = Number(this.createdVisitRecordId)
+      if (!this.visitSelectedAttachmentFiles.length) return alert('请先选择文件')
+      this.visitUploading = true
+      this.visitUploadProgress = 0
+      try {
+        await uploadCustomerFollowUpFiles(pid, rid, this.visitSelectedAttachmentFiles, {
+          onProgress: (p) => { this.visitUploadProgress = p }
+        })
+        this.visitSelectedAttachmentFiles = []
+        await this.loadVisitAttachments()
+        alert('上传成功')
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '上传失败')
+      } finally {
+        this.visitUploading = false
+      }
+    },
+    async loadVisitAttachments() {
+      const rid = Number(this.createdVisitRecordId)
+      if (!rid) { this.visitAttachments = []; return }
+      try {
+        const list = await listCustomerFollowUpFiles(rid)
+        this.visitAttachments = Array.isArray(list) ? list : []
+        this.updateVisitHasFiles(rid, this.visitAttachments.length > 0)
+      } catch (_) {
+        this.visitAttachments = []
+        this.updateVisitHasFiles(rid, false)
+      }
+    },
+    async onDeleteVisitAttachment(f) {
+      const ok = window.confirm('确认删除该附件吗？')
+      if (!ok) return
+      try {
+        await deleteCustomerFollowUpFile(f.fileId)
+        await this.loadVisitAttachments()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    triggerVisitEditAttachmentInput() {
+      try {
+        if (this.$refs.visitEditAttachmentInput && this.$refs.visitEditAttachmentInput.click) {
+          this.$refs.visitEditAttachmentInput.click()
+        }
+      } catch (_) {}
+    },
+    onSelectVisitEditAttachmentFiles(e) {
+      const incoming = (e && e.target && e.target.files) ? Array.from(e.target.files) : []
+      if (incoming.length) {
+        const existing = this.visitEditSelectedAttachmentFiles ? Array.from(this.visitEditSelectedAttachmentFiles) : []
+        const byKey = new Map()
+        for (const f of existing) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          byKey.set(k, f)
+        }
+        for (const f of incoming) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          if (!byKey.has(k)) byKey.set(k, f)
+        }
+        this.visitEditSelectedAttachmentFiles = Array.from(byKey.values())
+      }
+      if (e && e.target) e.target.value = ''
+    },
+    removeVisitEditSelectedFile(idx) {
+      if (typeof idx !== 'number') return
+      if (idx < 0 || idx >= this.visitEditSelectedAttachmentFiles.length) return
+      this.visitEditSelectedAttachmentFiles.splice(idx, 1)
+    },
+    async loadVisitEditAttachments() {
+      const rid = Number(this.visitEditId)
+      if (!rid) { this.visitEditAttachments = []; return }
+      try {
+        const list = await listCustomerFollowUpFiles(rid)
+        this.visitEditAttachments = Array.isArray(list) ? list : []
+        this.updateVisitHasFiles(rid, this.visitEditAttachments.length > 0)
+      } catch (_) {
+        this.visitEditAttachments = []
+        this.updateVisitHasFiles(rid, false)
+      }
+    },
+    updateVisitHasFiles(recordId, hasFiles) {
+      const rid = Number(recordId)
+      if (!rid || !Array.isArray(this.visits) || !this.visits.length) return
+      const idx = this.visits.findIndex(v => Number(v?.recordId) === rid)
+      if (idx >= 0) {
+        this.visits[idx].hasFiles = !!hasFiles
+      }
+    },
+    updateLeadHasFiles(leadsId, hasFiles) {
+      const lid = Number(leadsId)
+      if (!lid || !Array.isArray(this.leads) || !this.leads.length) return
+      const idx = this.leads.findIndex(v => Number(v?.leadsId) === lid)
+      if (idx >= 0) {
+        this.leads[idx].hasFiles = !!hasFiles
+      }
+    },
+    async onDeleteVisitEditAttachment(f) {
+      const ok = window.confirm('确认删除该附件吗？')
+      if (!ok) return
+      try {
+        await deleteCustomerFollowUpFile(f.fileId)
+        await this.loadVisitEditAttachments()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    triggerLeadAttachmentInput() {
+      try {
+        if (this.$refs.leadAttachmentInput && this.$refs.leadAttachmentInput.click) {
+          this.$refs.leadAttachmentInput.click()
+        }
+      } catch (_) {}
+    },
+    onSelectLeadAttachmentFiles(e) {
+      const incoming = (e && e.target && e.target.files) ? Array.from(e.target.files) : []
+      if (incoming.length) {
+        const existing = this.leadSelectedAttachmentFiles ? Array.from(this.leadSelectedAttachmentFiles) : []
+        const byKey = new Map()
+        for (const f of existing) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          byKey.set(k, f)
+        }
+        for (const f of incoming) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          if (!byKey.has(k)) byKey.set(k, f)
+        }
+        this.leadSelectedAttachmentFiles = Array.from(byKey.values())
+      }
+      if (this.createdLeadId && this.leadSelectedAttachmentFiles && this.leadSelectedAttachmentFiles.length) {
+        this.onUploadLeadAttachments()
+      } else if (this.leadSelectedAttachmentFiles && this.leadSelectedAttachmentFiles.length) {
+        this.leadUploadPending = true
+      }
+      if (e && e.target) e.target.value = ''
+    },
+    removeLeadSelectedFile(idx) {
+      if (typeof idx !== 'number') return
+      if (idx < 0 || idx >= this.leadSelectedAttachmentFiles.length) return
+      this.leadSelectedAttachmentFiles.splice(idx, 1)
+      if (!this.leadSelectedAttachmentFiles.length) {
+        this.leadUploadPending = false
+      }
+    },
+    async onUploadLeadAttachments() {
+      if (!this.createdLeadId) return
+      const pid = Number(this.$route.params.projectId)
+      const lid = Number(this.createdLeadId)
+      if (!this.leadSelectedAttachmentFiles.length) return alert('请先选择文件')
+      this.leadUploading = true
+      this.leadUploadProgress = 0
+      try {
+        await uploadAfterserviceLeadFiles(pid, lid, this.leadSelectedAttachmentFiles, {
+          onProgress: (p) => { this.leadUploadProgress = p }
+        })
+        this.leadSelectedAttachmentFiles = []
+        await this.loadLeadAttachments()
+        alert('上传成功')
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '上传失败')
+      } finally {
+        this.leadUploading = false
+      }
+    },
+    async loadLeadAttachments() {
+      const lid = Number(this.createdLeadId)
+      if (!lid) { this.leadAttachments = []; return }
+      try {
+        const list = await listAfterserviceLeadFiles(lid)
+        this.leadAttachments = Array.isArray(list) ? list : []
+        this.updateLeadHasFiles(lid, this.leadAttachments.length > 0)
+      } catch (_) {
+        this.leadAttachments = []
+        this.updateLeadHasFiles(lid, false)
+      }
+    },
+    async onDeleteLeadAttachment(f) {
+      const ok = window.confirm('确认删除该附件吗？')
+      if (!ok) return
+      try {
+        await deleteAfterserviceLeadFile(f.fileId)
+        await this.loadLeadAttachments()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    triggerLeadEditAttachmentInput() {
+      try {
+        if (this.$refs.leadEditAttachmentInput && this.$refs.leadEditAttachmentInput.click) {
+          this.$refs.leadEditAttachmentInput.click()
+        }
+      } catch (_) {}
+    },
+    onSelectLeadEditAttachmentFiles(e) {
+      const incoming = (e && e.target && e.target.files) ? Array.from(e.target.files) : []
+      if (incoming.length) {
+        const existing = this.leadEditSelectedAttachmentFiles ? Array.from(this.leadEditSelectedAttachmentFiles) : []
+        const byKey = new Map()
+        for (const f of existing) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          byKey.set(k, f)
+        }
+        for (const f of incoming) {
+          const k = `${f.name}:${f.size}:${f.lastModified || 0}`
+          if (!byKey.has(k)) byKey.set(k, f)
+        }
+        this.leadEditSelectedAttachmentFiles = Array.from(byKey.values())
+      }
+      if (e && e.target) e.target.value = ''
+    },
+    removeLeadEditSelectedFile(idx) {
+      if (typeof idx !== 'number') return
+      if (idx < 0 || idx >= this.leadEditSelectedAttachmentFiles.length) return
+      this.leadEditSelectedAttachmentFiles.splice(idx, 1)
+    },
+    async loadLeadEditAttachments() {
+      const lid = Number(this.leadEditId)
+      if (!lid) { this.leadEditAttachments = []; return }
+      try {
+        const list = await listAfterserviceLeadFiles(lid)
+        this.leadEditAttachments = Array.isArray(list) ? list : []
+        this.updateLeadHasFiles(lid, this.leadEditAttachments.length > 0)
+      } catch (_) {
+        this.leadEditAttachments = []
+        this.updateLeadHasFiles(lid, false)
+      }
+    },
+    async onDeleteLeadEditAttachment(f) {
+      const ok = window.confirm('确认删除该附件吗？')
+      if (!ok) return
+      try {
+        await deleteAfterserviceLeadFile(f.fileId)
+        await this.loadLeadEditAttachments()
+      } catch (e) {
+        alert(e?.response?.data?.message || e?.message || '删除失败')
+      }
+    },
+    async loadLeadViewAttachments(leadsId) {
+      const lid = Number(leadsId)
+      if (!lid) { this.leadViewAttachments = []; return }
+      try {
+        const list = await listAfterserviceLeadFiles(lid)
+        this.leadViewAttachments = Array.isArray(list) ? list : []
+        this.updateLeadHasFiles(lid, this.leadViewAttachments.length > 0)
+      } catch (_) {
+        this.leadViewAttachments = []
+        this.updateLeadHasFiles(lid, false)
+      }
+    },
+    viewLead(item) {
+      if (!item) return
+      this.leadViewForm = {
+        leadsSource: item.leadsSource || '用户主动寻求',
+        leadsFinder: item.leadsFinder || '',
+        isTransform: item.isTransform != null ? item.isTransform : false,
+        leadsDescript: item.leadsDescript || ''
+      }
+      this.leadViewAttachments = []
+      this.showLeadViewDialog = true
+      this.loadLeadViewAttachments(item.leadsId)
+    },
+    closeLeadView() {
+      this.showLeadViewDialog = false
+      this.leadViewForm = { leadsSource: '用户主动寻求', leadsFinder: '', isTransform: false, leadsDescript: '' }
+      this.leadViewAttachments = []
+    },
+    onAddClick() {
+      if (this.activeTab === 'events') {
+        this.openAdd()
+      } else if (this.activeTab === 'visits') {
+        this.openVisitAdd()
+      } else if (this.activeTab === 'opportunities') {
+        this.openLeadAdd()
+      } else {
+        alert('当前标签暂未实现“添加记录”功能，请切换到“运维事件”“售后（销售）回访”或“销售线索”标签。')
+      }
     },
     openAdd() {
       this.addFormError = ''
@@ -826,8 +2246,66 @@ export default {
       // 最后再打开弹窗，确保展示的是重置后的默认值
       this.showAddDialog = true
     },
+    openVisitAdd() {
+      this.visitAddFormError = ''
+      this.visitAddSubmitting = false
+      this.createdVisitRecordId = null
+      this.visitSelectedAttachmentFiles = []
+      this.visitAttachments = []
+      this.visitUploadPending = false
+      this.visitUploading = false
+      this.visitUploadProgress = 0
+      // 默认回访日期为今天，回访人默认为当前登录用户
+      const d = new Date()
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      this.visitAddForm = {
+        followUpDate: `${y}-${m}-${day}`,
+        followUpWay: '电话回访',
+        followUpPerson: '',
+        description: ''
+      }
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const userInfo = raw ? JSON.parse(raw) : null
+        const uid = userInfo && userInfo.userId != null ? Number(userInfo.userId) : null
+        if (uid != null) this.visitAddForm.followUpPerson = uid
+      } catch (_) {}
+      this.showVisitAddDialog = true
+    },
+    openLeadAdd() {
+      this.leadAddFormError = ''
+      this.leadAddSubmitting = false
+      this.leadAddForm = {
+        leadsSource: '用户主动寻求',
+        leadsFinder: '',
+        isTransform: false,
+        leadsDescript: ''
+      }
+      this.createdLeadId = null
+      this.leadSelectedAttachmentFiles = []
+      this.leadAttachments = []
+      this.leadUploading = false
+      this.leadUploadProgress = 0
+      this.leadUploadPending = false
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const userInfo = raw ? JSON.parse(raw) : null
+        const uid = userInfo && userInfo.userId != null ? Number(userInfo.userId) : null
+        if (uid != null) this.leadAddForm.leadsFinder = uid
+      } catch (_) {}
+      this.showLeadAddDialog = true
+    },
     closeAdd() {
       this.showAddDialog = false
+    },
+    closeLeadAdd() {
+      this.showLeadAddDialog = false
+      this.createdLeadId = null
+      this.leadSelectedAttachmentFiles = []
+      this.leadAttachments = []
+      this.leadUploadPending = false
     },
     // 工时输入：停止输入1秒后自动规范
     onHoursInput() {
@@ -1356,6 +2834,230 @@ export default {
       this.previewLoading = false
     },
 
+    async onPreviewLeadFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchLeadBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchLeadBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = getAfterserviceLeadPreviewVideoUrl(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          const pdfBlob = await this.fetchLeadPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchLeadBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'html'
+              this.previewHTML = result.value || '<div>文档转换为空</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (['xls','xlsx','ppt','pptx'].includes(ext)) {
+        try {
+          const pdfBlob = await this.fetchLeadPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchLeadBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      this.previewType = 'unsupported'
+      this.previewLoading = false
+    },
+
+    async onPreviewVisitFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchVisitBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchVisitBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = getCustomerFollowUpPreviewVideoUrl(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          const pdfBlob = await this.fetchVisitPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchVisitBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'html'
+              this.previewHTML = result.value || '<div>文档转换为空</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (['xls','xlsx','ppt','pptx'].includes(ext)) {
+        try {
+          const pdfBlob = await this.fetchVisitPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchVisitBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      this.previewType = 'unsupported'
+      this.previewLoading = false
+    },
+
     pdfZoomIn() {
       this.previewScale = Math.min(this.previewScale + 0.1, 3.0)
     },
@@ -1381,11 +3083,48 @@ export default {
       return await resp.blob()
     },
 
+    async fetchVisitBlob(fileId) {
+      const url = getCustomerFollowUpDownloadUrl(fileId)
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+
+    async fetchVisitPreviewPdfBlob(fileId) {
+      const url = getCustomerFollowUpPreviewPdfUrl(fileId)
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('预览转换失败：' + resp.status)
+      return await resp.blob()
+    },
+
+    async fetchLeadBlob(fileId) {
+      const url = getAfterserviceLeadDownloadUrl(fileId)
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+
+    async fetchLeadPreviewPdfBlob(fileId) {
+      const url = getAfterserviceLeadPreviewPdfUrl(fileId)
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('预览转换失败：' + resp.status)
+      return await resp.blob()
+    },
+
     getPreviewUrl(fileId) {
       return getAfterserviceDeliverablePreviewUrl(fileId)
     },
     getDownloadUrl(fileId) {
       return getAfterserviceDeliverableDownloadUrl(fileId)
+    },
+    getVisitPreviewUrl(fileId) {
+      return getCustomerFollowUpPreviewUrl(fileId)
+    },
+    getVisitDownloadUrl(fileId) {
+      return getCustomerFollowUpDownloadUrl(fileId)
+    },
+    getLeadDownloadUrl(fileId) {
+      return getAfterserviceLeadDownloadUrl(fileId)
     },
     fileBaseName(path) {
       if (!path) return ''

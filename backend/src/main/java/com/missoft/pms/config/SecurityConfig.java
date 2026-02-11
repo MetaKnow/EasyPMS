@@ -91,8 +91,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/afterservice-projects/**").permitAll()
                 // 允许访问运维事件接口（临时开放，后续可加认证）
                 .requestMatchers("/api/afterservice-events/**").permitAll()
+                // 允许访问运维销售线索接口（临时开放）
+                .requestMatchers("/api/afterservice-leads/**").permitAll()
+                .requestMatchers("/api/afterservice-lead-files/**").permitAll()
                 // 允许访问运维事件附件上传/下载/预览接口（临时开放）
                 .requestMatchers("/api/afterservice-deliverable-files/**").permitAll()
+                .requestMatchers("/api/customer-follow-ups/**").permitAll()
+                .requestMatchers("/api/customer-follow-up-files/**").permitAll()
                 // 允许访问系统备份接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/backups/**").permitAll()
                 // 允许访问静态资源

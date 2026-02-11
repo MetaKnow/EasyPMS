@@ -38,6 +38,9 @@ public class ExtraRequirement {
     @Column(name = "developer")
     private Long developer;
 
+    @Transient
+    private Boolean hasFiles;
+
     public Long getRequirementId() { return requirementId; }
 
     public void setRequirementId(Long requirementId) { this.requirementId = requirementId; }
@@ -77,4 +80,7 @@ public class ExtraRequirement {
     public Long getDeveloper() { return developer; }
 
     public void setDeveloper(Long developer) { this.developer = developer; }
+
+    public Boolean getHasFiles() { return hasFiles; }
+    public void setHasFiles(Boolean hasFiles) { this.hasFiles = hasFiles; }
 }
