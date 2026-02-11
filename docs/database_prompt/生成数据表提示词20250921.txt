@@ -45,3 +45,11 @@ nonstandard_construct_step表中增加字段：smilestoneId（standard_milestone
 
 增加extra_requirement_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、projectId（constructing_project表外键）、requirementId（extra_requirement表外键）。
 
+增加customer_follow_up表，字段包括recordId（主键）、followUpPerson（回访人，user表外键）、followUpDate（回访日期）、followUpWay（回访方式，值域为电话回访、现场回访）、description（回访描述）
+
+增加customer_follow_up_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、afterServiceProjectId（afterservice_project表外键）、followUpRecordId（customer_follow_up表外键）。
+
+增加afterService_leads表，字段包括leadsId（主键）、afterServiceProjectId（afterService_project表外键）、isTransform（是否转化为商机）、leadsFinder（线索挖掘人，user表外键）、leadsSource（线索来源，值域为用户主动寻求、销售回访、售后维护）、leadsDescript（线索描述）
+
+增加afterService_leads_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、afterServiceProjectId（afterservice_project表外键）、leadsId（afterService_leads表外键）。
+

@@ -19,6 +19,7 @@ public interface ExtraRequirementDeliverableFileRepository extends JpaRepository
      * @return 附件列表
      */
     List<ExtraRequirementDeliverableFile> findByRequirementId(Long requirementId);
+    boolean existsByRequirementId(Long requirementId);
 
     /**
      * 函数级注释：删除某个需求下的全部附件

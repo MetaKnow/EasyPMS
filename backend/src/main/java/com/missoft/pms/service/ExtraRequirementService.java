@@ -56,7 +56,13 @@ public class ExtraRequirementService {
     @Transactional(readOnly = true)
     public List<ExtraRequirement> listByProjectId(Long projectId) {
         if (projectId == null) return List.of();
-        return extraRequirementRepository.findByProjectId(projectId);
+        List<ExtraRequirement> list = extraRequirementRepository.findByProjectId(projectId);
+        for (ExtraRequirement r : list) {
+            if (r != null && r.getRequirementId() != null) {
+                r.setHasFiles(extraRequirementDeliverableFileService.hasFiles(r.getRequirementId()));
+            }
+        }
+        return list;
     }
 
     /**

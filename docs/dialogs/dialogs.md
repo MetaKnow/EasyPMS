@@ -51,3 +51,26 @@
 2026-02-09 合同外需求页面的添加需求按钮未显示，且无数据时不显示表头。需修复按钮显示（右上角），即使无数据也显示表头，并调整样式与维保记录一致。
 2026-02-09 在建项目合同外需求表单中增加附件上传、下载、删除与预览功能；附件保存至deliverableFiles/<项目编号-项目名称>/合同外需求/<需求名称>/并在extra_requirement_deliverableFiles表记录；查看模式仅预览/下载，编辑模式支持上传/下载/删除。
 2026-02-09 合同外需求列表操作列增加删除按钮，删除需求时同步删除已上传附件文件。
+2026-02-10 增加customer_follow_up表，字段包括recordId（主键）、followUpPerson（回访人，user表外键）、followUpDate（回访日期）、followUpWay（回访方式，值域为电话回访、现场回访）、description（回访描述）。只生成数据库迁移文件，不要做其他操作。
+2026-02-10 为运维项目生成售后（销售）回访页签的前后端，界面及功能与运维事件页签保持一致。添加回访记录保存在customer_follow_up表中。
+2026-02-10 回访页签接口请求返回403，需要修复。
+2026-02-10 回访描述为必填，并做保存校验。
+2026-02-10 增加customer_follow_up_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、afterServiceProjectId（afterservice_project表外键）、followUpRecordId（customer_follow_up表外键）。只生成数据库迁移文件，不要做其他操作。
+2026-02-10 添加回访记录附件上传、浏览、下载、删除功能，保存到customer_follow_up_deliverableFiles表并按指定路径存储文件，前端样式与运维事件一致。
+2026-02-10 修复回访附件上传接口返回400的问题。
+2026-02-10 回访附件上传仍返回400，需要继续修复。
+2026-02-10 customer_follow_up_deliverableFiles表增加createTime和updateTime字段。
+2026-02-10 修复078_add_timestamps_to_customer_follow_up_deliverableFiles.sql的SQL语法错误。
+2026-02-10 删除回访记录时同步删除附件文件。
+2026-02-10 有附件的回访记录查看按钮显示为红色。
+2026-02-10 回访记录附件删除完后立即刷新查看按钮颜色。
+2026-02-10 合同外需求有附件时查看按钮变红，附件清零时立即刷新颜色。
+2026-02-10 合同外需求查看按钮需要在列表加载时立即变红并保持。
+2026-02-11 运维项目新增销售线索页签，前后端实现并写入 afterService_leads 表。
+2026-02-11 增加afterService_leads表，字段包括leadsId（主键）、afterServiceProjectId（afterService_project表外键）、isTransform（是否转化为商机）、leadsFinder（线索挖掘人，user表外键）、leadsSource（线索来源，值域为用户主动寻求、销售回访、售后维护）、leadsDescript（线索描述）。只生成数据库迁移文件，不要做其他操作。
+2026-02-11 新增销售线索表单中的是否转化改为“是否转化商机”，线索描述改为必填并在保存时校验。
+2026-02-11 增加afterService_leads_deliverableFiles表，字段包括fileId、filePath、fileSize、uploadUser、afterServiceProjectId、leadsId。只生成数据库迁移文件，不要做其他操作。
+2026-02-11 添加销售线索附件上传、浏览、下载、删除功能，并按指定路径保存文件；查看仅浏览/下载、编辑支持上传/下载/删除，样式与运维事件一致。
+2026-02-11 有附件的销售线索查看按钮变红，附件删除完立即刷新按钮颜色。
+2026-02-11 如果销售线索有附件，查看按钮需在列表加载时立即变红并保持。
+2026-02-11 再次进入运维项目的销售线索页签时，查看按钮需保持附件标红状态。

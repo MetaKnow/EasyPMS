@@ -205,6 +205,12 @@ public class ExtraRequirementDeliverableFileService {
         return removed;
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasFiles(Long requirementId) {
+        if (requirementId == null) return false;
+        return fileRepository.existsByRequirementId(requirementId);
+    }
+
     private Path getProjectRoot() {
         Path cwd = Paths.get("").toAbsolutePath();
         if (cwd.endsWith("backend")) {
