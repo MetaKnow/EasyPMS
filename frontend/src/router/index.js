@@ -111,7 +111,7 @@ const routes = [
         path: 'system/partners',
         name: 'ChannelDistributorManagement',
         component: ChannelDistributorManagement,
-        meta: { title: '渠道商维护', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
+        meta: { title: '渠道管理', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
       },
       {
         path: 'system/backup',

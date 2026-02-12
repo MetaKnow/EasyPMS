@@ -53,3 +53,4 @@ nonstandard_construct_step表中增加字段：smilestoneId（standard_milestone
 
 增加afterService_leads_deliverableFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人）、afterServiceProjectId（afterservice_project表外键）、leadsId（afterService_leads表外键）。
 
+增加constructing_project_commentFiles表，字段包括fileId（主键）、filePath（文件路径）、fileSize（文件大小）、uploadUser（上传人，user表外键）、projectId（constructing_project表外键）、commentId（constructing_project_comment表外键）。

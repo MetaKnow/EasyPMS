@@ -2,7 +2,7 @@
   <div class="channel-management">
     <!-- 页面标题和操作按钮 -->
     <div class="page-header">
-      <h2 class="page-title">渠道商维护</h2>
+      <h2 class="page-title">渠道管理</h2>
       <div class="action-buttons">
         <button class="btn btn-primary" @click="showAddForm">
           <i class="icon-plus"></i>

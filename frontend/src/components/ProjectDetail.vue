@@ -16,13 +16,8 @@
     <div v-else class="content-wrapper">
       <!-- 顶部标签区域（横向切换） -->
       <div class="top-tabs">
-        <div 
-          v-for="tab in tabs" 
-          :key="tab.id" 
-          class="tab-item"
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
-        >
+        <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="{ active: activeTab === tab.id }"
+          @click="activeTab = tab.id">
           {{ tab.name }}
         </div>
       </div>
@@ -33,590 +28,840 @@
         <div v-show="activeTab === 'contract'" class="content-grid">
 
 
-      <section class="card wide">
-        <!-- 类级注释：移除“步骤与里程碑”区域标题，保持页面其他部分不变；
+          <section class="card wide">
+            <!-- 类级注释：移除“步骤与里程碑”区域标题，保持页面其他部分不变；
              为步骤表格添加滚动容器以实现表头固定、仅内容滚动。 -->
-        <div class="table-scroll">
-          <table class="table">
-          <thead>
-            <tr>
-              <th width="60">序号</th>
-              <th>步骤名称</th>
-              <th width="120">类型</th>
-              <th width="100">负责人</th>
-              <th width="120">计划开始</th>
-              <th width="120">计划结束</th>
-              <th width="120">实际开始</th>
-              <th width="120">实际结束</th>
-              <th width="100">计划工期</th>
-              <th width="100">实际工期</th>
-              <th width="140">状态</th>
-              <th width="160">交付物管理</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template
-              v-for="(row, idx) in combinedRows"
-              :key="row.rowType === 'step'
+            <div class="table-scroll">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th width="60">序号</th>
+                    <th>步骤名称</th>
+                    <th width="120">类型</th>
+                    <th width="100">负责人</th>
+                    <th width="120">计划开始</th>
+                    <th width="120">计划结束</th>
+                    <th width="120">实际开始</th>
+                    <th width="120">实际结束</th>
+                    <th width="100">计划工期</th>
+                    <th width="100">实际工期</th>
+                    <th width="140">状态</th>
+                    <th width="160">交付物管理</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-for="(row, idx) in combinedRows" :key="row.rowType === 'step'
                 ? (row.sstepId || row.nstepId || row.relationId)
                 : (row.rowType === 'milestone'
                   ? ('m-' + (row.milestoneId || row.milestoneName))
                   : (row.rowType === 'interface_step'
                     ? ('i-' + (row.relationId || (row.blockId + '-' + idx)))
-                    : (row.rowType + '-' + (row.blockId || idx))))"
-            >
-              <tr v-if="row.rowType === 'step'">
-                <td>{{ idx + 1 }}</td>
-                <td>{{ row.sstepName || row.nstepName }}</td>
-                <td>{{ row.type || '标准' }}</td>
-                <td @dblclick="startEdit(row, 'director')">
-                  <template v-if="isEditing(row, 'director')">
-                    <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit" class="cell-input">
-                      <option :value="null">-</option>
-                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
-                        {{ u.name || u.userName }}
-                      </option>
-                    </select>
-                    </template>
-                  <template v-else>
-                    {{ row.directorName ?? '-' }}
+                    : (row.rowType + '-' + (row.blockId || idx))))">
+                    <tr v-if="row.rowType === 'step'">
+                      <td>{{ idx + 1 }}</td>
+                      <td>{{ row.sstepName || row.nstepName }}</td>
+                      <td>{{ row.type || '标准' }}</td>
+                      <td @dblclick="startEdit(row, 'director')">
+                        <template v-if="isEditing(row, 'director')">
+                          <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
+                            class="cell-input">
+                            <option :value="null">-</option>
+                            <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                              {{ u.name || u.userName }}
+                            </option>
+                          </select>
+                        </template>
+                        <template v-else>
+                          {{ row.directorName ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planStartDate')">
+                        <template v-if="isEditing(row, 'planStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
+                            @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planEndDate')">
+                        <template v-if="isEditing(row, 'planEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
+                            @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                        <template v-if="isEditing(row, 'actualStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
+                            @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                        <template v-if="isEditing(row, 'actualEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
+                            @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td>
+                        {{ row.planPeriod ?? '-' }}
+                      </td>
+                      <td>
+                        {{ row.actualPeriod ?? '-' }}
+                      </td>
+                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td class="deliverable-actions">
+                        <template v-if="shouldShowDeliverableActions(row)">
+                          <div class="actions-inner">
+                            <button class="icon-btn" :class="viewButtonClass(row)" title="查看"
+                              @click="onViewDeliverables(row)" aria-label="查看交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path
+                                  d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" :class="uploadButtonClass(row)" title="上传"
+                              @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </td>
+                    </tr>
+                    <!-- 接口基本信息展示行 -->
+                    <tr v-else-if="row.rowType === 'interface_info'" class="interface-info-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td>接口：{{ row.integrationSysName }}（{{ row.interfaceType }}）</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td>
+                        <button class="btn ghost" :class="{ disabled: isProjectCompleted }"
+                          :disabled="isProjectCompleted" @click="onDeleteInterface(row.blockId)">删除</button>
+                      </td>
+                      <td class="deliverable-actions"></td>
+                    </tr>
+                    <!-- 个性化需求基本信息展示行 -->
+                    <tr v-else-if="row.rowType === 'personal_info'" class="personal-info-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td>个性化需求：{{ row.personalDevName }}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td>
+                        <button class="btn ghost" :class="{ disabled: isProjectCompleted }"
+                          :disabled="isProjectCompleted" @click="onDeletePersonal(row.blockId)">删除</button>
+                      </td>
+                      <td class="deliverable-actions"></td>
+                    </tr>
+                    <!-- 接口开发步骤（支持双击编辑） -->
+                    <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td>{{ row.sstepName }}</td>
+                      <td>{{ row.type }}</td>
+                      <td @dblclick="startEdit(row, 'director')">
+                        <template v-if="isEditing(row, 'director')">
+                          <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
+                            class="cell-input">
+                            <option :value="null">-</option>
+                            <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                              {{ u.name || u.userName }}
+                            </option>
+                          </select>
+                        </template>
+                        <template v-else>
+                          {{ row.directorName ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planStartDate')">
+                        <template v-if="isEditing(row, 'planStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
+                            @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planEndDate')">
+                        <template v-if="isEditing(row, 'planEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
+                            @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                        <template v-if="isEditing(row, 'actualStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
+                            @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                        <template v-if="isEditing(row, 'actualEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
+                            @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td>
+                        {{ row.planPeriod ?? '-' }}
+                      </td>
+                      <td>
+                        {{ row.actualPeriod ?? '-' }}
+                      </td>
+                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td class="deliverable-actions">
+                        <template v-if="shouldShowDeliverableActions(row)">
+                          <div class="actions-inner">
+                            <button class="icon-btn" :class="viewButtonClass(row)" title="查看"
+                              @click="onViewDeliverables(row)" aria-label="查看交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path
+                                  d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" :class="uploadButtonClass(row)" title="上传"
+                              @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </td>
+                    </tr>
+                    <!-- 个性化开发步骤（支持双击编辑） -->
+                    <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td>{{ row.sstepName }}</td>
+                      <td>{{ row.type }}</td>
+                      <td @dblclick="startEdit(row, 'director')">
+                        <template v-if="isEditing(row, 'director')">
+                          <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
+                            class="cell-input">
+                            <option :value="null">-</option>
+                            <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                              {{ u.name || u.userName }}
+                            </option>
+                          </select>
+                        </template>
+                        <template v-else>
+                          {{ row.directorName ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planStartDate')">
+                        <template v-if="isEditing(row, 'planStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
+                            @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'planEndDate')">
+                        <template v-if="isEditing(row, 'planEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
+                            @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.planEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                        <template v-if="isEditing(row, 'actualStartDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
+                            @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualStartDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                        <template v-if="isEditing(row, 'actualEndDate')">
+                          <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
+                            @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
+                        </template>
+                        <template v-else>
+                          {{ row.actualEndDate ?? '-' }}
+                        </template>
+                      </td>
+                      <td>
+                        {{ row.planPeriod ?? '-' }}
+                      </td>
+                      <td>
+                        {{ row.actualPeriod ?? '-' }}
+                      </td>
+                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td class="deliverable-actions">
+                        <template v-if="shouldShowDeliverableActions(row)">
+                          <div class="actions-inner">
+                            <button class="icon-btn" :class="viewButtonClass(row)" title="查看"
+                              @click="onViewDeliverables(row)" aria-label="查看交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path
+                                  d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" :class="uploadButtonClass(row)" title="上传"
+                              @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z" />
+                              </svg>
+                            </button>
+                            <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </template>
+                      </td>
+                    </tr>
+                    <!-- 添加接口按钮行（位于目标里程碑上一行） -->
+                    <tr v-else-if="row.rowType === 'add_interface'" class="add-interface-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td colspan="11">
+                        <button class="add-interface-btn" :class="{ disabled: isProjectCompleted }"
+                          :disabled="isProjectCompleted" @click="openInterfaceDialog">添加接口</button>
+                      </td>
+                    </tr>
+                    <!-- 添加个性化需求按钮行（位于目标里程碑上一行） -->
+                    <tr v-else-if="row.rowType === 'add_personal'" class="add-personal-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td colspan="11">
+                        <button class="add-personal-btn" :class="{ disabled: isProjectCompleted }"
+                          :disabled="isProjectCompleted" @click="openPersonalDialog">添加个性化需求</button>
+                      </td>
+                    </tr>
+                    <tr v-else class="milestone-row">
+                      <td>{{ idx + 1 }}</td>
+                      <td>【里程碑】{{ row.milestoneName }}</td>
+                      <td>里程碑</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>-</td>
+                      <td>{{ row.milestonePeriod ?? '-' }}</td>
+                      <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
+                      <td class="deliverable-actions">
+                        <div class="actions-inner">
+                          <button class="icon-btn" :class="viewButtonClass(row)" title="查看"
+                            @click="onViewDeliverables(row)" aria-label="查看交付物">
+                            <svg viewBox="0 0 24 24">
+                              <path
+                                d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                            </svg>
+                          </button>
+                          <button class="icon-btn" :class="uploadButtonClass(row)" title="上传"
+                            @click="onUploadDeliverable(row)" aria-label="上传交付物">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z" />
+                            </svg>
+                          </button>
+                          <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planStartDate')">
-                  <template v-if="isEditing(row, 'planStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')" @blur="commitEdit(row, 'planStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planEndDate')">
-                  <template v-if="isEditing(row, 'planEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')" @blur="commitEdit(row, 'planEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualStartDate')">
-                  <template v-if="isEditing(row, 'actualStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')" @blur="commitEdit(row, 'actualStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualEndDate')">
-                  <template v-if="isEditing(row, 'actualEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')" @blur="commitEdit(row, 'actualEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td>
-                  {{ row.planPeriod ?? '-' }}
-                </td>
-                <td>
-                  {{ row.actualPeriod ?? '-' }}
-                </td>
-                <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
-                <td class="deliverable-actions">
-                  <template v-if="shouldShowDeliverableActions(row)">
-                    <div class="actions-inner">
-                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                      </button>
-                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                      </button>
-                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                      </button>
-                    </div>
-                  </template>
-                </td>
-              </tr>
-              <!-- 接口基本信息展示行 -->
-              <tr v-else-if="row.rowType === 'interface_info'" class="interface-info-row">
-                <td>{{ idx + 1 }}</td>
-                <td>接口：{{ row.integrationSysName }}（{{ row.interfaceType }}）</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>
-                  <button class="btn ghost" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="onDeleteInterface(row.blockId)">删除</button>
-                </td>
-                <td class="deliverable-actions"></td>
-              </tr>
-              <!-- 个性化需求基本信息展示行 -->
-              <tr v-else-if="row.rowType === 'personal_info'" class="personal-info-row">
-                <td>{{ idx + 1 }}</td>
-                <td>个性化需求：{{ row.personalDevName }}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>
-                  <button class="btn ghost" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="onDeletePersonal(row.blockId)">删除</button>
-                </td>
-                <td class="deliverable-actions"></td>
-              </tr>
-              <!-- 接口开发步骤（支持双击编辑） -->
-              <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
-                <td>{{ idx + 1 }}</td>
-                <td>{{ row.sstepName }}</td>
-                <td>{{ row.type }}</td>
-                <td @dblclick="startEdit(row, 'director')">
-                  <template v-if="isEditing(row, 'director')">
-                    <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit" class="cell-input">
-                      <option :value="null">-</option>
-                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
-                        {{ u.name || u.userName }}
-                      </option>
-                    </select>
-                  </template>
-                  <template v-else>
-                    {{ row.directorName ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planStartDate')">
-                  <template v-if="isEditing(row, 'planStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')" @blur="commitEdit(row, 'planStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planEndDate')">
-                  <template v-if="isEditing(row, 'planEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')" @blur="commitEdit(row, 'planEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualStartDate')">
-                  <template v-if="isEditing(row, 'actualStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')" @blur="commitEdit(row, 'actualStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualEndDate')">
-                  <template v-if="isEditing(row, 'actualEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')" @blur="commitEdit(row, 'actualEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td>
-                  {{ row.planPeriod ?? '-' }}
-                </td>
-                <td>
-                  {{ row.actualPeriod ?? '-' }}
-                </td>
-                <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
-                <td class="deliverable-actions">
-                  <template v-if="shouldShowDeliverableActions(row)">
-                    <div class="actions-inner">
-                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                      </button>
-                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                      </button>
-                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                      </button>
-                    </div>
-                  </template>
-                </td>
-              </tr>
-              <!-- 个性化开发步骤（支持双击编辑） -->
-              <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
-                <td>{{ idx + 1 }}</td>
-                <td>{{ row.sstepName }}</td>
-                <td>{{ row.type }}</td>
-                <td @dblclick="startEdit(row, 'director')">
-                  <template v-if="isEditing(row, 'director')">
-                    <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit" class="cell-input">
-                      <option :value="null">-</option>
-                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
-                        {{ u.name || u.userName }}
-                      </option>
-                    </select>
-                  </template>
-                  <template v-else>
-                    {{ row.directorName ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planStartDate')">
-                  <template v-if="isEditing(row, 'planStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')" @blur="commitEdit(row, 'planStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'planEndDate')">
-                  <template v-if="isEditing(row, 'planEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')" @blur="commitEdit(row, 'planEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.planEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualStartDate')">
-                  <template v-if="isEditing(row, 'actualStartDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')" @blur="commitEdit(row, 'actualStartDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualStartDate ?? '-' }}
-                  </template>
-                </td>
-                <td @dblclick="startEdit(row, 'actualEndDate')">
-                  <template v-if="isEditing(row, 'actualEndDate')">
-                    <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')" @blur="commitEdit(row, 'actualEndDate')" class="cell-input"/>
-                  </template>
-                  <template v-else>
-                    {{ row.actualEndDate ?? '-' }}
-                  </template>
-                </td>
-                <td>
-                  {{ row.planPeriod ?? '-' }}
-                </td>
-                <td>
-                  {{ row.actualPeriod ?? '-' }}
-                </td>
-                <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
-                <td class="deliverable-actions">
-                  <template v-if="shouldShowDeliverableActions(row)">
-                    <div class="actions-inner">
-                      <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                      </button>
-                      <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                      </button>
-                      <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                      </button>
-                    </div>
-                  </template>
-                </td>
-              </tr>
-              <!-- 添加接口按钮行（位于目标里程碑上一行） -->
-              <tr v-else-if="row.rowType === 'add_interface'" class="add-interface-row">
-                <td>{{ idx + 1 }}</td>
-                <td colspan="11">
-                  <button class="add-interface-btn" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="openInterfaceDialog">添加接口</button>
-                </td>
-              </tr>
-              <!-- 添加个性化需求按钮行（位于目标里程碑上一行） -->
-              <tr v-else-if="row.rowType === 'add_personal'" class="add-personal-row">
-                <td>{{ idx + 1 }}</td>
-                <td colspan="11">
-                  <button class="add-personal-btn" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" @click="openPersonalDialog">添加个性化需求</button>
-                </td>
-              </tr>
-              <tr v-else class="milestone-row">
-                <td>{{ idx + 1 }}</td>
-                <td>【里程碑】{{ row.milestoneName }}</td>
-                <td>里程碑</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>{{ row.milestonePeriod ?? '-' }}</td>
-                <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
-                <td class="deliverable-actions">
-                  <div class="actions-inner">
-                    <button class="icon-btn" :class="viewButtonClass(row)" title="查看" @click="onViewDeliverables(row)" aria-label="查看交付物">
-                      <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                    </button>
-                    <button class="icon-btn" :class="uploadButtonClass(row)" title="上传" @click="onUploadDeliverable(row)" aria-label="上传交付物">
-                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18l-5 5h3v6h4V7h3l-5-5z"/></svg>
-                    </button>
-                    <button class="icon-btn" title="下载" @click="onDownloadDeliverables(row)" aria-label="下载交付物">
-                      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-
-      <!-- 合同外需求 -->
-    <div v-show="activeTab === 'out_contract'" class="content-grid">
-        <section class="card wide">
-          <div class="table-scroll">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th width="60">序号</th>
-                  <th>需求名称</th>
-                  <th width="90">是否付费</th>
-                  <th width="120">付费金额（元）</th>
-                  <th width="90">是否交付</th>
-                  <th width="90">是否完成</th>
-                  <th width="100">是否产品化</th>
-                  <th width="120">工作量</th>
-                  <th width="160">开发负责人</th>
-                  <th width="120">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(r, idx) in extraRequirements" :key="r.requirementId || (r.id ?? idx)">
-                  <td>{{ idx + 1 }}</td>
-                  <td>{{ r.requirementName }}</td>
-                  <td>{{ r.isPay ? '是' : '否' }}</td>
-                  <td>{{ r.payAmount != null ? String(r.payAmount) : '-' }}</td>
-                  <td>{{ r.isDeliver ? '是' : '否' }}</td>
-                  <td>{{ r.isComplete ? '是' : '否' }}</td>
-                  <td>{{ r.isProductization ? '是' : '否' }}</td>
-                  <td>{{ r.workload != null ? String(r.workload) : '-' }}</td>
-                  <td>{{ userName(r.developer) || '-' }}</td>
-                  <td class="deliverable-actions">
-                    <div class="actions-inner">
-                      <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewExtra(r)">
-                        <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                      </button>
-                      <button class="icon-btn" title="编辑" @click="editExtra(r)" :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
-                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                      </button>
-                      <button class="icon-btn" title="删除" @click="deleteExtra(r)" :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
-                        <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="!extraRequirements || extraRequirements.length === 0">
-                  <td colspan="10" class="empty">当前暂无合同外需求</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button class="btn" disabled>上一页</button>
-            <span class="page-info">共 {{ extraRequirements.length }} 条</span>
-            <button class="btn" disabled>下一页</button>
-          </div>
-        </section>
-    </div>
-
-
-      <!-- 新增接口弹窗 -->
-      <div v-if="showInterfaceDialog" class="dialog-mask" @click.self="closeInterfaceDialog">
-        <div class="dialog">
-          <h4>新增接口</h4>
-          <div class="form-row">
-            <label>对方系统名称 <span class="required">*</span></label>
-            <input type="text" v-model.trim="interfaceForm.integrationSysName" placeholder="请输入对方系统名称" />
-          </div>
-          <div class="form-row">
-            <label>对方系统厂商 <span class="required">*</span></label>
-            <input type="text" v-model.trim="interfaceForm.integrationSysManufacturer" placeholder="请输入对方系统厂商" />
-          </div>
-          <div class="form-row">
-            <label>接口类型</label>
-            <select v-model="interfaceForm.interfaceType">
-              <option value="">请选择接口类型</option>
-              <option v-for="opt in interfaceTypeOptions" :key="opt" :value="opt">{{ opt }}</option>
-              <option value="__custom__">自定义</option>
-            </select>
-          </div>
-          <div class="form-row" v-if="interfaceForm.interfaceType === '__custom__'">
-            <label>自定义类型 <span class="required">*</span></label>
-            <input type="text" v-model.trim="interfaceForm.customType" placeholder="请输入接口类型" />
-          </div>
-          <div class="dialog-actions">
-            <button class="btn" @click="confirmInterface">确定</button>
-            <button class="btn ghost" @click="closeInterfaceDialog">取消</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 新增个性化需求弹窗 -->
-      <div v-if="showPersonalDialog" class="dialog-mask" @click.self="closePersonalDialog">
-        <div class="dialog">
-          <h4>新增个性化需求</h4>
-          <div class="form-row">
-            <label>需求名称 <span class="required">*</span></label>
-            <input type="text" v-model.trim="personalForm.personalDevName" placeholder="请输入个性化需求名称" />
-          </div>
-          <div class="dialog-actions">
-            <button class="btn" @click="confirmPersonal">确定</button>
-            <button class="btn ghost" @click="closePersonalDialog">取消</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 交付物查看弹窗（结构化版本，去除上下文与模板功能） -->
-      <div v-if="showDeliverableDialog" class="dialog-mask" @click.self="closeDeliverableDialog">
-        <div class="dialog view-dialog">
-          <h4>交付物列表</h4>
-          <!-- 去除上下文标签与模式切换 -->
-
-          <div class="form-row">
-            <div v-if="deliverableLoading">正在加载交付物...</div>
-            <div v-else-if="deliverableError" class="state error">{{ deliverableError }}</div>
-            <div v-else>
-              <div v-if="!deliverableList || deliverableList.length === 0" class="empty">当前未配置可查看的交付物</div>
-              <div v-else class="deliverable-cards">
-                <div class="deliverable-card" v-for="d in deliverableList" :key="d.deliverableId || d.id">
-                  <div class="deliverable-head">
-                    <div class="deliverable-meta">
-                      <span class="deliverable-name">{{ d.deliverableName || d.name }}</span>
-                      <span class="deliverable-type">{{ d.deliverableType || '-' }}</span>
-                    </div>
-                  </div>
-                  <!-- 文件列表区域：查看模式下显示已上传文件 -->
-                  <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[(d.deliverableId || d.id)]?.length">
-                    <div class="template-title">已上传文件：</div>
-                    <ul class="file-list compact">
-                      <li v-for="f in uploadedFilesByDeliverableId[(d.deliverableId || d.id)]" :key="f.fileId" class="file-item">
-                        <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{ fileBaseName(f.filePath) }}</button>
-                        <span class="size">{{ prettySize(f.fileSize) }}</span>
-                        <a class="icon-btn" :href="downloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                          <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="uploaded-list" v-else>
-                    <div class="template-title" style="color:#999">该交付物暂无已上传文件</div>
-                  </div>
-                </div>
-              </div>
+                </tbody>
+              </table>
             </div>
-          </div>
-
-          <div class="dialog-actions">
-            <button class="btn" @click="closeDeliverableDialog">关闭</button>
-          </div>
+          </section>
         </div>
-      </div>
 
-      <!-- 交付物上传弹窗 -->
-      <div v-if="showUploadDialog" class="dialog-mask" @click.self="closeUploadDialog">
-        <div class="dialog upload-dialog">
-          <h4>上传交付物</h4>
-          <div class="form-row">
-            <div v-if="uploadLoading">正在准备上传上下文...</div>
-            <div v-else-if="uploadError" class="state error">{{ uploadError }}</div>
-            <div v-else>
-              <div v-if="!uploadDeliverables || uploadDeliverables.length === 0" style="color:#999">当前步骤/里程碑下没有交付物</div>
-              <div v-else class="upload-list">
-                <div v-for="d in uploadDeliverables" :key="d.deliverableId" class="upload-item">
-                  <div class="upload-head">
-                    <span class="name">{{ d.deliverableName }}</span>
-                    <span class="hint">支持多文件上传</span>
-                  </div>
-                  <div class="template-chips" v-if="uploadTemplatesByDeliverableId[d.deliverableId]?.length">
-                    <div class="template-title">模板：</div>
-                    <div class="chip-group">
-                      <button type="button" class="chip clickable" v-for="t in uploadTemplatesByDeliverableId[d.deliverableId]" :key="t.name" @click="downloadTemplateForDialog(d.deliverableId, t.name)">
-                        <span class="chip-name">{{ t.name }}</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="upload-actions">
-                    <label class="btn primary" :class="{ disabled: uploadingByDeliverableId[d.deliverableId] }" :for="`file-input-${d.deliverableId}`">选择文件</label>
-                    <input :id="`file-input-${d.deliverableId}`" type="file" multiple :disabled="uploadingByDeliverableId[d.deliverableId]" @change="handleUploadFileSelectedForDeliverable(d, $event)" hidden />
-                    <div class="progress" v-if="uploadingByDeliverableId[d.deliverableId]">
-                      <div class="bar" :style="{ width: (uploadProgressByDeliverableId[d.deliverableId] || 0) + '%' }"></div>
-                      <span class="percent">{{ uploadProgressByDeliverableId[d.deliverableId] || 0 }}%</span>
-                    </div>
-                  </div>
-                  <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[d.deliverableId]?.length">
-                    <div class="template-title">已上传文件：</div>
-                    <ul class="file-list compact">
-                      <li v-for="f in uploadedFilesByDeliverableId[d.deliverableId]" :key="f.fileId" class="file-item">
-                        <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{ fileBaseName(f.filePath) }}</button>
-                        <span class="size">{{ prettySize(f.fileSize) }}</span>
-                        <button class="icon-btn danger" :class="{ disabled: isProjectCompleted }" :disabled="isProjectCompleted" title="删除" @click="deleteUploadedFile(f.fileId, d.deliverableId)">
-                          <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+        <!-- 合同外需求 -->
+        <div v-show="activeTab === 'out_contract'" class="content-grid">
+          <section class="card wide">
+            <div class="table-scroll">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th width="60">序号</th>
+                    <th>需求名称</th>
+                    <th width="90">是否付费</th>
+                    <th width="120">付费金额（元）</th>
+                    <th width="90">是否交付</th>
+                    <th width="90">是否完成</th>
+                    <th width="100">是否产品化</th>
+                    <th width="120">工作量</th>
+                    <th width="160">开发负责人</th>
+                    <th width="120">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(r, idx) in extraRequirements" :key="r.requirementId || (r.id ?? idx)">
+                    <td>{{ idx + 1 }}</td>
+                    <td>{{ r.requirementName }}</td>
+                    <td>{{ r.isPay ? '是' : '否' }}</td>
+                    <td>{{ r.payAmount != null ? String(r.payAmount) : '-' }}</td>
+                    <td>{{ r.isDeliver ? '是' : '否' }}</td>
+                    <td>{{ r.isComplete ? '是' : '否' }}</td>
+                    <td>{{ r.isProductization ? '是' : '否' }}</td>
+                    <td>{{ r.workload != null ? String(r.workload) : '-' }}</td>
+                    <td>{{ userName(r.developer) || '-' }}</td>
+                    <td class="deliverable-actions">
+                      <div class="actions-inner">
+                        <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewExtra(r)">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                          </svg>
                         </button>
-                        <!-- 已移除下载按钮：上传交付物界面不提供下载入口 -->
-                      </li>
-                    </ul>
+                        <button class="icon-btn" title="编辑" @click="editExtra(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="删除" @click="deleteExtra(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!extraRequirements || extraRequirements.length === 0">
+                    <td colspan="10" class="empty">当前暂无合同外需求</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <button class="btn" disabled>上一页</button>
+              <span class="page-info">共 {{ extraRequirements.length }} 条</span>
+              <button class="btn" disabled>下一页</button>
+            </div>
+          </section>
+        </div>
+
+        <div v-show="activeTab === 'project_comment'" class="content-grid">
+          <section class="card wide comment-section">
+            <div class="comment-split">
+              <div class="comment-pane-left">
+                <div class="comment-compose-area">
+                  <div class="compose-header">
+                    <span class="compose-title">发表评论</span>
+                  </div>
+                  <div class="compose-body">
+                    <textarea v-model="commentForm.content" rows="3" placeholder="写下你的想法...请控制评论内容在1000汉字和字符内"></textarea>
+                    <div class="comment-upload">
+                      <div class="comment-upload-head">
+                        <span class="comment-upload-title">附件</span>
+                        <label class="comment-upload-btn">
+                          <input type="file" multiple @change="onCommentFileChange" />
+                          选择文件
+                        </label>
+                        <span v-if="commentPendingFiles.length" class="comment-upload-count">已选 {{ commentPendingFiles.length }} 个</span>
+                      </div>
+                      <div v-if="commentPendingFiles.length" class="comment-upload-list">
+                        <div v-for="(file, index) in commentPendingFiles" :key="file.name + file.size + index" class="comment-upload-item">
+                          <span class="comment-upload-name">{{ file.name }}</span>
+                          <span class="comment-upload-size">{{ prettySize(file.size) }}</span>
+                          <button class="icon-btn" type="button" @click="removeCommentPendingFile(index)">×</button>
+                        </div>
+                      </div>
+                      <div v-if="commentUploading" class="comment-upload-progress">
+                        <div class="comment-upload-bar" :style="{ width: commentUploadProgress + '%' }"></div>
+                      </div>
+                    </div>
+                    <div class="compose-footer">
+                      <span class="comment-count" v-if="commentList.length > 0">共 {{ commentList.length }} 条评论</span>
+                      <span class="comment-count" v-else>暂无评论，快来抢沙发吧~</span>
+                      <button class="btn primary submit-btn" @click="submitProjectComment" :disabled="commentSubmitting">
+                        {{ commentSubmitting ? '发送中...' : '发送' }}
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="commentError" class="comment-error">{{ commentError }}</div>
+                </div>
+              </div>
+
+              <div class="comment-pane-right">
+                <div class="comment-list-container">
+                  <div v-if="commentLoading" class="state loading-state">
+                    <div class="spinner"></div>
+                    <span>加载评论中...</span>
+                  </div>
+                  <div v-else-if="!commentList || commentList.length === 0" class="empty-comment-state">
+                    <div class="empty-icon">💬</div>
+                    <p>还没有人评论，来说两句吧</p>
+                  </div>
+                  <div v-else class="comment-items">
+                    <div v-for="item in commentList" :key="item.commentId || item.id" class="comment-card">
+                      <div class="comment-avatar">
+                        {{ (item.displayName || item.userName || item.userId || '?').charAt(0).toUpperCase() }}
+                      </div>
+                      <div class="comment-main">
+                        <div class="comment-header">
+                          <span class="comment-author">{{ item.displayName || item.userName || item.userId || '未知用户' }}</span>
+                          <div class="comment-actions">
+                            <span class="comment-date">{{ formatDate(item.createTime) }}</span>
+                            <button v-if="Number(item.userId) === Number(currentUserId)" class="comment-delete-btn" type="button" @click="deleteProjectComment(item)">删除</button>
+                          </div>
+                        </div>
+                        <div class="comment-text">{{ item.content }}</div>
+                        <div v-if="(commentFilesByCommentId[item.commentId] || []).length" class="comment-file-list">
+                          <div v-for="file in commentFilesByCommentId[item.commentId]" :key="file.fileId" class="comment-file-item">
+                            <template v-if="isImageFile(file.filePath)">
+                              <button class="comment-image-link" type="button" @click="openCommentImagePreview(file)">
+                                <img :src="commentPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)" class="comment-image-thumb" />
+                              </button>
+                              <div class="comment-file-meta">
+                                <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                  {{ fileBaseName(file.filePath) }}
+                                </a>
+                                <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
+                              </div>
+                            </template>
+                            <template v-else>
+                              <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                {{ fileBaseName(file.filePath) }}
+                              </a>
+                              <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
+                            </template>
+                          </div>
+                        </div>
+                        <div class="comment-footer">
+                          <button class="comment-reply-btn" type="button" @click="toggleReplyForm(item.commentId)">回复</button>
+                        </div>
+                        <div v-if="replyFormVisibleByCommentId[item.commentId]" class="comment-reply-editor">
+                          <textarea v-model="replyFormContentByCommentId[item.commentId]" rows="2" placeholder="输入回复内容"></textarea>
+                          <div class="comment-reply-upload">
+                            <label class="comment-upload-btn">
+                              <input type="file" multiple @change="onReplyFileChange(item.commentId, $event)" />
+                              选择文件
+                            </label>
+                            <span v-if="(replyPendingFilesByCommentId[item.commentId] || []).length" class="comment-upload-count">已选 {{ (replyPendingFilesByCommentId[item.commentId] || []).length }} 个</span>
+                          </div>
+                          <div v-if="(replyPendingFilesByCommentId[item.commentId] || []).length" class="comment-upload-list">
+                            <div v-for="(file, index) in (replyPendingFilesByCommentId[item.commentId] || [])" :key="file.name + file.size + index" class="comment-upload-item">
+                              <span class="comment-upload-name">{{ file.name }}</span>
+                              <span class="comment-upload-size">{{ prettySize(file.size) }}</span>
+                              <button class="icon-btn" type="button" @click="removeReplyPendingFile(item.commentId, index)">×</button>
+                            </div>
+                          </div>
+                          <div v-if="replyUploadingByCommentId[item.commentId]" class="comment-upload-progress">
+                            <div class="comment-upload-bar" :style="{ width: (replyUploadProgressByCommentId[item.commentId] || 0) + '%' }"></div>
+                          </div>
+                          <div class="comment-reply-actions">
+                            <button class="btn primary submit-btn" type="button" @click="submitReply(item)" :disabled="replySubmittingByCommentId[item.commentId]">
+                              {{ replySubmittingByCommentId[item.commentId] ? '发送中...' : '发送回复' }}
+                            </button>
+                          </div>
+                        </div>
+                        <div v-if="(replyListByCommentId[item.commentId] || []).length" class="comment-reply-list">
+                          <div v-for="reply in replyListByCommentId[item.commentId]" :key="reply.replyId" class="comment-reply-item">
+                            <div class="comment-reply-header">
+                              <span class="comment-reply-author">{{ reply.displayName || reply.userName || reply.userId || '未知用户' }}</span>
+                              <div class="comment-reply-actions">
+                                <span class="comment-reply-date">{{ formatDate(reply.createTime) }}</span>
+                                <button v-if="Number(reply.userId) === Number(currentUserId)" class="comment-reply-delete-btn" type="button" @click="deleteReply(reply, item.commentId)">删除</button>
+                              </div>
+                            </div>
+                            <div class="comment-reply-content">{{ reply.content }}</div>
+                            <div v-if="(replyFilesByReplyId[reply.replyId] || []).length" class="comment-file-list">
+                              <div v-for="file in replyFilesByReplyId[reply.replyId]" :key="file.fileId" class="comment-file-item">
+                                <template v-if="isImageFile(file.filePath)">
+                                  <button class="comment-image-link" type="button" @click="openReplyImagePreview(file)">
+                                    <img :src="replyPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)" class="comment-image-thumb" />
+                                  </button>
+                                  <div class="comment-file-meta">
+                                    <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                      {{ fileBaseName(file.filePath) }}
+                                    </a>
+                                    <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
+                                  </div>
+                                </template>
+                                <template v-else>
+                                  <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                    {{ fileBaseName(file.filePath) }}
+                                  </a>
+                                  <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
+                                </template>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+          </section>
+        </div>
+
+
+        <!-- 新增接口弹窗 -->
+        <div v-if="showInterfaceDialog" class="dialog-mask" @click.self="closeInterfaceDialog">
+          <div class="dialog">
+            <h4>新增接口</h4>
+            <div class="form-row">
+              <label>对方系统名称 <span class="required">*</span></label>
+              <input type="text" v-model.trim="interfaceForm.integrationSysName" placeholder="请输入对方系统名称" />
+            </div>
+            <div class="form-row">
+              <label>对方系统厂商 <span class="required">*</span></label>
+              <input type="text" v-model.trim="interfaceForm.integrationSysManufacturer" placeholder="请输入对方系统厂商" />
+            </div>
+            <div class="form-row">
+              <label>接口类型</label>
+              <select v-model="interfaceForm.interfaceType">
+                <option value="">请选择接口类型</option>
+                <option v-for="opt in interfaceTypeOptions" :key="opt" :value="opt">{{ opt }}</option>
+                <option value="__custom__">自定义</option>
+              </select>
+            </div>
+            <div class="form-row" v-if="interfaceForm.interfaceType === '__custom__'">
+              <label>自定义类型 <span class="required">*</span></label>
+              <input type="text" v-model.trim="interfaceForm.customType" placeholder="请输入接口类型" />
+            </div>
+            <div class="dialog-actions">
+              <button class="btn" @click="confirmInterface">确定</button>
+              <button class="btn ghost" @click="closeInterfaceDialog">取消</button>
+            </div>
           </div>
-          <div class="dialog-actions">
-            <button class="btn" @click="closeUploadDialog">关闭</button>
+        </div>
+
+        <!-- 新增个性化需求弹窗 -->
+        <div v-if="showPersonalDialog" class="dialog-mask" @click.self="closePersonalDialog">
+          <div class="dialog">
+            <h4>新增个性化需求</h4>
+            <div class="form-row">
+              <label>需求名称 <span class="required">*</span></label>
+              <input type="text" v-model.trim="personalForm.personalDevName" placeholder="请输入个性化需求名称" />
+            </div>
+            <div class="dialog-actions">
+              <button class="btn" @click="confirmPersonal">确定</button>
+              <button class="btn ghost" @click="closePersonalDialog">取消</button>
+            </div>
           </div>
         </div>
+
+        <!-- 交付物查看弹窗（结构化版本，去除上下文与模板功能） -->
+        <div v-if="showDeliverableDialog" class="dialog-mask" @click.self="closeDeliverableDialog">
+          <div class="dialog view-dialog">
+            <h4>交付物列表</h4>
+            <!-- 去除上下文标签与模式切换 -->
+
+            <div class="form-row">
+              <div v-if="deliverableLoading">正在加载交付物...</div>
+              <div v-else-if="deliverableError" class="state error">{{ deliverableError }}</div>
+              <div v-else>
+                <div v-if="!deliverableList || deliverableList.length === 0" class="empty">当前未配置可查看的交付物</div>
+                <div v-else class="deliverable-cards">
+                  <div class="deliverable-card" v-for="d in deliverableList" :key="d.deliverableId || d.id">
+                    <div class="deliverable-head">
+                      <div class="deliverable-meta">
+                        <span class="deliverable-name">{{ d.deliverableName || d.name }}</span>
+                        <span class="deliverable-type">{{ d.deliverableType || '-' }}</span>
+                      </div>
+                    </div>
+                    <!-- 文件列表区域：查看模式下显示已上传文件 -->
+                    <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[(d.deliverableId || d.id)]?.length">
+                      <div class="template-title">已上传文件：</div>
+                      <ul class="file-list compact">
+                        <li v-for="f in uploadedFilesByDeliverableId[(d.deliverableId || d.id)]" :key="f.fileId"
+                          class="file-item">
+                          <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{
+                            fileBaseName(f.filePath) }}</button>
+                          <span class="size">{{ prettySize(f.fileSize) }}</span>
+                          <a class="icon-btn" :href="downloadURL(f.fileId)" :download="fileBaseName(f.filePath)"
+                            title="下载" target="_blank">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                            </svg>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                    <div class="uploaded-list" v-else>
+                      <div class="template-title" style="color:#999">该交付物暂无已上传文件</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dialog-actions">
+              <button class="btn" @click="closeDeliverableDialog">关闭</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 交付物上传弹窗 -->
+        <div v-if="showUploadDialog" class="dialog-mask" @click.self="closeUploadDialog">
+          <div class="dialog upload-dialog">
+            <h4>上传交付物</h4>
+            <div class="form-row">
+              <div v-if="uploadLoading">正在准备上传上下文...</div>
+              <div v-else-if="uploadError" class="state error">{{ uploadError }}</div>
+              <div v-else>
+                <div v-if="!uploadDeliverables || uploadDeliverables.length === 0" style="color:#999">当前步骤/里程碑下没有交付物
+                </div>
+                <div v-else class="upload-list">
+                  <div v-for="d in uploadDeliverables" :key="d.deliverableId" class="upload-item">
+                    <div class="upload-head">
+                      <span class="name">{{ d.deliverableName }}</span>
+                      <span class="hint">支持多文件上传</span>
+                    </div>
+                    <div class="template-chips" v-if="uploadTemplatesByDeliverableId[d.deliverableId]?.length">
+                      <div class="template-title">模板：</div>
+                      <div class="chip-group">
+                        <button type="button" class="chip clickable"
+                          v-for="t in uploadTemplatesByDeliverableId[d.deliverableId]" :key="t.name"
+                          @click="downloadTemplateForDialog(d.deliverableId, t.name)">
+                          <span class="chip-name">{{ t.name }}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="upload-actions">
+                      <label class="btn primary" :class="{ disabled: uploadingByDeliverableId[d.deliverableId] }"
+                        :for="`file-input-${d.deliverableId}`">选择文件</label>
+                      <input :id="`file-input-${d.deliverableId}`" type="file" multiple
+                        :disabled="uploadingByDeliverableId[d.deliverableId]"
+                        @change="handleUploadFileSelectedForDeliverable(d, $event)" hidden />
+                      <div class="progress" v-if="uploadingByDeliverableId[d.deliverableId]">
+                        <div class="bar"
+                          :style="{ width: (uploadProgressByDeliverableId[d.deliverableId] || 0) + '%' }"></div>
+                        <span class="percent">{{ uploadProgressByDeliverableId[d.deliverableId] || 0 }}%</span>
+                      </div>
+                    </div>
+                    <div class="uploaded-list" v-if="uploadedFilesByDeliverableId[d.deliverableId]?.length">
+                      <div class="template-title">已上传文件：</div>
+                      <ul class="file-list compact">
+                        <li v-for="f in uploadedFilesByDeliverableId[d.deliverableId]" :key="f.fileId"
+                          class="file-item">
+                          <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{
+                            fileBaseName(f.filePath) }}</button>
+                          <span class="size">{{ prettySize(f.fileSize) }}</span>
+                          <button class="icon-btn danger" :class="{ disabled: isProjectCompleted }"
+                            :disabled="isProjectCompleted" title="删除"
+                            @click="deleteUploadedFile(f.fileId, d.deliverableId)">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                            </svg>
+                          </button>
+                          <!-- 已移除下载按钮：上传交付物界面不提供下载入口 -->
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="dialog-actions">
+              <button class="btn" @click="closeUploadDialog">关闭</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 文件名点击进行预览；右侧下载图标已移除（按需保留预览与删除） -->
+
+        <!-- 隐藏上传输入 -->
+        <input ref="deliverableUploader" type="file" multiple style="display:none"
+          @change="handleDeliverableFilesSelected" />
+
+        <!-- 全屏文件预览弹窗 -->
+        <div v-if="showPreviewDialog" class="preview-overlay">
+          <div class="preview-header">
+            <span class="title">{{ previewTitle }}</span>
+            <div class="tools">
+              <button v-if="previewType !== 'pdf' && previewType !== 'sheet'" class="icon-btn" title="缩小"
+                @click="pdfZoomOut">
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 13H5v-2h14v2z" />
+                </svg>
+              </button>
+              <button v-if="previewType !== 'pdf' && previewType !== 'video'" class="icon-btn" title="放大"
+                @click="pdfZoomIn">
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+              </button>
+              <button class="icon-btn" title="关闭" @click="closePreviewDialog">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M18.3 5.71L12 12.01 5.7 5.71 4.29 7.12 10.59 13.41 4.29 19.7 5.7 21.11 12 14.82 18.3 21.11 19.71 19.7 13.41 13.41 19.71 7.12z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="preview-body">
+            <div v-if="previewLoading" class="loading">正在加载…</div>
+            <div v-else-if="previewError" class="error">{{ previewError }}</div>
+            <div v-else class="preview-content"
+              :style="(previewType === 'pdf' || previewType === 'video') ? { width: '100%', height: 'calc(100vh - 48px - 24px)', display: 'block' } : { transform: 'scale(' + previewScale + ')', transformOrigin: 'center top' }">
+              <img v-if="previewType === 'image'" :src="previewUrl" class="preview-image" />
+              <iframe v-else-if="previewType === 'pdf'" :src="previewUrl" class="pdf-embed"></iframe>
+              <video v-else-if="previewType === 'video'" :src="previewUrl" class="video-player" controls autoplay
+                playsinline></video>
+              <div v-else-if="previewType === 'docx'" class="html-view" v-html="previewHTML"></div>
+
+              <pre v-else-if="previewType === 'text'" class="text-view">{{ previewText }}</pre>
+              <div v-else class="unsupported">文件格式不支持预览，请下载后查看</div>
+            </div>
+          </div>
+        </div>
+
+
+
       </div>
 
-      <!-- 文件名点击进行预览；右侧下载图标已移除（按需保留预览与删除） -->
-
-      <!-- 隐藏上传输入 -->
-      <input ref="deliverableUploader" type="file" multiple style="display:none" @change="handleDeliverableFilesSelected" />
-
-      <!-- 全屏文件预览弹窗 -->
-      <div v-if="showPreviewDialog" class="preview-overlay">
-      <div class="preview-header">
-        <span class="title">{{ previewTitle }}</span>
-        <div class="tools">
-          <button v-if="previewType !== 'pdf' && previewType !== 'sheet'" class="icon-btn" title="缩小" @click="pdfZoomOut">
-            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
-          </button>
-          <button v-if="previewType !== 'pdf' && previewType !== 'video'" class="icon-btn" title="放大" @click="pdfZoomIn">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          </button>
-          <button class="icon-btn" title="关闭" @click="closePreviewDialog">
-            <svg viewBox="0 0 24 24"><path d="M18.3 5.71L12 12.01 5.7 5.71 4.29 7.12 10.59 13.41 4.29 19.7 5.7 21.11 12 14.82 18.3 21.11 19.71 19.7 13.41 13.41 19.71 7.12z"/></svg>
-          </button>
+      <!-- 其他标签页空白占位 -->
+      <div v-show="['risk', 'warning', 'statistics', 'daily_report', 'modification_record'].includes(activeTab)"
+        class="empty-tab">
+        <div class="empty-state">
+          <div class="empty-icon">📂</div>
+          <h3>{{ getTabName(activeTab) }}</h3>
+          <p>该模块正在建设中...</p>
         </div>
       </div>
-      <div class="preview-body">
-        <div v-if="previewLoading" class="loading">正在加载…</div>
-        <div v-else-if="previewError" class="error">{{ previewError }}</div>
-        <div v-else class="preview-content" :style="(previewType === 'pdf' || previewType === 'video') ? { width: '100%', height: 'calc(100vh - 48px - 24px)', display: 'block' } : { transform: 'scale(' + previewScale + ')', transformOrigin: 'center top' }">
-          <img v-if="previewType === 'image'" :src="previewUrl" class="preview-image" />
-          <iframe v-else-if="previewType === 'pdf'" :src="previewUrl" class="pdf-embed"></iframe>
-          <video v-else-if="previewType === 'video'" :src="previewUrl" class="video-player" controls autoplay playsinline></video>
-          <div v-else-if="previewType === 'docx'" class="html-view" v-html="previewHTML"></div>
-          
-          <pre v-else-if="previewType === 'text'" class="text-view">{{ previewText }}</pre>
-          <div v-else class="unsupported">文件格式不支持预览，请下载后查看</div>
-        </div>
-      </div>
-      </div>
-
-      
-
-        </div>
-        
-        <!-- 其他标签页空白占位 -->
-        <div v-show="activeTab !== 'contract' && activeTab !== 'out_contract'" class="empty-tab">
-           <div class="empty-state">
-             <div class="empty-icon">📂</div>
-             <h3>{{ getTabName(activeTab) }}</h3>
-             <p>该模块正在建设中...</p>
-           </div>
-        </div>
     </div>
     <!-- 新增合同外需求弹窗 -->
     <div v-if="showExtraDialog" class="dialog-mask extra-modal-overlay">
@@ -631,7 +876,8 @@
               <div class="extra-grid">
                 <div class="extra-group">
                   <label>需求名称 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <input type="text" v-model.trim="extraForm.requirementName" placeholder="请输入需求名称" :disabled="extraDialogMode === 'view'" />
+                  <input type="text" v-model.trim="extraForm.requirementName" placeholder="请输入需求名称"
+                    :disabled="extraDialogMode === 'view'" />
                 </div>
                 <div class="extra-group">
                   <label>是否付费 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
@@ -643,7 +889,8 @@
                 </div>
                 <div class="extra-group" v-if="extraForm.isPay">
                   <label>付费金额 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <input type="number" v-model.number="extraForm.payAmount" step="0.01" placeholder="请输入金额（元）" :disabled="extraDialogMode === 'view'" />
+                  <input type="number" v-model.number="extraForm.payAmount" step="0.01" placeholder="请输入金额（元）"
+                    :disabled="extraDialogMode === 'view'" />
                 </div>
                 <div class="extra-group">
                   <label>是否交付 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
@@ -671,7 +918,8 @@
                 </div>
                 <div class="extra-group">
                   <label>工作量</label>
-                  <input type="number" v-model.number="extraForm.workload" step="0.01" placeholder="请输入工作量（人天）" :disabled="extraDialogMode === 'view'" />
+                  <input type="number" v-model.number="extraForm.workload" step="0.01" placeholder="请输入工作量（人天）"
+                    :disabled="extraDialogMode === 'view'" />
                 </div>
                 <div class="extra-group">
                   <label>开发负责人</label>
@@ -686,8 +934,10 @@
                   <div class="extra-section-title">上传附件</div>
                   <div class="extra-upload-card">
                     <div class="extra-upload-head" v-if="extraDialogMode === 'edit' || extraDialogMode === 'create'">
-                      <button type="button" class="btn primary select-btn" @click="triggerExtraAttachmentInput">选择文件</button>
-                      <input ref="extraAttachmentInput" type="file" multiple class="hidden-file" @change="onExtraFilesSelected($event)" />
+                      <button type="button" class="btn primary select-btn"
+                        @click="triggerExtraAttachmentInput">选择文件</button>
+                      <input ref="extraAttachmentInput" type="file" multiple class="hidden-file"
+                        @change="onExtraFilesSelected($event)" />
                     </div>
                     <div class="extra-upload-body">
                       <div class="progress" v-if="extraUploading">
@@ -701,7 +951,9 @@
                             <span class="file-link">{{ f.name }}</span>
                             <span class="size">{{ prettySize(f.size) }}</span>
                             <button class="icon-btn danger" title="移除" @click="removeExtraPendingFile(idx)">
-                              <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
                             </button>
                           </li>
                         </ul>
@@ -709,13 +961,20 @@
                       <div class="uploaded-list" v-if="extraAttachments.length">
                         <ul class="file-list compact">
                           <li v-for="f in extraAttachments" :key="f.fileId" class="file-item">
-                            <button type="button" class="file-link preview-link" @click="onPreviewExtraFile(f)">{{ fileBaseName(f.filePath) }}</button>
+                            <button type="button" class="file-link preview-link" @click="onPreviewExtraFile(f)">{{
+                              fileBaseName(f.filePath) }}</button>
                             <span class="size">{{ prettySize(f.fileSize) }}</span>
-                            <a class="icon-btn" :href="convertExtraDownloadURL(f.fileId)" :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                              <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z"/></svg>
+                            <a class="icon-btn" :href="convertExtraDownloadURL(f.fileId)"
+                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
                             </a>
-                            <button class="icon-btn danger" v-if="extraDialogMode === 'edit'" title="删除" @click="onDeleteExtraFile(f)">
-                              <svg viewBox="0 0 24 24"><path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z"/></svg>
+                            <button class="icon-btn danger" v-if="extraDialogMode === 'edit'" title="删除"
+                              @click="onDeleteExtraFile(f)">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
                             </button>
                           </li>
                         </ul>
@@ -750,6 +1009,10 @@ import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverab
 import { createInterface, listInterfacesByProject, deleteInterface } from '../api/interface';
 import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
 import { createExtraRequirement, listExtraRequirementsByProject, updateExtraRequirement, deleteExtraRequirement, uploadExtraRequirementFiles, listExtraRequirementFiles, deleteExtraRequirementFile } from '../api/extraRequirement';
+import { listConstructingProjectComments, createConstructingProjectComment, deleteConstructingProjectComment } from '../api/constructingProjectComment';
+import { createConstructingProjectCommentReply, listConstructingProjectCommentReplies, deleteConstructingProjectCommentReply } from '../api/constructingProjectCommentReply';
+import { uploadConstructingProjectCommentReplyFiles, listConstructingProjectCommentReplyFilesByComment, getConstructingProjectCommentReplyFilePreviewUrl, getConstructingProjectCommentReplyFileDownloadUrl } from '../api/constructingProjectCommentReplyFile';
+import { uploadConstructingProjectCommentFiles, listConstructingProjectCommentFilesByProject, getConstructingProjectCommentFilePreviewUrl, getConstructingProjectCommentFileDownloadUrl } from '../api/constructingProjectCommentFile';
 import request from '../api/request'
 // 引入预览依赖：Mammoth（docx→HTML）、XLSX
 import mammoth from 'mammoth/mammoth.browser'
@@ -782,6 +1045,7 @@ export default {
         { id: 'warning', name: '项目预警' },
         { id: 'statistics', name: '项目统计' },
         { id: 'daily_report', name: '项目日报' },
+        { id: 'project_comment', name: '项目评论' },
         { id: 'modification_record', name: '修改记录' }
       ],
       loading: true,
@@ -871,6 +1135,26 @@ export default {
         isProductization: null,
         workload: null,
         developer: null
+      },
+      commentList: [],
+      commentLoading: false,
+      commentSubmitting: false,
+      commentError: '',
+      commentUploading: false,
+      commentUploadProgress: 0,
+      commentPendingFiles: [],
+      commentFilesByCommentId: {},
+      currentUserId: null,
+      replyListByCommentId: {},
+      replyFilesByReplyId: {},
+      replyFormVisibleByCommentId: {},
+      replyFormContentByCommentId: {},
+      replyPendingFilesByCommentId: {},
+      replyUploadingByCommentId: {},
+      replyUploadProgressByCommentId: {},
+      replySubmittingByCommentId: {},
+      commentForm: {
+        content: ''
       }
     };
   },
@@ -1008,6 +1292,13 @@ export default {
     }
   },
   created() {
+    try {
+      const userInfoRaw = sessionStorage.getItem('userInfo')
+      const userInfo = userInfoRaw ? JSON.parse(userInfoRaw) : null
+      this.currentUserId = userInfo && userInfo.userId ? Number(userInfo.userId) : null
+    } catch (_) {
+      this.currentUserId = null
+    }
     this.loadSummary();
     this.loadUsers();
     this.loadStandardMilestones();
@@ -1834,10 +2125,13 @@ export default {
             this.personalBlocks = [];
           }
         }
-          // 加载合同外需求列表
-          try {
-            await this.loadExtraRequirements();
-          } catch (_) {}
+        // 加载合同外需求列表
+        try {
+          await this.loadExtraRequirements();
+        } catch (_) { }
+        try {
+          await this.loadProjectComments();
+        } catch (_) { }
       } catch (err) {
         const backendMsg = err?.response?.data?.message || err?.response?.data?.error;
         this.error = backendMsg ? `加载失败：${backendMsg}` : (err?.message || '加载失败');
@@ -2026,12 +2320,12 @@ export default {
           if (field === 'planStartDate' || field === 'planEndDate') {
             step.planPeriod = payload.planPeriod ?? null;
           }
-            if (field === 'actualStartDate' || field === 'actualEndDate') {
-              step.actualPeriod = payload.actualPeriod ?? null;
-              // 规则5：根据实际开始/结束日期更新步骤状态
-              this.updateStepStatus(step);
-            }
+          if (field === 'actualStartDate' || field === 'actualEndDate') {
+            step.actualPeriod = payload.actualPeriod ?? null;
+            // 规则5：根据实际开始/结束日期更新步骤状态
+            this.updateStepStatus(step);
           }
+        }
 
         // 同步更新原始 steps 列表中的对应项，触发 combinedRows 重新计算
         const src = this.steps.find(s => s.relationId === relationId);
@@ -2121,7 +2415,7 @@ export default {
     },
     prettySize(bytes) {
       if (!bytes && bytes !== 0) return '';
-      const units = ['B','KB','MB','GB','TB'];
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
       let size = bytes, idx = 0;
       while (size >= 1024 && idx < units.length - 1) { size /= 1024; idx++; }
       return `${size.toFixed(1)} ${units[idx]}`;
@@ -2130,7 +2424,7 @@ export default {
       if (!ts) return '';
       try {
         const d = new Date(ts);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       } catch (_) { return ''; }
     },
     goBack() {
@@ -2145,7 +2439,7 @@ export default {
         if ((this.previewType === 'image' || this.previewType === 'pdf') && this.previewUrl) {
           URL.revokeObjectURL(this.previewUrl)
         }
-      } catch (_) {}
+      } catch (_) { }
       // 重置状态
       this.showPreviewDialog = false
       this.previewTitle = ''
@@ -2175,7 +2469,7 @@ export default {
       this.showPreviewDialog = true
 
       // 类型判定
-      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
       if (imageExts.includes(ext)) {
         this.previewType = 'image'
         try {
@@ -2326,6 +2620,21 @@ export default {
       if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
       return await resp.blob()
     },
+    async fetchCommentBlob(fileId) {
+      const url = this.commentDownloadUrl(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：获取回复附件 Blob
+     */
+    async fetchReplyBlob(fileId) {
+      const url = this.replyDownloadUrl(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
     /**
      * 函数级注释：获取后端 Office→PDF 预览的 PDF Blob
      * - 统一将 Word 文档（doc/docx）转换为 PDF，供 iframe 内置查看器预览。
@@ -2339,7 +2648,7 @@ export default {
       if (!resp.ok) throw new Error('预览转换失败：' + resp.status)
       return await resp.blob()
     },
-    
+
     // 接口新增弹窗控制
     openInterfaceDialog() {
       if (this.isProjectCompleted) {
@@ -2545,6 +2854,304 @@ export default {
       } catch (e) {
         this.extraRequirements = []
       }
+    },
+    async loadProjectComments() {
+      if (!this.project || !this.project.projectId) return
+      this.commentLoading = true
+      this.commentError = ''
+      try {
+        const resp = await listConstructingProjectComments(this.project.projectId)
+        const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.data || [])
+        this.commentList = Array.isArray(list) ? list : []
+        await this.loadProjectCommentFiles()
+        await this.loadProjectCommentReplies()
+      } catch (e) {
+        this.commentList = []
+        this.commentFilesByCommentId = {}
+        this.replyListByCommentId = {}
+        this.replyFilesByReplyId = {}
+        this.commentError = e?.response?.data?.error || e?.message || '加载评论失败'
+      } finally {
+        this.commentLoading = false
+      }
+    },
+    async loadProjectCommentFiles() {
+      if (!this.project || !this.project.projectId) return
+      try {
+        const files = await listConstructingProjectCommentFilesByProject(this.project.projectId)
+        const map = {}
+        for (const file of files || []) {
+          const key = file?.commentId
+          if (!key) continue
+          if (!map[key]) map[key] = []
+          map[key].push(file)
+        }
+        this.commentFilesByCommentId = map
+      } catch (e) {
+        this.commentFilesByCommentId = {}
+      }
+    },
+    /**
+     * 函数级注释：加载评论回复与回复附件
+     */
+    async loadProjectCommentReplies() {
+      const list = Array.isArray(this.commentList) ? this.commentList : []
+      if (list.length === 0) {
+        this.replyListByCommentId = {}
+        this.replyFilesByReplyId = {}
+        return
+      }
+      const replyMap = {}
+      const replyFilesMap = {}
+      await Promise.all(list.map(async (item) => {
+        const commentId = item?.commentId
+        if (!commentId) return
+        try {
+          const resp = await listConstructingProjectCommentReplies(commentId)
+          const replies = Array.isArray(resp?.data) ? resp.data : (resp?.data?.data || [])
+          replyMap[commentId] = Array.isArray(replies) ? replies : []
+        } catch (_) {
+          replyMap[commentId] = []
+        }
+        try {
+          const files = await listConstructingProjectCommentReplyFilesByComment(commentId)
+          for (const file of files || []) {
+            const key = file?.replyId
+            if (!key) continue
+            if (!replyFilesMap[key]) replyFilesMap[key] = []
+            replyFilesMap[key].push(file)
+          }
+        } catch (_) {}
+      }))
+      this.replyListByCommentId = replyMap
+      this.replyFilesByReplyId = replyFilesMap
+    },
+    async submitProjectComment() {
+      if (this.commentSubmitting) return
+      if (!this.project || !this.project.projectId) return this.showError('项目ID缺失，无法发表评论')
+      const content = (this.commentForm.content || '').trim()
+      const hasPendingFiles = Array.isArray(this.commentPendingFiles) && this.commentPendingFiles.length > 0
+      if (!content && !hasPendingFiles) return this.showError('请输入评论内容或上传附件')
+      if (content && content.length > 2000) return this.showError('评论内容超长，请控制在1000汉字和字符内')
+      const userInfoRaw = sessionStorage.getItem('userInfo')
+      const userInfo = userInfoRaw ? JSON.parse(userInfoRaw) : null
+      const userId = userInfo && userInfo.userId ? Number(userInfo.userId) : null
+      if (!userId) return this.showError('未获取到用户信息，无法发表评论')
+      this.commentSubmitting = true
+      this.commentUploadProgress = 0
+      try {
+        const resp = await createConstructingProjectComment({
+          projectId: this.project.projectId,
+          userId,
+          content
+        })
+        const commentId = resp?.data?.data?.commentId || resp?.data?.commentId
+        if (commentId && this.commentPendingFiles.length > 0) {
+          this.commentUploading = true
+          await uploadConstructingProjectCommentFiles(this.project.projectId, commentId, this.commentPendingFiles, {
+            uploaderId: userId,
+            onProgress: (percent) => {
+              this.commentUploadProgress = percent
+            }
+          })
+        }
+        this.commentForm.content = ''
+        this.commentPendingFiles = []
+        this.commentUploadProgress = 0
+        await this.loadProjectComments()
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '发表评论失败')
+      } finally {
+        this.commentUploading = false
+        this.commentSubmitting = false
+      }
+    },
+    async deleteProjectComment(item) {
+      const commentId = item?.commentId
+      if (!commentId) return
+      if (!this.currentUserId || Number(item?.userId) !== Number(this.currentUserId)) {
+        return this.showError('只能删除自己发表的评论')
+      }
+      const ok = this.$confirm ? await this.$confirm('确认删除该评论及附件？') : window.confirm('确认删除该评论及附件？')
+      if (!ok) return
+      try {
+        await deleteConstructingProjectComment(commentId, this.currentUserId)
+        this.$message && this.$message.success('评论已删除')
+        await this.loadProjectComments()
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '删除评论失败')
+      }
+    },
+    /**
+     * 函数级注释：切换评论回复编辑区
+     */
+    toggleReplyForm(commentId) {
+      const key = String(commentId)
+      const current = !!this.replyFormVisibleByCommentId[key]
+      this.replyFormVisibleByCommentId = {
+        ...this.replyFormVisibleByCommentId,
+        [key]: !current
+      }
+    },
+    /**
+     * 函数级注释：选择回复附件
+     */
+    onReplyFileChange(commentId, e) {
+      const key = String(commentId)
+      const files = Array.from(e?.target?.files || [])
+      if (files.length === 0) return
+      const list = Array.isArray(this.replyPendingFilesByCommentId[key]) ? this.replyPendingFilesByCommentId[key] : []
+      this.replyPendingFilesByCommentId = {
+        ...this.replyPendingFilesByCommentId,
+        [key]: [...list, ...files]
+      }
+      if (e?.target) e.target.value = ''
+    },
+    /**
+     * 函数级注释：移除待上传回复附件
+     */
+    removeReplyPendingFile(commentId, index) {
+      const key = String(commentId)
+      const list = Array.isArray(this.replyPendingFilesByCommentId[key]) ? [...this.replyPendingFilesByCommentId[key]] : []
+      list.splice(index, 1)
+      this.replyPendingFilesByCommentId = {
+        ...this.replyPendingFilesByCommentId,
+        [key]: list
+      }
+    },
+    /**
+     * 函数级注释：提交回复
+     */
+    async submitReply(commentItem) {
+      const commentId = commentItem?.commentId
+      if (!commentId) return
+      const key = String(commentId)
+      const content = (this.replyFormContentByCommentId[key] || '').trim()
+      const pending = Array.isArray(this.replyPendingFilesByCommentId[key]) ? this.replyPendingFilesByCommentId[key] : []
+      if (!content && pending.length === 0) return this.showError('请输入回复内容或上传附件')
+      if (content && content.length > 2000) return this.showError('回复内容超长，请控制在1000汉字和字符内')
+      if (!this.currentUserId) return this.showError('未获取到用户信息，无法回复')
+      this.replySubmittingByCommentId = { ...this.replySubmittingByCommentId, [key]: true }
+      this.replyUploadProgressByCommentId = { ...this.replyUploadProgressByCommentId, [key]: 0 }
+      try {
+        const resp = await createConstructingProjectCommentReply({
+          projectId: this.project.projectId,
+          commentId,
+          userId: this.currentUserId,
+          content
+        })
+        const replyId = resp?.data?.data?.replyId || resp?.data?.replyId
+        if (replyId && pending.length > 0) {
+          this.replyUploadingByCommentId = { ...this.replyUploadingByCommentId, [key]: true }
+          await uploadConstructingProjectCommentReplyFiles(this.project.projectId, commentId, replyId, pending, {
+            uploaderId: this.currentUserId,
+            onProgress: (percent) => {
+              this.replyUploadProgressByCommentId = { ...this.replyUploadProgressByCommentId, [key]: percent }
+            }
+          })
+        }
+        this.replyFormContentByCommentId = { ...this.replyFormContentByCommentId, [key]: '' }
+        this.replyPendingFilesByCommentId = { ...this.replyPendingFilesByCommentId, [key]: [] }
+        this.replyUploadProgressByCommentId = { ...this.replyUploadProgressByCommentId, [key]: 0 }
+        await this.loadProjectCommentReplies()
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '回复失败')
+      } finally {
+        this.replyUploadingByCommentId = { ...this.replyUploadingByCommentId, [key]: false }
+        this.replySubmittingByCommentId = { ...this.replySubmittingByCommentId, [key]: false }
+      }
+    },
+    /**
+     * 函数级注释：删除回复（仅本人）
+     */
+    async deleteReply(reply, commentId) {
+      const replyId = reply?.replyId
+      if (!replyId) return
+      if (!this.currentUserId || Number(reply?.userId) !== Number(this.currentUserId)) {
+        return this.showError('只能删除自己发表的回复')
+      }
+      const ok = this.$confirm ? await this.$confirm('确认删除该回复及附件？') : window.confirm('确认删除该回复及附件？')
+      if (!ok) return
+      try {
+        await deleteConstructingProjectCommentReply(replyId, this.currentUserId)
+        this.$message && this.$message.success('回复已删除')
+        await this.loadProjectCommentReplies()
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '删除回复失败')
+      }
+    },
+    /**
+     * 函数级注释：获取回复预览URL
+     */
+    replyPreviewUrl(fileId) {
+      return getConstructingProjectCommentReplyFilePreviewUrl(fileId)
+    },
+    /**
+     * 函数级注释：获取回复下载URL
+     */
+    replyDownloadUrl(fileId) {
+      return getConstructingProjectCommentReplyFileDownloadUrl(fileId)
+    },
+    /**
+     * 函数级注释：打开回复图片预览
+     */
+    async openReplyImagePreview(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      this.previewTitle = name || '图片预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+      this.previewType = 'image'
+      try {
+        const blob = await this.fetchReplyBlob(file.fileId)
+        const url = URL.createObjectURL(blob)
+        this.previewUrl = url
+      } catch (e) {
+        this.previewError = e?.message || '图片加载失败'
+      } finally {
+        this.previewLoading = false
+      }
+    },
+    onCommentFileChange(e) {
+      const files = Array.from(e?.target?.files || [])
+      if (files.length === 0) return
+      this.commentPendingFiles = [...(this.commentPendingFiles || []), ...files]
+      if (e?.target) e.target.value = ''
+    },
+    removeCommentPendingFile(index) {
+      const list = Array.isArray(this.commentPendingFiles) ? [...this.commentPendingFiles] : []
+      list.splice(index, 1)
+      this.commentPendingFiles = list
+    },
+    commentPreviewUrl(fileId) {
+      return getConstructingProjectCommentFilePreviewUrl(fileId)
+    },
+    commentDownloadUrl(fileId) {
+      return getConstructingProjectCommentFileDownloadUrl(fileId)
+    },
+    async openCommentImagePreview(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      this.previewTitle = name || '图片预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+      this.previewType = 'image'
+      try {
+        const blob = await this.fetchCommentBlob(file.fileId)
+        const url = URL.createObjectURL(blob)
+        this.previewUrl = url
+      } catch (e) {
+        this.previewError = e?.message || '图片加载失败'
+      } finally {
+        this.previewLoading = false
+      }
+    },
+    isImageFile(path) {
+      const name = this.fileBaseName(path || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      return ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(ext)
     },
     /**
      * 函数级注释：加载合同外需求附件列表
@@ -2767,7 +3374,7 @@ export default {
     triggerExtraAttachmentInput() {
       try {
         this.$refs.extraAttachmentInput && this.$refs.extraAttachmentInput.click()
-      } catch (_) {}
+      } catch (_) { }
     },
     /**
      * 函数级注释：上传合同外需求附件并刷新列表
@@ -2869,7 +3476,7 @@ export default {
       this.previewScale = 1.0
       this.showPreviewDialog = true
 
-      const imageExts = ['png','jpg','jpeg','gif','bmp','webp']
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
       if (imageExts.includes(ext)) {
         this.previewType = 'image'
         try {
@@ -3001,45 +3608,714 @@ export default {
 
 <style scoped>
 /* 类级注释：页面容器调整为内部滚动，仅内容区滚动，避免底部空白 */
-.project-detail-page { display:flex; flex-direction:column; height:100vh; overflow:hidden; padding:8px; box-sizing:border-box; }
-.topbar { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eee; }
-.back-btn { padding:6px 12px; border:1px solid #ddd; border-radius:4px; background:#fff; cursor:pointer; }
-.title { flex:1; display:flex; align-items:baseline; gap:8px; font-size:18px; font-weight:600; }
-.title .num { color:#666; font-size:13px; font-weight:400; }
-.stats { display:flex; gap:6px; }
-.chip { padding:4px 8px; background:#f5f5f5; border-radius:12px; font-size:12px; }
-.state { padding:24px; color:#333; }
-.state.error { color:#c00; }
-.content-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; overflow-x:auto; flex: 1; min-height: 0; }
-.card { background:#fff; border:1px solid #eee; border-radius:8px; padding:12px; }
-.card.wide { grid-column: 1 / -1; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.info-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
-.info-grid label { color:#888; font-size:12px; }
-.list { list-style:none; padding:0; margin:0; }
-.list-item { display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #eee; }
-.tag { font-size:12px; color:#666; }
-.tag.done { color:#2f8f2f; }
-.deliverables { display:flex; flex-direction:column; gap:12px; }
-.deliverable-header { display:flex; align-items:center; justify-content:space-between; }
-.deliverable-title { display:flex; align-items:center; gap:8px; }
-.file-list { list-style:none; padding:0; margin:6px 0 0; }
-.file-item { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px dashed #eee; }
-.file-link { color:#1677ff; text-decoration:none; }
-.file-link:hover { text-decoration:underline; }
-.size, .time { color:#888; font-size:12px; }
-.empty { color:#888; padding:8px 0; }
+.project-detail-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.back-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.title .num {
+  color: #666;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.stats {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.state {
+  padding: 24px;
+  color: #333;
+}
+
+.state.error {
+  color: #c00;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.card.wide {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.info-grid label {
+  color: #888;
+  font-size: 12px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.tag {
+  font-size: 12px;
+  color: #666;
+}
+
+.tag.done {
+  color: #2f8f2f;
+}
+
+.deliverables {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deliverable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.deliverable-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.file-link {
+  color: #1677ff;
+  text-decoration: none;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+}
+
+.size,
+.time {
+  color: #888;
+  font-size: 12px;
+}
+
+.empty {
+  color: #888;
+  padding: 8px 0;
+}
+
+/* 评论区样式优化 */
+.comment-section {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 0 !important; /* 重置内边距，由内部容器控制 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-split {
+  display: flex;
+  height: calc(100vh - 120px);
+}
+
+.comment-pane-left {
+  width: 30%;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-pane-right {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-compose-area {
+  padding: 20px;
+  border-bottom: none;
+  height: 100%;
+}
+
+.compose-header {
+  margin-bottom: 12px;
+}
+
+.compose-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+}
+
+.compose-body {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.compose-body:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.compose-body textarea {
+  width: 100%;
+  border: none;
+  padding: 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 120px;
+  max-height: 240px;
+  overflow: auto;
+  display: block;
+  outline: none;
+}
+
+.comment-upload {
+  border-top: 1px solid #f3f4f6;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.comment-upload-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.comment-upload-title {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.comment-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  background: #fff;
+}
+
+.comment-upload-btn input {
+  display: none;
+}
+
+.comment-upload-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.comment-upload-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.comment-upload-name {
+  flex: 1;
+  font-size: 12px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.comment-upload-size {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.comment-upload-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #eef2ff;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.comment-upload-bar {
+  height: 100%;
+  background: #2563eb;
+  transition: width 0.2s ease;
+}
+
+.compose-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #fff;
+  border-top: 1px solid #f3f4f6;
+}
+
+.comment-count {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.submit-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.comment-list-container {
+  flex: 1;
+  padding: 0 20px;
+  overflow-y: auto;
+  min-height: 300px;
+}
+
+.comment-items {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.comment-card {
+  display: flex;
+  gap: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.comment-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.comment-main {
+  flex: 1;
+  background: #f3f4f6;
+  padding: 12px 16px;
+  border-radius: 0 12px 12px 12px;
+  position: relative;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-delete-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.comment-delete-btn:hover {
+  text-decoration: underline;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comment-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.comment-reply-btn {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.comment-reply-btn:hover {
+  text-decoration: underline;
+}
+
+.comment-reply-editor {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.comment-reply-editor textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 180px;
+}
+
+.comment-reply-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.comment-reply-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comment-reply-item {
+  padding: 10px 12px;
+  background: #eef2ff;
+  border-radius: 8px;
+}
+
+.comment-reply-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.comment-reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-reply-delete-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.comment-reply-delete-btn:hover {
+  text-decoration: underline;
+}
+
+.comment-reply-author {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.comment-reply-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.comment-reply-content {
+  font-size: 13px;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.comment-file-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comment-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.comment-image-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+  cursor: pointer;
+}
+
+.comment-image-thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  display: block;
+}
+
+.comment-file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-file-name {
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.comment-file-name:hover {
+  text-decoration: underline;
+}
+
+.comment-file-size {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.empty-comment-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  color: #9ca3af;
+}
+
+.empty-comment-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: #6b7280;
+  gap: 12px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.comment-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* 旧样式清理 (如有冲突请删除) */
+.comment-compose, .comment-list, .comment-item, .comment-meta, .comment-user, .comment-content {
+  /* 保留或移除，新样式已使用新类名 */
+}
 
 /* 表格样式 */
 /* 兼容粘性表头：使用分离边框以提高浏览器兼容性 */
-.table { width:100%; border-collapse:separate; border-spacing:0; }
-.table th, .table td { padding:8px; border-bottom:1px dashed #eee; font-size:14px; text-align:left; }
-.table td { position: relative; }
-.table thead th { background:#fafafa; font-weight:600; color:#333; }
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  border-bottom: 1px dashed #eee;
+  font-size: 14px;
+  text-align: left;
+}
+
+.table td {
+  position: relative;
+}
+
+.table thead th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
 /* 固定表头与滚动容器（仅本组件生效） */
-.table-scroll { flex: 1; min-height: 0; overflow: auto; }
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 /* 同时对 thead 设为粘性，避免某些浏览器对 th 粘性支持不一致 */
-.table-scroll thead { position: sticky; top: 0; z-index: 4; background: #fafafa; }
-.table-scroll thead th { position: sticky; top: 0; z-index: 5; background: #fafafa; }
+.table-scroll thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #fafafa;
+}
+
+.table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fafafa;
+}
+
 .cell-input {
   position: absolute;
   left: 8px;
@@ -3056,88 +4332,398 @@ export default {
   background: #fff;
   z-index: 2;
 }
-.milestone-row { color:#c00; background:#fff5f5; }
+
+.milestone-row {
+  color: #c00;
+  background: #fff5f5;
+}
+
 /* 接口相关样式与弹窗 */
-.interface-info-row { background:#f7fbff; color:#0a65c2; }
-.interface-step-row { background:#fafdff; }
-.add-interface-row { background:#f7fbff; }
-.add-interface-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
-.add-interface-btn:hover { background:#0f5fd6; }
-.add-interface-btn.disabled { opacity:.6; cursor:not-allowed; filter: grayscale(40%); }
-.personal-info-row { background:#f7fbff; color:#0a65c2; }
-.personal-step-row { background:#fafdff; }
-.add-personal-row { background:#f7fbff; }
-.add-personal-btn { padding:6px 12px; border:1px solid #1677ff; background:#1677ff; color:#fff; border-radius:4px; cursor:pointer; }
-.add-personal-btn:hover { background:#0f5fd6; }
-.add-personal-btn.disabled { opacity:.6; cursor:not-allowed; filter: grayscale(40%); }
-.dialog-mask { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:1000; }
-.dialog { width:420px; background:#fff; border-radius:8px; border:1px solid #eee; padding:16px; }
-.dialog.upload-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-.dialog.view-dialog { width: 560px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
-.dialog h4 { margin:0 0 12px; }
-.dialog-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.extra-modal { background:#fff; border-radius:12px; width:90%; max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid #e8e8e8; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
-.extra-modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e8e8e8; background:#fafafa; }
-.extra-modal-header h3 { margin:0; font-size:18px; font-weight:600; color:#262626; }
-.extra-close { background:none; border:none; font-size:24px; cursor:pointer; color:#999; padding:0; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:all .2s; }
-.extra-close:hover { background:#f0f0f0; color:#666; }
-.extra-modal-body { flex:1; overflow-y:auto; }
-.extra-modal-footer { flex-shrink:0; padding:16px 24px; border-top:1px solid #e8e8e8; background:#fafafa; }
-.extra-form { padding:24px; }
-.extra-section { margin-bottom:24px; }
-.extra-section-title { font-size:16px; font-weight:600; color:#262626; margin:0 0 16px 0; padding-bottom:8px; border-bottom:2px solid #1890ff; display:inline-block; }
-.extra-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
-.extra-group { display:flex; flex-direction:column; }
-.extra-group.full-width { grid-column:1 / -1; }
-.extra-group label { font-weight:500; margin-bottom:6px; color:#262626; font-size:14px; }
+.interface-info-row {
+  background: #f7fbff;
+  color: #0a65c2;
+}
+
+.interface-step-row {
+  background: #fafdff;
+}
+
+.add-interface-row {
+  background: #f7fbff;
+}
+
+.add-interface-btn {
+  padding: 6px 12px;
+  border: 1px solid #1677ff;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-interface-btn:hover {
+  background: #0f5fd6;
+}
+
+.add-interface-btn.disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  filter: grayscale(40%);
+}
+
+.personal-info-row {
+  background: #f7fbff;
+  color: #0a65c2;
+}
+
+.personal-step-row {
+  background: #fafdff;
+}
+
+.add-personal-row {
+  background: #f7fbff;
+}
+
+.add-personal-btn {
+  padding: 6px 12px;
+  border: 1px solid #1677ff;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-personal-btn:hover {
+  background: #0f5fd6;
+}
+
+.add-personal-btn.disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  filter: grayscale(40%);
+}
+
+.dialog-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  width: 420px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  padding: 16px;
+}
+
+.dialog.upload-dialog {
+  width: 560px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.dialog.view-dialog {
+  width: 560px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dialog h4 {
+  margin: 0 0 12px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.extra-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.extra-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.extra-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.extra-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all .2s;
+}
+
+.extra-close:hover {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.extra-modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.extra-modal-footer {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.extra-form {
+  padding: 24px;
+}
+
+.extra-section {
+  margin-bottom: 24px;
+}
+
+.extra-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #1890ff;
+  display: inline-block;
+}
+
+.extra-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.extra-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.extra-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.extra-group label {
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #262626;
+  font-size: 14px;
+}
+
 .extra-group input,
 .extra-group select,
-.extra-group textarea { padding:8px 12px; border:1px solid #d9d9d9; border-radius:6px; font-size:14px; transition:border-color .2s; }
+.extra-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color .2s;
+}
+
 .extra-group input:focus,
 .extra-group select:focus,
-.extra-group textarea:focus { outline:none; border-color:#1890ff; box-shadow:0 0 0 2px rgba(24,144,255,0.2); }
+.extra-group textarea:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
 .extra-group input:disabled,
 .extra-group select:disabled,
-.extra-group textarea:disabled { color:#262626; background-color:#f5f5f5; -webkit-text-fill-color:#262626; opacity:1; cursor:default; }
-.extra-actions { display:flex; justify-content:flex-end; gap:12px; }
-.extra-upload-card { border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:12px; }
-.extra-upload-head { display:flex; align-items:center; justify-content:flex-start; margin-bottom:8px; }
-.extra-upload-body .uploaded-list { margin-top:8px; }
-.hidden-file { display:none; }
-.select-btn { padding:6px 12px; }
-.context-chips { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.chip.primary { background:#eef2ff; border-color:#c7d2fe; color:#1d4ed8; }
-.segmented { display:inline-flex; align-items:center; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
-.segmented .seg-btn { padding:6px 12px; background:#fff; border:none; border-right:1px solid #e5e7eb; cursor:pointer; font-size:12px; color:#374151; }
-.segmented .seg-btn:last-child { border-right:none; }
-.segmented .seg-btn.active { background:#1677ff; color:#fff; }
-.form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
-.form-row input, .form-row select { height:32px; padding:0 8px; border:1px solid #ddd; border-radius:4px; }
-.required { color:#c00; }
-.dialog-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-.btn { padding:6px 12px; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer; }
-.btn.ghost { background:#f5f7fa; }
-.btn.primary { background:#1677ff; border-color:#1677ff; color:#fff; }
-.btn.primary:hover { background:#0f5fd6; border-color:#0f5fd6; }
-.btn.disabled { opacity:.6; cursor:not-allowed; }
+.extra-group textarea:disabled {
+  color: #262626;
+  background-color: #f5f5f5;
+  -webkit-text-fill-color: #262626;
+  opacity: 1;
+  cursor: default;
+}
+
+.extra-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.extra-upload-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.extra-upload-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.extra-upload-body .uploaded-list {
+  margin-top: 8px;
+}
+
+.hidden-file {
+  display: none;
+}
+
+.select-btn {
+  padding: 6px 12px;
+}
+
+.context-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip.primary {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1d4ed8;
+}
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented .seg-btn {
+  padding: 6px 12px;
+  background: #fff;
+  border: none;
+  border-right: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-size: 12px;
+  color: #374151;
+}
+
+.segmented .seg-btn:last-child {
+  border-right: none;
+}
+
+.segmented .seg-btn.active {
+  background: #1677ff;
+  color: #fff;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.form-row input,
+.form-row select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.required {
+  color: #c00;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn.ghost {
+  background: #f5f7fa;
+}
+
+.btn.primary {
+  background: #1677ff;
+  border-color: #1677ff;
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background: #0f5fd6;
+  border-color: #0f5fd6;
+}
+
+.btn.disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 /* 删除按钮颜色与名称文字颜色保持一致（接口与个性化信息行） */
 .interface-info-row .btn.ghost,
 .personal-info-row .btn.ghost {
   color: inherit;
 }
+
 /* 交付物管理列与图标按钮样式 */
-.deliverable-actions { /* 保持表格单元格默认布局，避免高度不一致 */ }
+.deliverable-actions {
+  /* 保持表格单元格默认布局，避免高度不一致 */
+}
+
 .deliverable-actions .actions-inner {
   display: flex;
   align-items: center;
   gap: 8px;
   justify-content: flex-start;
 }
+
 .table td.deliverable-actions:empty::before {
   content: "";
   display: block;
-  height: 28px; /* 与图标按钮高度一致，保证行高与下边线对齐 */
+  height: 28px;
+  /* 与图标按钮高度一致，保证行高与下边线对齐 */
 }
+
 .icon-btn {
   width: 28px;
   height: 28px;
@@ -3150,33 +4736,62 @@ export default {
   cursor: pointer;
   transition: all .15s ease;
   color: #374151;
-  position: relative; /* 为模板标记定位 */
+  position: relative;
+  /* 为模板标记定位 */
 }
+
 .icon-btn:hover {
   background: #f9fafb;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
+
 .icon-btn.danger {
   /* 类级注释：危险状态（必须上传）——红色背景更醒目，图标保持黑色 */
-  border-color: #ef4444; /* red-500 */
-  background: #fee2e2;   /* red-200 */
+  border-color: #ef4444;
+  /* red-500 */
+  background: #fee2e2;
+  /* red-200 */
 }
-.icon-btn.danger:hover { background: #fecaca; border-color: #ef4444; }
+
+.icon-btn.danger:hover {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
 .icon-btn.success {
   /* 类级注释：成功状态（已有上传）——绿色背景更醒目，图标保持黑色 */
-  border-color: #22c55e; /* green-500 */
-  background: #dcfce7;  /* green-200 */
+  border-color: #22c55e;
+  /* green-500 */
+  background: #dcfce7;
+  /* green-200 */
 }
-.icon-btn.success:hover { background: #bbf7d0; border-color: #22c55e; }
-.icon-btn.has-files { border-color: #ef4444; background: #fee2e2; }
-.icon-btn.has-files:hover { background: #fecaca; border-color: #ef4444; }
-.icon-btn.has-files svg { fill: #ef4444; }
+
+.icon-btn.success:hover {
+  background: #bbf7d0;
+  border-color: #22c55e;
+}
+
+.icon-btn.has-files {
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+.icon-btn.has-files:hover {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
+.icon-btn.has-files svg {
+  fill: #ef4444;
+}
+
 .icon-btn svg {
   width: 18px;
   height: 18px;
   /* 保持图标黑色，不受按钮颜色影响 */
   fill: #000;
 }
+
 .icon-btn.disabled {
   border-color: #d1d5db;
   background: #f3f4f6;
@@ -3184,11 +4799,20 @@ export default {
   cursor: not-allowed;
   opacity: 0.7;
 }
-.icon-btn.disabled:hover { background: #f3f4f6; box-shadow: none; }
-.icon-btn.disabled svg { fill: #9ca3af; }
+
+.icon-btn.disabled:hover {
+  background: #f3f4f6;
+  box-shadow: none;
+}
+
+.icon-btn.disabled svg {
+  fill: #9ca3af;
+}
+
 /* 类级注释：上传按钮“模板”标记样式 —— 在右上角显示一个醒目的星标 */
 .icon-btn.has-template::after {
-  content: '\2605'; /* ★ 星号，表示存在模板 */
+  content: '\2605';
+  /* ★ 星号，表示存在模板 */
   position: absolute;
   top: -6px;
   right: -6px;
@@ -3196,7 +4820,8 @@ export default {
   height: 16px;
   font-size: 12px;
   line-height: 16px;
-  color: #f59e0b; /* amber-500 */
+  color: #f59e0b;
+  /* amber-500 */
   background: #fff;
   border-radius: 50%;
   border: 1px solid #f59e0b;
@@ -3205,30 +4830,129 @@ export default {
   justify-content: center;
   z-index: 1;
 }
-.upload-list { display:flex; flex-direction:column; gap:12px; }
-.upload-item { border:1px solid #eee; border-radius:8px; padding:12px; background:#fafafa; }
-.upload-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.upload-head .name { font-weight:600; color:#333; }
-.upload-head .hint { color:#888; font-size:12px; }
-.template-title { color:#666; font-size:12px; margin-bottom:6px; }
-.chip-group { display:flex; flex-wrap:wrap; gap:6px; }
-.chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid #e5e7eb; border-radius:16px; background:#fff; font-size:12px; color:#374151; }
-.chip.clickable { cursor:pointer; }
-.chip.clickable:hover { background:#f9fafb; border-color:#d1d5db; }
-.chip .chip-name { font-weight:500; }
-.chip .chip-meta { color:#6b7280; }
-.upload-actions { display:flex; align-items:center; gap:12px; margin-top:8px; }
+
+.upload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.upload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.upload-head .name {
+  font-weight: 600;
+  color: #333;
+}
+
+.upload-head .hint {
+  color: #888;
+  font-size: 12px;
+}
+
+.template-title {
+  color: #666;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 12px;
+  color: #374151;
+}
+
+.chip.clickable {
+  cursor: pointer;
+}
+
+.chip.clickable:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.chip .chip-name {
+  font-weight: 500;
+}
+
+.chip .chip-meta {
+  color: #6b7280;
+}
+
+.upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
 .deliverable-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
-.deliverable-cards { display:flex; flex-direction:column; gap:10px; }
-.deliverable-card { border:1px solid #eee; border-radius:8px; padding:10px; background:#fafafa; }
-.deliverable-head { display:flex; align-items:center; justify-content:space-between; }
-.deliverable-meta { display:flex; align-items:center; gap:8px; }
-.deliverable-name { font-weight:600; color:#333; }
-.deliverable-type { color:#666; font-size:12px; background:#f5f5f5; border-radius:12px; padding:2px 8px; }
+
+.deliverable-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deliverable-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fafafa;
+}
+
+.deliverable-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.deliverable-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deliverable-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.deliverable-type {
+  color: #666;
+  font-size: 12px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 2px 8px;
+}
+
 .deliverable-list li {
   display: flex;
   align-items: center;
@@ -3236,38 +4960,166 @@ export default {
   padding: 6px 8px;
   border-bottom: 1px dashed #e5e7eb;
 }
-.deliverable-list .name { font-weight: 500; }
-.deliverable-list .type { color: #6b7280; font-size: 12px; }
+
+.deliverable-list .name {
+  font-weight: 500;
+}
+
+.deliverable-list .type {
+  color: #6b7280;
+  font-size: 12px;
+}
+
 /* 上传进度条样式 */
-.progress { position: relative; height: 6px; background: #f0f0f0; border-radius: 4px; margin-top: 8px; }
-.progress .bar { height: 100%; background: #409eff; border-radius: 4px; width: 0%; transition: width .2s ease; }
-.progress .percent { position: absolute; top: -18px; right: 0; font-size: 12px; color: #666; }
-.file-list.compact .file-item { padding:2px 0; }
+.progress {
+  position: relative;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.progress .bar {
+  height: 100%;
+  background: #409eff;
+  border-radius: 4px;
+  width: 0%;
+  transition: width .2s ease;
+}
+
+.progress .percent {
+  position: absolute;
+  top: -18px;
+  right: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.file-list.compact .file-item {
+  padding: 2px 0;
+}
+
 /* 预览弹窗样式 */
-.preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; flex-direction: column; }
-.preview-header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: #111827; color: #fff; }
-.preview-header .title { font-size: 14px; font-weight: 600; color: #fff; }
-.preview-header .tools { display: flex; align-items: center; gap: 8px; }
-.preview-body { flex: 1; background: #0f172a; color: #fff; overflow: auto; padding: 12px; }
-.preview-content { display: inline-block; transform-origin: center top; }
-.preview-image { max-width: 100%; height: auto; display: block; }
-.pdf-embed { width: 100%; height: 100%; border: none; background: #0f172a; }
-.video-player { width: 100%; height: 100%; background: #000; }
-.pdf-viewer { display: inline-block; background: #fff; padding: 8px; border-radius: 6px; }
-.pdf-nav { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.html-view { background: #fff; color: #111; padding: 12px; border-radius: 6px; max-width: 100%; }
-.text-view { background: #111827; color: #e5e7eb; padding: 12px; border-radius: 6px; max-width: 100%; white-space: pre-wrap; }
-.loading { color: #e5e7eb; }
-.error { color: #fecaca; }
-.unsupported { color: #e5e7eb; }
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: #111827;
+  color: #fff;
+}
+
+.preview-header .title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.preview-header .tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-body {
+  flex: 1;
+  background: #0f172a;
+  color: #fff;
+  overflow: auto;
+  padding: 12px;
+}
+
+.preview-content {
+  display: inline-block;
+  transform-origin: center top;
+}
+
+.preview-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pdf-embed {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #0f172a;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.pdf-viewer {
+  display: inline-block;
+  background: #fff;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.pdf-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.html-view {
+  background: #fff;
+  color: #111;
+  padding: 12px;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+.text-view {
+  background: #111827;
+  color: #e5e7eb;
+  padding: 12px;
+  border-radius: 6px;
+  max-width: 100%;
+  white-space: pre-wrap;
+}
+
+.loading {
+  color: #e5e7eb;
+}
+
+.error {
+  color: #fecaca;
+}
+
+.unsupported {
+  color: #e5e7eb;
+}
+
 /* 已移除 Luckysheet 容器样式：统一使用 iframe 全屏预览 PDF */
 /* 类级注释：上传按钮模板标记改为字母 T（覆盖旧星标） */
-.icon-btn.has-template::after { content: 'T'; font-weight: 700; }
+.icon-btn.has-template::after {
+  content: 'T';
+  font-weight: 700;
+}
+
 /* 布局容器调整 */
 .content-wrapper {
   display: flex;
-  flex-direction: column; /* 改为垂直排列 */
-  gap: 2px; /* 进一步减小标签栏与内容区的间距 */
+  flex-direction: column;
+  /* 改为垂直排列 */
+  gap: 2px;
+  /* 进一步减小标签栏与内容区的间距 */
   flex: 1;
   min-height: 0;
 }
@@ -3277,21 +5129,25 @@ export default {
   display: flex;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
   flex-shrink: 0;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .tab-item {
-  padding: 8px 16px; /* 减小内边距以降低高度 */
+  padding: 8px 16px;
+  /* 减小内边距以降低高度 */
   cursor: pointer;
-  border-bottom: 2px solid transparent; /* 底部边框指示选中状态 */
-  border-left: none; /* 移除左侧边框 */
+  border-bottom: 2px solid transparent;
+  /* 底部边框指示选中状态 */
+  border-left: none;
+  /* 移除左侧边框 */
   transition: all 0.2s;
   color: #4b5563;
   font-weight: 500;
-  font-size: 13px; /* 稍微减小字体 */
+  font-size: 13px;
+  /* 稍微减小字体 */
   white-space: nowrap;
 }
 
@@ -3303,7 +5159,8 @@ export default {
 .tab-item.active {
   background-color: #fff;
   color: #2563eb;
-  border-bottom-color: #2563eb; /* 底部高亮 */
+  border-bottom-color: #2563eb;
+  /* 底部高亮 */
   border-left-color: transparent;
 }
 
@@ -3312,13 +5169,14 @@ export default {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* 关键：允许flex子项收缩 */
+  min-height: 0;
+  /* 关键：允许flex子项收缩 */
 }
 
 .empty-tab {
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 60px;
   text-align: center;
   min-height: 400px;
@@ -3352,9 +5210,34 @@ export default {
 }
 
 /* 合同外需求样式补充 */
-.actions { display:flex; gap:8px; }
-.add-btn { padding:6px 12px; border:1px solid #2563eb; color:#2563eb; background:#fff; border-radius:4px; cursor:pointer; }
-.add-btn:hover { background:#eff6ff; }
-.pagination { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding-top:8px; }
-.page-info { color:#666; font-size:12px; }
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.add-btn {
+  padding: 6px 12px;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  background: #eff6ff;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.page-info {
+  color: #666;
+  font-size: 12px;
+}
 </style>

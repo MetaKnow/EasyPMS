@@ -83,6 +83,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/construct-deliverable-files/**").permitAll()
                 // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/constructing-projects/**").permitAll()
+                .requestMatchers("/api/constructing-project-comments/**").permitAll()
+                .requestMatchers("/api/constructing-project-comment-files/**").permitAll()
+                .requestMatchers("/api/constructing-project-comment-replies/**").permitAll()
+                .requestMatchers("/api/constructing-project-comment-reply-files/**").permitAll()
                 // 允许访问项目汇总与相关项目接口（临时开放）
                 .requestMatchers("/api/projects/**").permitAll()
                 // 允许访问项目-标准步骤关系编辑接口（临时开放）

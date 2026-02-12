@@ -147,6 +147,7 @@ export default {
       menuItems: [
         { id: 'dashboard', name: '工作台', icon: 'icon-dashboard', path: '/home/dashboard' },
         { id: 'customers', name: '客户管理', icon: 'icon-users', path: '/home/customers' },
+        { id: 'partners', name: '渠道管理', icon: 'icon-partner', path: '/home/system/partners' },
         { id: 'construction', name: '在建项目管理', icon: 'icon-building', path: '/home/construction' },
         { id: 'maintenance', name: '运维项目管理', icon: 'icon-tools', path: '/home/maintenance' },
         { 
@@ -162,7 +163,6 @@ export default {
             { id: 'steps', name: '标准交付步骤', icon: 'icon-steps', path: '/home/system/steps' },
             { id: 'deliverables', name: '标准交付物', icon: 'icon-deliverable', path: '/home/system/deliverables' },
             { id: 'products', name: '基础产品维护', icon: 'icon-product', path: '/home/system/products' },
-            { id: 'partners', name: '渠道商维护', icon: 'icon-partner', path: '/home/system/partners' },
             { id: 'backup', name: '系统备份', icon: 'icon-backup', path: '/home/system/backup' }
           ]
         }
@@ -432,19 +432,15 @@ export default {
       const role = (this.userInfo && this.userInfo.roleName) ? String(this.userInfo.roleName).trim() : ''
       const roleLower = role.toLowerCase()
       const canViewPartners = role.includes('销售') || role.includes('公司领导') || role.includes('销售总监') || roleLower.includes('sales') || roleLower.includes('leader') || roleLower.includes('sales director')
+      if (canViewPartners) {
+        allowed.add('partners')
+      }
 
       const items = []
       for (const item of this.menuItems) {
         if (!item.isGroup) {
           if (allowed.has(item.id)) items.push(item)
           continue
-        }
-        if (item.id === 'system' && canViewPartners) {
-          const children = Array.isArray(item.children) ? item.children.filter(c => c && c.id === 'partners') : []
-          if (children.length > 0) {
-            const expanded = this.menuGroupExpanded && this.menuGroupExpanded[item.id] !== undefined ? this.menuGroupExpanded[item.id] : !!item.expanded
-            items.push({ ...item, expanded, children })
-          }
         }
       }
       return items
