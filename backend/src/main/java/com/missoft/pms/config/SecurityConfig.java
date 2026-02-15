@@ -83,6 +83,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/construct-deliverable-files/**").permitAll()
                 // 允许访问在建项目管理接口（临时开放，后续可根据需要添加认证）
                 .requestMatchers("/api/constructing-projects/**").permitAll()
+                // 允许访问项目风险接口（临时开放）
+                .requestMatchers("/api/constructing-project-risks/**").permitAll()
+                // 允许访问项目风险附件接口（临时开放）
+                .requestMatchers("/api/constructing-project-risk-files/**").permitAll()
                 .requestMatchers("/api/constructing-project-comments/**").permitAll()
                 .requestMatchers("/api/constructing-project-comment-files/**").permitAll()
                 .requestMatchers("/api/constructing-project-comment-replies/**").permitAll()

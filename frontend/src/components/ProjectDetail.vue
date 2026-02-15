@@ -1,5 +1,6 @@
 <template>
   <div class="project-detail-page">
+    <div v-if="tooltip.visible" class="custom-tooltip" :style="tooltip.style">{{ tooltip.content }}</div>
     <div class="topbar">
       <button class="back-btn" @click="goBack">返回</button>
       <div class="title">
@@ -8,6 +9,7 @@
       </div>
       <div class="actions">
         <button v-if="activeTab === 'out_contract'" class="add-btn" @click="openExtraDialog('create')">添加需求</button>
+        <button v-if="activeTab === 'risk'" class="add-btn" @click="openRiskDialog('create')">添加风险</button>
       </div>
     </div>
 
@@ -32,21 +34,35 @@
             <!-- 类级注释：移除“步骤与里程碑”区域标题，保持页面其他部分不变；
              为步骤表格添加滚动容器以实现表头固定、仅内容滚动。 -->
             <div class="table-scroll">
-              <table class="table">
+              <table class="table table-fixed no-wrap-table">
+                <colgroup>
+                  <col style="width: 60px">
+                  <col> <!-- 步骤名称 -->
+                  <col style="width: 120px">
+                  <col style="width: 100px">
+                  <col style="width: 120px">
+                  <col style="width: 120px">
+                  <col style="width: 120px">
+                  <col style="width: 120px">
+                  <col style="width: 100px">
+                  <col style="width: 100px">
+                  <col style="width: 140px">
+                  <col style="width: 160px">
+                </colgroup>
                 <thead>
                   <tr>
-                    <th width="60">序号</th>
+                    <th>序号</th>
                     <th>步骤名称</th>
-                    <th width="120">类型</th>
-                    <th width="100">负责人</th>
-                    <th width="120">计划开始</th>
-                    <th width="120">计划结束</th>
-                    <th width="120">实际开始</th>
-                    <th width="120">实际结束</th>
-                    <th width="100">计划工期</th>
-                    <th width="100">实际工期</th>
-                    <th width="140">状态</th>
-                    <th width="160">交付物管理</th>
+                    <th>类型</th>
+                    <th>负责人</th>
+                    <th>计划开始</th>
+                    <th>计划结束</th>
+                    <th>实际开始</th>
+                    <th>实际结束</th>
+                    <th>计划工期</th>
+                    <th>实际工期</th>
+                    <th>状态</th>
+                    <th>交付物管理</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -59,9 +75,13 @@
                     : (row.rowType + '-' + (row.blockId || idx))))">
                     <tr v-if="row.rowType === 'step'">
                       <td>{{ idx + 1 }}</td>
-                      <td>{{ row.sstepName || row.nstepName }}</td>
-                      <td>{{ row.type || '标准' }}</td>
-                      <td @dblclick="startEdit(row, 'director')">
+                      <td @mouseenter="showTooltip($event, row.sstepName || row.nstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.sstepName || row.nstepName }}</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, row.type || '标准')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.type || '标准' }}</div>
+                      </td>
+                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -72,52 +92,54 @@
                           </select>
                         </template>
                         <template v-else>
-                          {{ row.directorName ?? '-' }}
+                          <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')">
+                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')">
+                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td>
-                        {{ row.planPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td>
-                        {{ row.actualPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
                           <div class="actions-inner">
@@ -182,9 +204,13 @@
                     <!-- 接口开发步骤（支持双击编辑） -->
                     <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
                       <td>{{ idx + 1 }}</td>
-                      <td>{{ row.sstepName }}</td>
-                      <td>{{ row.type }}</td>
-                      <td @dblclick="startEdit(row, 'director')">
+                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.sstepName }}</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.type }}</div>
+                      </td>
+                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -195,52 +221,54 @@
                           </select>
                         </template>
                         <template v-else>
-                          {{ row.directorName ?? '-' }}
+                          <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')">
+                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')">
+                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td>
-                        {{ row.planPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td>
-                        {{ row.actualPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
                           <div class="actions-inner">
@@ -269,9 +297,13 @@
                     <!-- 个性化开发步骤（支持双击编辑） -->
                     <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
                       <td>{{ idx + 1 }}</td>
-                      <td>{{ row.sstepName }}</td>
-                      <td>{{ row.type }}</td>
-                      <td @dblclick="startEdit(row, 'director')">
+                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.sstepName }}</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.type }}</div>
+                      </td>
+                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -282,52 +314,54 @@
                           </select>
                         </template>
                         <template v-else>
-                          {{ row.directorName ?? '-' }}
+                          <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')">
+                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')">
+                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.planEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')">
+                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualStartDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')">
+                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
                         </template>
                         <template v-else>
-                          {{ row.actualEndDate ?? '-' }}
+                          <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td>
-                        {{ row.planPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td>
-                        {{ row.actualPeriod ?? '-' }}
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td>{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</td>
+                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
                           <div class="actions-inner">
@@ -371,16 +405,36 @@
                     </tr>
                     <tr v-else class="milestone-row">
                       <td>{{ idx + 1 }}</td>
-                      <td>【里程碑】{{ row.milestoneName }}</td>
-                      <td>里程碑</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>-</td>
-                      <td>{{ row.milestonePeriod ?? '-' }}</td>
-                      <td>{{ row.iscomplete ? '完成' : '未完成' }}</td>
+                      <td @mouseenter="showTooltip($event, '【里程碑】' + row.milestoneName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">【里程碑】{{ row.milestoneName }}</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '里程碑')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">里程碑</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">-</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, row.milestonePeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.milestonePeriod ?? '-' }}</div>
+                      </td>
+                      <td @mouseenter="showTooltip($event, row.iscomplete ? '完成' : '未完成')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.iscomplete ? '完成' : '未完成' }}</div>
+                      </td>
                       <td class="deliverable-actions">
                         <div class="actions-inner">
                           <button class="icon-btn" :class="viewButtonClass(row)" title="查看"
@@ -415,32 +469,60 @@
         <div v-show="activeTab === 'out_contract'" class="content-grid">
           <section class="card wide">
             <div class="table-scroll">
-              <table class="table">
+              <table class="table table-fixed no-wrap-table">
+                <colgroup>
+                  <col style="width: 60px">
+                  <col> <!-- 需求名称 -->
+                  <col style="width: 90px">
+                  <col style="width: 120px">
+                  <col style="width: 90px">
+                  <col style="width: 90px">
+                  <col style="width: 100px">
+                  <col style="width: 120px">
+                  <col style="width: 160px">
+                  <col style="width: 120px">
+                </colgroup>
                 <thead>
                   <tr>
-                    <th width="60">序号</th>
+                    <th>序号</th>
                     <th>需求名称</th>
-                    <th width="90">是否付费</th>
-                    <th width="120">付费金额（元）</th>
-                    <th width="90">是否交付</th>
-                    <th width="90">是否完成</th>
-                    <th width="100">是否产品化</th>
-                    <th width="120">工作量</th>
-                    <th width="160">开发负责人</th>
-                    <th width="120">操作</th>
+                    <th>是否付费</th>
+                    <th>付费金额（元）</th>
+                    <th>是否交付</th>
+                    <th>是否完成</th>
+                    <th>是否产品化</th>
+                    <th>工作量</th>
+                    <th>开发负责人</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(r, idx) in extraRequirements" :key="r.requirementId || (r.id ?? idx)">
                     <td>{{ idx + 1 }}</td>
-                    <td>{{ r.requirementName }}</td>
-                    <td>{{ r.isPay ? '是' : '否' }}</td>
-                    <td>{{ r.payAmount != null ? String(r.payAmount) : '-' }}</td>
-                    <td>{{ r.isDeliver ? '是' : '否' }}</td>
-                    <td>{{ r.isComplete ? '是' : '否' }}</td>
-                    <td>{{ r.isProductization ? '是' : '否' }}</td>
-                    <td>{{ r.workload != null ? String(r.workload) : '-' }}</td>
-                    <td>{{ userName(r.developer) || '-' }}</td>
+                    <td @mouseenter="showTooltip($event, r.requirementName || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.requirementName || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isPay ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.isPay ? '是' : '否' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.payAmount != null ? String(r.payAmount) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.payAmount != null ? String(r.payAmount) : '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isDeliver ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.isDeliver ? '是' : '否' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isComplete ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.isComplete ? '是' : '否' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isProductization ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.isProductization ? '是' : '否' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.workload != null ? String(r.workload) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.workload != null ? String(r.workload) : '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, userName(r.developer) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ userName(r.developer) || '-' }}</div>
+                    </td>
                     <td class="deliverable-actions">
                       <div class="actions-inner">
                         <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewExtra(r)">
@@ -474,6 +556,96 @@
             <div class="pagination">
               <button class="btn" disabled>上一页</button>
               <span class="page-info">共 {{ extraRequirements.length }} 条</span>
+              <button class="btn" disabled>下一页</button>
+            </div>
+          </section>
+        </div>
+
+        <div v-show="activeTab === 'risk'" class="content-grid">
+          <section class="card wide">
+            <div class="table-scroll">
+              <table class="table table-fixed no-wrap-table">
+                <colgroup>
+                  <col style="width: 60px">
+                  <col style="width: 140px">
+                  <col style="width: 90px">
+                  <col style="width: 90px">
+                  <col style="width: 160px">
+                  <col> <!-- 风险描述 -->
+                  <col> <!-- 风险评估 -->
+                  <col style="width: 140px">
+                  <col style="width: 120px">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>风险类型</th>
+                    <th>风险级别</th>
+                    <th>是否解除</th>
+                    <th>解除方式</th>
+                    <th>风险描述</th>
+                    <th>风险评估</th>
+                    <th>创建人</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(r, idx) in projectRisks" :key="r.riskId || (r.id ?? idx)">
+                    <td>{{ idx + 1 }}</td>
+                    <td @mouseenter="showTooltip($event, r.riskType || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.riskType || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.riskLevel || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.riskLevel || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isRelieve ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.isRelieve ? '是' : '否' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.relieveWay || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.relieveWay || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.riskDescription || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.riskDescription || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.riskEvaluate || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.riskEvaluate || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, userName(r.creator) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ userName(r.creator) || '-' }}</div>
+                    </td>
+                    <td class="deliverable-actions">
+                      <div class="actions-inner">
+                        <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewRisk(r)">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="编辑" @click="editRisk(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="删除" @click="deleteRisk(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!projectRisks || projectRisks.length === 0">
+                    <td colspan="9" class="empty">当前暂无项目风险</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <button class="btn" disabled>上一页</button>
+              <span class="page-info">共 {{ projectRisks.length }} 条</span>
               <button class="btn" disabled>下一页</button>
             </div>
           </section>
@@ -854,7 +1026,7 @@
       </div>
 
       <!-- 其他标签页空白占位 -->
-      <div v-show="['risk', 'warning', 'statistics', 'daily_report', 'modification_record'].includes(activeTab)"
+      <div v-show="['warning', 'statistics', 'daily_report', 'modification_record'].includes(activeTab)"
         class="empty-tab">
         <div class="empty-state">
           <div class="empty-icon">📂</div>
@@ -997,6 +1169,120 @@
         </div>
       </div>
     </div>
+    <div v-if="showRiskDialog" class="dialog-mask extra-modal-overlay">
+      <div class="extra-modal">
+        <div class="extra-modal-header">
+          <h3>{{ riskDialogMode === 'create' ? '新增项目风险' : (riskDialogMode === 'edit' ? '编辑项目风险' : '查看项目风险') }}</h3>
+          <button class="extra-close" @click="closeRiskDialog">&times;</button>
+        </div>
+        <div class="extra-modal-body">
+          <form class="extra-form" @submit.prevent>
+            <div class="extra-section">
+              <div class="extra-grid">
+                <div class="extra-group">
+                  <label>风险类型 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                  <select v-model="riskForm.riskType" :disabled="riskDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option v-for="t in riskTypeOptions" :key="t" :value="t">{{ t }}</option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>风险级别 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                  <select v-model="riskForm.riskLevel" :disabled="riskDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option v-for="t in riskLevelOptions" :key="t" :value="t">{{ t }}</option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>是否解除 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                  <select v-model="riskForm.isRelieve" :disabled="riskDialogMode === 'view'">
+                    <option :value="null">请选择</option>
+                    <option :value="false">否</option>
+                    <option :value="true">是</option>
+                  </select>
+                </div>
+                <div class="extra-group full-width" v-if="riskForm.isRelieve">
+                  <label>解除方式 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                  <textarea rows="2" v-model.trim="riskForm.relieveWay" placeholder="请输入解除方式"
+                    :disabled="riskDialogMode === 'view'"></textarea>
+                </div>
+                <div class="extra-group full-width">
+                  <label>风险描述 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                  <textarea rows="3" v-model.trim="riskForm.riskDescription" placeholder="请输入风险描述"
+                    :disabled="riskDialogMode === 'view'"></textarea>
+                </div>
+                <div class="extra-group full-width">
+                  <label>风险评估</label>
+                  <textarea rows="3" v-model.trim="riskForm.riskEvaluate" placeholder="请输入风险评估"
+                    :disabled="riskDialogMode === 'view'"></textarea>
+                </div>
+                <div class="extra-group full-width">
+                  <div class="extra-section-title">上传附件</div>
+                  <div class="extra-upload-card">
+                    <div class="extra-upload-head" v-if="riskDialogMode === 'edit' || riskDialogMode === 'create'">
+                      <button type="button" class="btn primary select-btn"
+                        @click="triggerRiskAttachmentInput">选择文件</button>
+                      <input ref="riskAttachmentInput" type="file" multiple class="hidden-file"
+                        @change="onRiskFilesSelected($event)" />
+                    </div>
+                    <div class="extra-upload-body">
+                      <div class="progress" v-if="riskUploading">
+                        <div class="bar" :style="{ width: riskUploadProgress + '%' }"></div>
+                        <span class="percent">{{ riskUploadProgress }}%</span>
+                      </div>
+                      <div class="uploaded-list" v-if="riskDialogMode === 'create' && riskPendingFiles.length">
+                        <div class="template-title">待上传附件：</div>
+                        <ul class="file-list compact">
+                          <li v-for="(f, idx) in riskPendingFiles" :key="f.name + '-' + idx" class="file-item">
+                            <span class="file-link">{{ f.name }}</span>
+                            <span class="size">{{ prettySize(f.size) }}</span>
+                            <button class="icon-btn danger" title="移除" @click="removeRiskPendingFile(idx)">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-if="riskAttachments.length">
+                        <ul class="file-list compact">
+                          <li v-for="f in riskAttachments" :key="f.fileId" class="file-item">
+                            <button type="button" class="file-link preview-link" @click="onPreviewRiskFile(f)">{{
+                              fileBaseName(f.filePath) }}</button>
+                            <span class="size">{{ prettySize(f.fileSize) }}</span>
+                            <a class="icon-btn" :href="convertRiskDownloadURL(f.fileId)"
+                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
+                            </a>
+                            <button class="icon-btn danger" v-if="riskDialogMode === 'edit'" title="删除"
+                              @click="onDeleteRiskFile(f)">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-else-if="!riskPendingFiles.length">
+                        <div class="template-title" style="color:#999">暂无附件</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="extra-modal-footer">
+          <div class="extra-actions">
+            <button class="btn primary" @click="confirmRisk">{{ riskDialogMode === 'view' ? '关闭' : '确定' }}</button>
+            <button class="btn ghost" @click="closeRiskDialog" v-if="riskDialogMode !== 'view'">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1009,6 +1295,7 @@ import { getStandardDeliverablesByStepId, getStandardDeliverables, listDeliverab
 import { createInterface, listInterfacesByProject, deleteInterface } from '../api/interface';
 import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
 import { createExtraRequirement, listExtraRequirementsByProject, updateExtraRequirement, deleteExtraRequirement, uploadExtraRequirementFiles, listExtraRequirementFiles, deleteExtraRequirementFile } from '../api/extraRequirement';
+import { createConstructingProjectRisk, listConstructingProjectRisksByProject, updateConstructingProjectRisk, deleteConstructingProjectRisk, uploadConstructingProjectRiskFiles, listConstructingProjectRiskFiles, deleteConstructingProjectRiskFile } from '../api/constructingProjectRisk';
 import { listConstructingProjectComments, createConstructingProjectComment, deleteConstructingProjectComment } from '../api/constructingProjectComment';
 import { createConstructingProjectCommentReply, listConstructingProjectCommentReplies, deleteConstructingProjectCommentReply } from '../api/constructingProjectCommentReply';
 import { uploadConstructingProjectCommentReplyFiles, listConstructingProjectCommentReplyFilesByComment, getConstructingProjectCommentReplyFilePreviewUrl, getConstructingProjectCommentReplyFileDownloadUrl } from '../api/constructingProjectCommentReplyFile';
@@ -1044,7 +1331,7 @@ export default {
         { id: 'risk', name: '项目风险' },
         { id: 'warning', name: '项目预警' },
         { id: 'statistics', name: '项目统计' },
-        { id: 'daily_report', name: '项目日报' },
+        { id: 'daily_report', name: '项目日（周）报' },
         { id: 'project_comment', name: '项目评论' },
         { id: 'modification_record', name: '修改记录' }
       ],
@@ -1116,7 +1403,8 @@ export default {
       previewLoading: false,
       previewError: '',
       // 预览缩放（非 PDF 内置工具）
-      previewScale: 1.0
+      previewScale: 1.0,
+      tooltip: { visible: false, content: '', style: { top: '0px', left: '0px' } }
       ,
       // 合同外需求数据与表单
       extraRequirements: [],
@@ -1135,6 +1423,23 @@ export default {
         isProductization: null,
         workload: null,
         developer: null
+      },
+      projectRisks: [],
+      showRiskDialog: false,
+      riskDialogMode: 'create',
+      riskAttachments: [],
+      riskPendingFiles: [],
+      riskUploading: false,
+      riskUploadProgress: 0,
+      riskTypeOptions: ['需求控制', '需求敲定', '协调配合', '数据迁移', '商务关系', '其他'],
+      riskLevelOptions: ['高', '中', '低'],
+      riskForm: {
+        riskType: null,
+        riskLevel: null,
+        isRelieve: null,
+        relieveWay: '',
+        riskDescription: '',
+        riskEvaluate: ''
       },
       commentList: [],
       commentLoading: false,
@@ -1314,6 +1619,35 @@ export default {
     getTabName(id) {
       const tab = this.tabs.find(t => t.id === id);
       return tab ? tab.name : '';
+    },
+    /**
+     * 函数级注释：显示表格单元格的悬浮提示
+     * @param {MouseEvent} e 鼠标事件
+     * @param {string} content 提示内容
+     */
+    showTooltip(e, content) {
+      if (!content) return
+      this.tooltip.content = content
+      this.tooltip.visible = true
+      this.updateTooltipPosition(e)
+    },
+    /**
+     * 函数级注释：隐藏表格单元格的悬浮提示
+     */
+    hideTooltip() {
+      this.tooltip.visible = false
+    },
+    /**
+     * 函数级注释：更新悬浮提示的位置
+     * @param {MouseEvent} e 鼠标事件
+     */
+    updateTooltipPosition(e) {
+      const x = e.clientX + 15
+      const y = e.clientY + 15
+      this.tooltip.style = {
+        top: `${y}px`,
+        left: `${x}px`
+      }
     },
     /**
      * 函数级注释：获取与当前行关联的标准交付物列表
@@ -2130,6 +2464,9 @@ export default {
           await this.loadExtraRequirements();
         } catch (_) { }
         try {
+          await this.loadProjectRisks();
+        } catch (_) { }
+        try {
           await this.loadProjectComments();
         } catch (_) { }
       } catch (err) {
@@ -2854,6 +3191,445 @@ export default {
       } catch (e) {
         this.extraRequirements = []
       }
+    },
+    /**
+     * 函数级注释：加载项目风险列表
+     */
+    async loadProjectRisks() {
+      if (!this.project || !this.project.projectId) return
+      try {
+        const resp = await listConstructingProjectRisksByProject(this.project.projectId)
+        const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.risks || resp || [])
+        this.projectRisks = Array.isArray(list) ? list.map(r => ({ ...r })) : []
+        await this.refreshRiskHasFiles()
+      } catch (e) {
+        this.projectRisks = []
+      }
+    },
+    /**
+     * 函数级注释：加载风险附件列表
+     */
+    async loadRiskFiles(riskId) {
+      if (!riskId) {
+        this.riskAttachments = []
+        return
+      }
+      try {
+        const resp = await listConstructingProjectRiskFiles(riskId)
+        const files = resp?.data?.files || resp?.data || []
+        this.riskAttachments = Array.isArray(files) ? files : []
+        this.updateRiskHasFiles(riskId, this.riskAttachments.length > 0)
+      } catch (_) {
+        this.riskAttachments = []
+        this.updateRiskHasFiles(riskId, false)
+      }
+    },
+    /**
+     * 函数级注释：同步风险附件状态
+     */
+    updateRiskHasFiles(riskId, hasFiles) {
+      const rid = Number(riskId)
+      if (!rid || !Array.isArray(this.projectRisks) || !this.projectRisks.length) return
+      const idx = this.projectRisks.findIndex(r => Number(r?.riskId) === rid)
+      if (idx >= 0) {
+        this.projectRisks[idx].hasFiles = !!hasFiles
+      }
+    },
+    /**
+     * 函数级注释：刷新风险附件标记
+     */
+    async refreshRiskHasFiles() {
+      if (!Array.isArray(this.projectRisks) || !this.projectRisks.length) return
+      const tasks = this.projectRisks.map(async (r) => {
+        const rid = Number(r?.riskId)
+        if (!rid || r?.hasFiles != null) return
+        try {
+          const resp = await listConstructingProjectRiskFiles(rid)
+          const files = resp?.data?.files || resp?.data || []
+          this.updateRiskHasFiles(rid, Array.isArray(files) && files.length > 0)
+        } catch (_) {
+          this.updateRiskHasFiles(rid, false)
+        }
+      })
+      await Promise.all(tasks)
+    },
+    /**
+     * 函数级注释：打开风险弹窗并初始化表单
+     */
+    openRiskDialog(mode = 'create', row = null) {
+      this.riskDialogMode = mode
+      this.showRiskDialog = true
+      this.riskAttachments = []
+      this.riskPendingFiles = []
+      this.riskUploading = false
+      this.riskUploadProgress = 0
+      if (mode === 'create') {
+        this.riskForm = {
+          riskType: null,
+          riskLevel: null,
+          isRelieve: null,
+          relieveWay: '',
+          riskDescription: '',
+          riskEvaluate: '',
+          creator: this.currentUserId || null
+        }
+      } else if (row) {
+        this.riskForm = {
+          riskId: row.riskId,
+          riskType: row.riskType,
+          riskLevel: row.riskLevel,
+          isRelieve: row.isRelieve,
+          relieveWay: row.relieveWay || '',
+          riskDescription: row.riskDescription || '',
+          riskEvaluate: row.riskEvaluate || '',
+          creator: row.creator || null
+        }
+        this.loadRiskFiles(row.riskId)
+      }
+    },
+    /**
+     * 函数级注释：查看项目风险
+     */
+    viewRisk(row) {
+      this.openRiskDialog('view', row)
+    },
+    /**
+     * 函数级注释：编辑项目风险
+     */
+    editRisk(row) {
+      this.openRiskDialog('edit', row)
+    },
+    /**
+     * 函数级注释：删除项目风险
+     */
+    async deleteRisk(row) {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能删除项目风险')
+      }
+      const ok = this.$confirm ? await this.$confirm('确认删除该项目风险及其附件？') : window.confirm('确认删除该项目风险及其附件？')
+      if (!ok) return
+      try {
+        await deleteConstructingProjectRisk(row.riskId)
+        this.$message && this.$message.success('项目风险已删除')
+        await this.loadProjectRisks()
+      } catch (e) {
+        this.showError('删除项目风险失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：关闭风险弹窗
+     */
+    closeRiskDialog() {
+      this.showRiskDialog = false
+      this.riskAttachments = []
+      this.riskPendingFiles = []
+      this.riskUploading = false
+      this.riskUploadProgress = 0
+    },
+    /**
+     * 函数级注释：提交风险表单
+     */
+    async confirmRisk() {
+      if (this.riskDialogMode === 'view') {
+        this.closeRiskDialog()
+        return
+      }
+
+      if (!this.riskForm.riskType) {
+        this.showError('请选择风险类型')
+        return
+      }
+      if (!this.riskForm.riskLevel) {
+        this.showError('请选择风险级别')
+        return
+      }
+      if (this.riskForm.isRelieve === null) {
+        this.showError('请选择是否解除')
+        return
+      }
+      if (!this.riskForm.riskDescription || !this.riskForm.riskDescription.trim()) {
+        this.showError('请输入风险描述')
+        return
+      }
+      if (this.riskForm.isRelieve && (!this.riskForm.relieveWay || !this.riskForm.relieveWay.trim())) {
+        this.showError('请输入解除方式')
+        return
+      }
+      const creatorId = this.riskForm.creator ?? this.currentUserId
+      if (!creatorId) {
+        this.showError('未获取到用户信息，无法保存风险')
+        return
+      }
+      const isRelieve = !!this.riskForm.isRelieve
+      const payload = {
+        projectId: this.project?.projectId,
+        riskType: this.riskForm.riskType,
+        riskLevel: this.riskForm.riskLevel,
+        isRelieve,
+        relieveWay: isRelieve ? ((this.riskForm.relieveWay || '').trim() || null) : null,
+        riskDescription: (this.riskForm.riskDescription || '').trim(),
+        riskEvaluate: (this.riskForm.riskEvaluate || '').trim() || null,
+        creator: creatorId
+      }
+      try {
+        let resp
+        if (this.riskDialogMode === 'edit') {
+          resp = await updateConstructingProjectRisk(this.riskForm.riskId, payload)
+        } else {
+          resp = await createConstructingProjectRisk(payload)
+        }
+
+        this.$message && this.$message.success(this.riskDialogMode === 'edit' ? '项目风险已更新' : '项目风险已添加')
+
+        if (this.riskDialogMode === 'create' && this.riskPendingFiles.length) {
+          const createdId = resp?.data?.risk?.riskId || resp?.data?.riskId
+          if (createdId) {
+            await this.uploadRiskFiles(createdId, this.riskPendingFiles)
+            this.riskPendingFiles = []
+          }
+        }
+
+        this.showRiskDialog = false
+        await this.loadProjectRisks()
+      } catch (e) {
+        const msg = e?.response?.data?.error || e?.message || (this.riskDialogMode === 'edit' ? '更新失败' : '添加失败')
+        this.showError(msg)
+      }
+    },
+    /**
+     * 函数级注释：选择风险附件文件
+     */
+    onRiskFilesSelected(evt) {
+      const files = Array.from(evt?.target?.files || [])
+      if (evt?.target) evt.target.value = ''
+      if (!files.length) return
+
+      if (this.riskDialogMode === 'create') {
+        this.riskPendingFiles = this.riskPendingFiles.concat(files)
+        return
+      }
+
+      const riskId = this.riskForm.riskId
+      if (!riskId) {
+        this.showError('请先保存风险后再上传附件')
+        return
+      }
+      this.uploadRiskFiles(riskId, files)
+    },
+    /**
+     * 函数级注释：触发风险附件文件选择
+     */
+    triggerRiskAttachmentInput() {
+      try {
+        this.$refs.riskAttachmentInput && this.$refs.riskAttachmentInput.click()
+      } catch (_) { }
+    },
+    /**
+     * 函数级注释：上传风险附件
+     */
+    async uploadRiskFiles(riskId, files) {
+      if (!this.project?.projectId) return
+      this.riskUploading = true
+      this.riskUploadProgress = 0
+      try {
+        await uploadConstructingProjectRiskFiles(this.project.projectId, riskId, files, {
+          uploaderId: this.currentUserId,
+          onProgress: (percent) => {
+            this.riskUploadProgress = percent
+          }
+        })
+        await this.loadRiskFiles(riskId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '附件上传失败')
+      } finally {
+        this.riskUploading = false
+      }
+    },
+    /**
+     * 函数级注释：删除风险附件
+     */
+    async onDeleteRiskFile(file) {
+      try {
+        await deleteConstructingProjectRiskFile(file.fileId)
+        this.$message && this.$message.success('附件已删除')
+        await this.loadRiskFiles(this.riskForm.riskId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '删除附件失败')
+      }
+    },
+    /**
+     * 函数级注释：移除待上传的风险附件
+     */
+    removeRiskPendingFile(idx) {
+      this.riskPendingFiles.splice(idx, 1)
+    },
+    /**
+     * 函数级注释：生成风险附件下载链接
+     */
+    convertRiskDownloadURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-risk-files/download/${fileId}`
+    },
+    /**
+     * 函数级注释：生成风险附件PDF预览链接
+     */
+    convertRiskPreviewPdfURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-risk-files/preview/pdf/${fileId}`
+    },
+    /**
+     * 函数级注释：生成风险附件视频预览链接
+     */
+    convertRiskPreviewVideoURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-risk-files/preview/video/${fileId}`
+    },
+    /**
+     * 函数级注释：获取风险附件二进制数据
+     */
+    async fetchRiskBlob(fileId) {
+      const url = this.convertRiskDownloadURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：获取风险附件预览PDF数据
+     */
+    async fetchRiskPreviewPdfBlob(fileId) {
+      const url = this.convertRiskPreviewPdfURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('PDF 预览失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：预览风险附件
+     */
+    async onPreviewRiskFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchRiskBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchRiskBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = this.convertRiskPreviewVideoURL(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          const pdfBlob = await this.fetchRiskPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchRiskBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'docx'
+              this.previewHTML = result.value || '<div>该文档无法转换为HTML</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'xls' || ext === 'xlsx') {
+        try {
+          const pdfBlob = await this.fetchRiskPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || 'Excel 预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchRiskBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'ppt' || ext === 'pptx') {
+        try {
+          const pdfBlob = await this.fetchRiskPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '演示文稿预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      this.previewType = 'unsupported'
+      this.previewLoading = false
     },
     async loadProjectComments() {
       if (!this.project || !this.project.projectId) return
@@ -4275,6 +5051,15 @@ export default {
   border-collapse: separate;
   border-spacing: 0;
 }
+.table.table-fixed {
+  table-layout: fixed;
+}
+.table.no-wrap-table th,
+.table.no-wrap-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .table th,
 .table td {
@@ -4553,6 +5338,10 @@ export default {
   border-radius: 6px;
   font-size: 14px;
   transition: border-color .2s;
+}
+
+.extra-group textarea {
+  resize: vertical;
 }
 
 .extra-group input:focus,
@@ -5239,5 +6028,25 @@ export default {
 .page-info {
   color: #666;
   font-size: 12px;
+}
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  display: block;
+}
+.custom-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #303133;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  max-width: 300px;
+  word-wrap: break-word;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  pointer-events: none;
 }
 </style>
