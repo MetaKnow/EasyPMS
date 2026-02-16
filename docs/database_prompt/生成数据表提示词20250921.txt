@@ -18,7 +18,6 @@
 
 请在数据库中增加一张运维交付物表，表名为afterService_deliverable，字段包括：deliverableId（主键）、deliverableName（交付物名称）、filePath（文件路径）、fileSize（文件大小）、projectId（运维项目ID，afterService_project表外键，必填）、eventId（运维事件ID，afterService_event表外键）、uploadUser（上传人，user表外键，必填）
 
-
 修改standard_construct_step表：去掉director、planStartDate、planEndDate、actualStartDate、actualEndDate、planPeriod、actualPeriod、afterServiceProjectId字段；增加type字段。
 
 修改project_relations表：表名改为project_sstep_relations，去掉milestoneId、nstepId字段；增加director（user表外键）、planStartDate、planEndDate、actualStartDate、actualEndDate、planPeriod、actualPeriod字段。
@@ -58,4 +57,8 @@ nonstandard_construct_step表中增加字段：smilestoneId（standard_milestone
 增加constructing_project_risk表，字段包括riskId（主键）、riskType（风险类型，值域为“需求控制、需求敲定、协调配合、数据迁移、商务关系、其他”）、riskLevel（风险级别，值域为“高、中、低”）、isRelieve（是否解除）、relieveWay（解除方式）、riskDescription（风险描述）、riskEvaluate（风险评估）、creator（创建人、user表外键）、projectId（constructing_project表外键）。
 
 增加constructing_project_riskFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、riskId（constructing_project_risk表外键）。
+
+增加constructing_project_weeklyReport表，字段包括weeklyReportId（主键）、period（周期，起止日期）、submitUser（提交用户，user表外键）、submitDate（提交日期）、weeklyWorkload（本周工作量（人天））、workDifficulties（工作难点，字段长度2000）。
+
+增加constructing_project_weeklyReportFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、weeklyReportId（constructing_project_weeklyReport表外键）。
 

@@ -109,3 +109,11 @@
 2026-02-15 补充合同内建设内容中“里程碑”行的悬浮提示效果。
 2026-02-15 合同外需求、项目风险列表字段不换行且不改变行宽度，单元格内缩略显示，并对齐运维事件页签实现。
 2026-02-15 反馈仍未生效，要求继续按运维事件页签方式确保单元格不换行且缩略显示。
+2026-02-16 增加constructing_project_weeklyReport表，字段包括weeklyReportId（主键）、period（周期，起止日期）、submitUser（提交用户，user表外键）、submitDate（提交日期）、weeklyWorkload（本周工作量（人天））、workDifficulties（工作难点，字段长度2000）。只生成数据库迁移文件，不要做其他操作。
+2026-02-16 constructing_project_weeklyReport 表增加projectId（constructing_project表外键），只生成数据库迁移文件。
+2026-02-16 增加constructing_project_weeklyReportFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、weeklyReportId（constructing_project_weeklyReport表外键）。只生成数据库迁移文件。
+2026-02-16 生成在建项目中项目周报页签的前后端。页面与项目风险页签一致，可以添加周报并上传附件，数据存储在constructing_project_weeklyReport表中；附件存储在项目根目录的“deliverableFiles/<项目编号-项目名称>/项目周报/<weeklyReportId>”路径中，并在constructing_project_weeklyReportFiles表生成记录。
+2026-02-16 项目周报提交日期默认为当前日期，周期改为可选择的起止日期。
+2026-02-16 项目周报本周工作量必填，周期起止日期输入框进行UI美化。
+2026-02-17 去掉项目周报周期日期输入框的外侧灰色区域。
+2026-02-17 项目周报列表周期列加宽，提交日期仅显示日期。

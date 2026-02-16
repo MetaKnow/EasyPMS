@@ -10,6 +10,7 @@
       <div class="actions">
         <button v-if="activeTab === 'out_contract'" class="add-btn" @click="openExtraDialog('create')">添加需求</button>
         <button v-if="activeTab === 'risk'" class="add-btn" @click="openRiskDialog('create')">添加风险</button>
+        <button v-if="activeTab === 'daily_report'" class="add-btn" @click="openWeeklyReportDialog('create')">添加周报</button>
       </div>
     </div>
 
@@ -651,6 +652,86 @@
           </section>
         </div>
 
+        <div v-show="activeTab === 'daily_report'" class="content-grid">
+          <section class="card wide">
+            <div class="table-scroll">
+              <table class="table table-fixed no-wrap-table">
+                <colgroup>
+                  <col style="width: 60px">
+                  <col style="width: 240px">
+                  <col style="width: 140px">
+                  <col style="width: 130px">
+                  <col style="width: 140px">
+                  <col> <!-- 工作难点 -->
+                  <col style="width: 120px">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>周期</th>
+                    <th>提交人</th>
+                    <th>提交日期</th>
+                    <th>本周工作量</th>
+                    <th>工作难点</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(r, idx) in weeklyReports" :key="r.weeklyReportId || (r.id ?? idx)">
+                    <td>{{ idx + 1 }}</td>
+                    <td @mouseenter="showTooltip($event, r.period || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.period || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, userName(r.submitUser) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ userName(r.submitUser) || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, formatDateOnly(r.submitDate) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ formatDateOnly(r.submitDate) || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.weeklyWorkload != null ? String(r.weeklyWorkload) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.weeklyWorkload != null ? String(r.weeklyWorkload) : '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.workDifficulties || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.workDifficulties || '-' }}</div>
+                    </td>
+                    <td class="deliverable-actions">
+                      <div class="actions-inner">
+                        <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewWeeklyReport(r)">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="编辑" @click="editWeeklyReport(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path
+                              d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                          </svg>
+                        </button>
+                        <button class="icon-btn" title="删除" @click="deleteWeeklyReport(r)" :disabled="isProjectCompleted"
+                          :class="{ disabled: isProjectCompleted }">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="!weeklyReports || weeklyReports.length === 0">
+                    <td colspan="7" class="empty">当前暂无项目周报</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <button class="btn" disabled>上一页</button>
+              <span class="page-info">共 {{ weeklyReports.length }} 条</span>
+              <button class="btn" disabled>下一页</button>
+            </div>
+          </section>
+        </div>
+
         <div v-show="activeTab === 'project_comment'" class="content-grid">
           <section class="card wide comment-section">
             <div class="comment-split">
@@ -1026,7 +1107,7 @@
       </div>
 
       <!-- 其他标签页空白占位 -->
-      <div v-show="['warning', 'statistics', 'daily_report', 'modification_record'].includes(activeTab)"
+      <div v-show="['warning', 'statistics', 'modification_record'].includes(activeTab)"
         class="empty-tab">
         <div class="empty-state">
           <div class="empty-icon">📂</div>
@@ -1169,6 +1250,114 @@
         </div>
       </div>
     </div>
+    <div v-if="showWeeklyReportDialog" class="dialog-mask extra-modal-overlay">
+      <div class="extra-modal">
+        <div class="extra-modal-header">
+          <h3>{{ weeklyReportDialogMode === 'create' ? '新增项目周报' : (weeklyReportDialogMode === 'edit' ? '编辑项目周报' : '查看项目周报') }}</h3>
+          <button class="extra-close" @click="closeWeeklyReportDialog">&times;</button>
+        </div>
+        <div class="extra-modal-body">
+          <form class="extra-form" @submit.prevent>
+            <div class="extra-section">
+              <div class="extra-grid">
+                <div class="extra-group">
+                  <label>周期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                  <div class="extra-range">
+                    <input type="date" v-model="weeklyReportForm.periodStartDate" :disabled="weeklyReportDialogMode === 'view'" />
+                    <span>至</span>
+                    <input type="date" v-model="weeklyReportForm.periodEndDate" :disabled="weeklyReportDialogMode === 'view'" />
+                  </div>
+                </div>
+                <div class="extra-group">
+                  <label>提交人 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                  <select v-model="weeklyReportForm.submitUser" :disabled="weeklyReportDialogMode === 'view'">
+                    <option :value="null">请选择提交人</option>
+                    <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                      {{ u.name || u.userName }}
+                    </option>
+                  </select>
+                </div>
+                <div class="extra-group">
+                  <label>提交日期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                  <input type="date" v-model="weeklyReportForm.submitDate" :disabled="weeklyReportDialogMode === 'view'" />
+                </div>
+                <div class="extra-group">
+                  <label>本周工作量（人天） <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                  <input type="number" v-model.number="weeklyReportForm.weeklyWorkload" step="0.01" placeholder="请输入工作量（人天）"
+                    :disabled="weeklyReportDialogMode === 'view'" />
+                </div>
+                <div class="extra-group full-width">
+                  <label>工作难点</label>
+                  <textarea rows="3" v-model.trim="weeklyReportForm.workDifficulties" placeholder="请输入工作难点"
+                    :disabled="weeklyReportDialogMode === 'view'"></textarea>
+                </div>
+                <div class="extra-group full-width">
+                  <div class="extra-section-title">上传附件</div>
+                  <div class="extra-upload-card">
+                    <div class="extra-upload-head" v-if="weeklyReportDialogMode === 'edit' || weeklyReportDialogMode === 'create'">
+                      <button type="button" class="btn primary select-btn"
+                        @click="triggerWeeklyReportAttachmentInput">选择文件</button>
+                      <input ref="weeklyReportAttachmentInput" type="file" multiple class="hidden-file"
+                        @change="onWeeklyReportFilesSelected($event)" />
+                    </div>
+                    <div class="extra-upload-body">
+                      <div class="progress" v-if="weeklyReportUploading">
+                        <div class="bar" :style="{ width: weeklyReportUploadProgress + '%' }"></div>
+                        <span class="percent">{{ weeklyReportUploadProgress }}%</span>
+                      </div>
+                      <div class="uploaded-list" v-if="weeklyReportDialogMode === 'create' && weeklyReportPendingFiles.length">
+                        <div class="template-title">待上传附件：</div>
+                        <ul class="file-list compact">
+                          <li v-for="(f, idx) in weeklyReportPendingFiles" :key="f.name + '-' + idx" class="file-item">
+                            <span class="file-link">{{ f.name }}</span>
+                            <span class="size">{{ prettySize(f.size) }}</span>
+                            <button class="icon-btn danger" title="移除" @click="removeWeeklyReportPendingFile(idx)">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-if="weeklyReportAttachments.length">
+                        <ul class="file-list compact">
+                          <li v-for="f in weeklyReportAttachments" :key="f.fileId" class="file-item">
+                            <button type="button" class="file-link preview-link" @click="onPreviewWeeklyReportFile(f)">{{
+                              fileBaseName(f.filePath) }}</button>
+                            <span class="size">{{ prettySize(f.fileSize) }}</span>
+                            <a class="icon-btn" :href="convertWeeklyReportDownloadURL(f.fileId)"
+                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                              </svg>
+                            </a>
+                            <button class="icon-btn danger" v-if="weeklyReportDialogMode === 'edit'" title="删除"
+                              @click="onDeleteWeeklyReportFile(f)">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="uploaded-list" v-else-if="!weeklyReportPendingFiles.length">
+                        <div class="template-title" style="color:#999">暂无附件</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="extra-modal-footer">
+          <div class="extra-actions">
+            <button class="btn primary" @click="confirmWeeklyReport">{{ weeklyReportDialogMode === 'view' ? '关闭' : '确定' }}</button>
+            <button class="btn ghost" @click="closeWeeklyReportDialog" v-if="weeklyReportDialogMode !== 'view'">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div v-if="showRiskDialog" class="dialog-mask extra-modal-overlay">
       <div class="extra-modal">
         <div class="extra-modal-header">
@@ -1296,6 +1485,7 @@ import { createInterface, listInterfacesByProject, deleteInterface } from '../ap
 import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalDevelope } from '../api/personalDevelope';
 import { createExtraRequirement, listExtraRequirementsByProject, updateExtraRequirement, deleteExtraRequirement, uploadExtraRequirementFiles, listExtraRequirementFiles, deleteExtraRequirementFile } from '../api/extraRequirement';
 import { createConstructingProjectRisk, listConstructingProjectRisksByProject, updateConstructingProjectRisk, deleteConstructingProjectRisk, uploadConstructingProjectRiskFiles, listConstructingProjectRiskFiles, deleteConstructingProjectRiskFile } from '../api/constructingProjectRisk';
+import { createConstructingProjectWeeklyReport, listConstructingProjectWeeklyReportsByProject, updateConstructingProjectWeeklyReport, deleteConstructingProjectWeeklyReport, uploadConstructingProjectWeeklyReportFiles, listConstructingProjectWeeklyReportFiles, deleteConstructingProjectWeeklyReportFile } from '../api/constructingProjectWeeklyReport';
 import { listConstructingProjectComments, createConstructingProjectComment, deleteConstructingProjectComment } from '../api/constructingProjectComment';
 import { createConstructingProjectCommentReply, listConstructingProjectCommentReplies, deleteConstructingProjectCommentReply } from '../api/constructingProjectCommentReply';
 import { uploadConstructingProjectCommentReplyFiles, listConstructingProjectCommentReplyFilesByComment, getConstructingProjectCommentReplyFilePreviewUrl, getConstructingProjectCommentReplyFileDownloadUrl } from '../api/constructingProjectCommentReplyFile';
@@ -1331,7 +1521,7 @@ export default {
         { id: 'risk', name: '项目风险' },
         { id: 'warning', name: '项目预警' },
         { id: 'statistics', name: '项目统计' },
-        { id: 'daily_report', name: '项目日（周）报' },
+        { id: 'daily_report', name: '项目周报' },
         { id: 'project_comment', name: '项目评论' },
         { id: 'modification_record', name: '修改记录' }
       ],
@@ -1440,6 +1630,21 @@ export default {
         relieveWay: '',
         riskDescription: '',
         riskEvaluate: ''
+      },
+      weeklyReports: [],
+      showWeeklyReportDialog: false,
+      weeklyReportDialogMode: 'create',
+      weeklyReportAttachments: [],
+      weeklyReportPendingFiles: [],
+      weeklyReportUploading: false,
+      weeklyReportUploadProgress: 0,
+      weeklyReportForm: {
+        periodStartDate: '',
+        periodEndDate: '',
+        submitUser: null,
+        submitDate: '',
+        weeklyWorkload: null,
+        workDifficulties: ''
       },
       commentList: [],
       commentLoading: false,
@@ -2467,6 +2672,9 @@ export default {
           await this.loadProjectRisks();
         } catch (_) { }
         try {
+          await this.loadWeeklyReports();
+        } catch (_) { }
+        try {
           await this.loadProjectComments();
         } catch (_) { }
       } catch (err) {
@@ -2763,6 +2971,13 @@ export default {
         const d = new Date(ts);
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       } catch (_) { return ''; }
+    },
+    formatDateOnly(ts) {
+      if (!ts) return ''
+      try {
+        const d = new Date(ts)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      } catch (_) { return '' }
     },
     goBack() {
       this.$router.push('/home/construction');
@@ -3616,6 +3831,473 @@ export default {
       if (ext === 'ppt' || ext === 'pptx') {
         try {
           const pdfBlob = await this.fetchRiskPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || '演示文稿预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      this.previewType = 'unsupported'
+      this.previewLoading = false
+    },
+    /**
+     * 函数级注释：加载项目周报列表
+     */
+    async loadWeeklyReports() {
+      if (!this.project || !this.project.projectId) return
+      try {
+        const resp = await listConstructingProjectWeeklyReportsByProject(this.project.projectId)
+        const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.weeklyReports || resp || [])
+        this.weeklyReports = Array.isArray(list) ? list.map(r => ({ ...r })) : []
+        await this.refreshWeeklyReportHasFiles()
+      } catch (e) {
+        this.weeklyReports = []
+      }
+    },
+    /**
+     * 函数级注释：加载周报附件列表
+     */
+    async loadWeeklyReportFiles(weeklyReportId) {
+      if (!weeklyReportId) {
+        this.weeklyReportAttachments = []
+        return
+      }
+      try {
+        const resp = await listConstructingProjectWeeklyReportFiles(weeklyReportId)
+        const files = resp?.data?.files || resp?.data || []
+        this.weeklyReportAttachments = Array.isArray(files) ? files : []
+        this.updateWeeklyReportHasFiles(weeklyReportId, this.weeklyReportAttachments.length > 0)
+      } catch (_) {
+        this.weeklyReportAttachments = []
+        this.updateWeeklyReportHasFiles(weeklyReportId, false)
+      }
+    },
+    /**
+     * 函数级注释：同步周报附件状态
+     */
+    updateWeeklyReportHasFiles(weeklyReportId, hasFiles) {
+      const rid = Number(weeklyReportId)
+      if (!rid || !Array.isArray(this.weeklyReports) || !this.weeklyReports.length) return
+      const idx = this.weeklyReports.findIndex(r => Number(r?.weeklyReportId) === rid)
+      if (idx >= 0) {
+        this.weeklyReports[idx].hasFiles = !!hasFiles
+      }
+    },
+    /**
+     * 函数级注释：刷新周报附件标记
+     */
+    async refreshWeeklyReportHasFiles() {
+      if (!Array.isArray(this.weeklyReports) || !this.weeklyReports.length) return
+      const tasks = this.weeklyReports.map(async (r) => {
+        const rid = Number(r?.weeklyReportId)
+        if (!rid || r?.hasFiles != null) return
+        try {
+          const resp = await listConstructingProjectWeeklyReportFiles(rid)
+          const files = resp?.data?.files || resp?.data || []
+          this.updateWeeklyReportHasFiles(rid, Array.isArray(files) && files.length > 0)
+        } catch (_) {
+          this.updateWeeklyReportHasFiles(rid, false)
+        }
+      })
+      await Promise.all(tasks)
+    },
+    /**
+     * 函数级注释：打开周报弹窗并初始化表单
+     */
+    openWeeklyReportDialog(mode = 'create', row = null) {
+      this.weeklyReportDialogMode = mode
+      this.showWeeklyReportDialog = true
+      this.weeklyReportAttachments = []
+      this.weeklyReportPendingFiles = []
+      this.weeklyReportUploading = false
+      this.weeklyReportUploadProgress = 0
+      if (mode === 'create') {
+        this.weeklyReportForm = {
+          periodStartDate: '',
+          periodEndDate: '',
+          submitUser: this.currentUserId || null,
+          submitDate: this.getTodayDateString(),
+          weeklyWorkload: null,
+          workDifficulties: ''
+        }
+      } else if (row) {
+        const range = this.parseWeeklyReportPeriod(row.period)
+        this.weeklyReportForm = {
+          weeklyReportId: row.weeklyReportId,
+          periodStartDate: range.periodStartDate,
+          periodEndDate: range.periodEndDate,
+          submitUser: row.submitUser ?? null,
+          submitDate: row.submitDate || '',
+          weeklyWorkload: row.weeklyWorkload ?? null,
+          workDifficulties: row.workDifficulties || ''
+        }
+        this.loadWeeklyReportFiles(row.weeklyReportId)
+      }
+    },
+    /**
+     * 函数级注释：查看项目周报
+     */
+    viewWeeklyReport(row) {
+      this.openWeeklyReportDialog('view', row)
+    },
+    /**
+     * 函数级注释：编辑项目周报
+     */
+    editWeeklyReport(row) {
+      this.openWeeklyReportDialog('edit', row)
+    },
+    /**
+     * 函数级注释：删除项目周报
+     */
+    async deleteWeeklyReport(row) {
+      if (this.isProjectCompleted) {
+        return this.showError('已完成项目不能删除项目周报')
+      }
+      const ok = this.$confirm ? await this.$confirm('确认删除该项目周报及其附件？') : window.confirm('确认删除该项目周报及其附件？')
+      if (!ok) return
+      try {
+        await deleteConstructingProjectWeeklyReport(row.weeklyReportId)
+        this.$message && this.$message.success('项目周报已删除')
+        await this.loadWeeklyReports()
+      } catch (e) {
+        this.showError('删除项目周报失败：' + (e?.response?.data?.error || e?.message || '未知错误'))
+      }
+    },
+    /**
+     * 函数级注释：关闭周报弹窗
+     */
+    closeWeeklyReportDialog() {
+      this.showWeeklyReportDialog = false
+      this.weeklyReportAttachments = []
+      this.weeklyReportPendingFiles = []
+      this.weeklyReportUploading = false
+      this.weeklyReportUploadProgress = 0
+    },
+    /**
+     * 函数级注释：提交周报表单
+     */
+    async confirmWeeklyReport() {
+      if (this.weeklyReportDialogMode === 'view') {
+        this.closeWeeklyReportDialog()
+        return
+      }
+
+      if (!this.weeklyReportForm.periodStartDate || !this.weeklyReportForm.periodEndDate) {
+        this.showError('请输入周期')
+        return
+      }
+      const periodStartDate = this.weeklyReportForm.periodStartDate
+      const periodEndDate = this.weeklyReportForm.periodEndDate
+      if (this.compareDateValue(periodStartDate, periodEndDate) > 0) {
+        this.showError('周期起止日期不合法')
+        return
+      }
+      if (!this.weeklyReportForm.submitUser) {
+        this.showError('请选择提交人')
+        return
+      }
+      if (!this.weeklyReportForm.submitDate) {
+        this.showError('请选择提交日期')
+        return
+      }
+      if (this.weeklyReportForm.weeklyWorkload == null || this.weeklyReportForm.weeklyWorkload === '') {
+        this.showError('请输入本周工作量')
+        return
+      }
+      const periodValue = this.formatWeeklyReportPeriod(periodStartDate, periodEndDate)
+      const payload = {
+        projectId: this.project?.projectId,
+        period: periodValue,
+        submitUser: this.weeklyReportForm.submitUser,
+        submitDate: this.weeklyReportForm.submitDate,
+        weeklyWorkload: this.weeklyReportForm.weeklyWorkload,
+        workDifficulties: (this.weeklyReportForm.workDifficulties || '').trim() || null
+      }
+      try {
+        let resp
+        if (this.weeklyReportDialogMode === 'edit') {
+          resp = await updateConstructingProjectWeeklyReport(this.weeklyReportForm.weeklyReportId, payload)
+        } else {
+          resp = await createConstructingProjectWeeklyReport(payload)
+        }
+
+        this.$message && this.$message.success(this.weeklyReportDialogMode === 'edit' ? '项目周报已更新' : '项目周报已添加')
+
+        if (this.weeklyReportDialogMode === 'create' && this.weeklyReportPendingFiles.length) {
+          const createdId = resp?.data?.weeklyReport?.weeklyReportId || resp?.data?.weeklyReportId
+          if (createdId) {
+            await this.uploadWeeklyReportFiles(createdId, this.weeklyReportPendingFiles)
+            this.weeklyReportPendingFiles = []
+          }
+        }
+
+        this.showWeeklyReportDialog = false
+        await this.loadWeeklyReports()
+      } catch (e) {
+        const msg = e?.response?.data?.error || e?.message || (this.weeklyReportDialogMode === 'edit' ? '更新失败' : '添加失败')
+        this.showError(msg)
+      }
+    },
+    getTodayDateString() {
+      const d = new Date()
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    },
+    parseWeeklyReportPeriod(period) {
+      if (!period) {
+        return { periodStartDate: '', periodEndDate: '' }
+      }
+      const text = String(period)
+      const matches = text.match(/\d{4}-\d{2}-\d{2}/g) || []
+      if (matches.length >= 2) {
+        return { periodStartDate: matches[0], periodEndDate: matches[1] }
+      }
+      return { periodStartDate: '', periodEndDate: '' }
+    },
+    formatWeeklyReportPeriod(periodStartDate, periodEndDate) {
+      if (!periodStartDate || !periodEndDate) return ''
+      return `${periodStartDate} 至 ${periodEndDate}`
+    },
+    compareDateValue(startDate, endDate) {
+      try {
+        const start = new Date(`${startDate}T00:00:00`)
+        const end = new Date(`${endDate}T00:00:00`)
+        const diff = start.getTime() - end.getTime()
+        if (isNaN(diff)) return 0
+        if (diff === 0) return 0
+        return diff > 0 ? 1 : -1
+      } catch (_) {
+        return 0
+      }
+    },
+    /**
+     * 函数级注释：选择周报附件文件
+     */
+    onWeeklyReportFilesSelected(evt) {
+      const files = Array.from(evt?.target?.files || [])
+      if (evt?.target) evt.target.value = ''
+      if (!files.length) return
+
+      if (this.weeklyReportDialogMode === 'create') {
+        this.weeklyReportPendingFiles = this.weeklyReportPendingFiles.concat(files)
+        return
+      }
+
+      const reportId = this.weeklyReportForm.weeklyReportId
+      if (!reportId) {
+        this.showError('请先保存周报后再上传附件')
+        return
+      }
+      this.uploadWeeklyReportFiles(reportId, files)
+    },
+    /**
+     * 函数级注释：触发周报附件文件选择
+     */
+    triggerWeeklyReportAttachmentInput() {
+      try {
+        this.$refs.weeklyReportAttachmentInput && this.$refs.weeklyReportAttachmentInput.click()
+      } catch (_) { }
+    },
+    /**
+     * 函数级注释：上传周报附件
+     */
+    async uploadWeeklyReportFiles(weeklyReportId, files) {
+      if (!this.project?.projectId) return
+      this.weeklyReportUploading = true
+      this.weeklyReportUploadProgress = 0
+      try {
+        await uploadConstructingProjectWeeklyReportFiles(this.project.projectId, weeklyReportId, files, {
+          uploaderId: this.currentUserId,
+          onProgress: (percent) => {
+            this.weeklyReportUploadProgress = percent
+          }
+        })
+        await this.loadWeeklyReportFiles(weeklyReportId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '附件上传失败')
+      } finally {
+        this.weeklyReportUploading = false
+      }
+    },
+    /**
+     * 函数级注释：删除周报附件
+     */
+    async onDeleteWeeklyReportFile(file) {
+      try {
+        await deleteConstructingProjectWeeklyReportFile(file.fileId)
+        this.$message && this.$message.success('附件已删除')
+        await this.loadWeeklyReportFiles(this.weeklyReportForm.weeklyReportId)
+      } catch (e) {
+        this.showError(e?.response?.data?.error || e?.message || '删除附件失败')
+      }
+    },
+    /**
+     * 函数级注释：移除待上传的周报附件
+     */
+    removeWeeklyReportPendingFile(idx) {
+      this.weeklyReportPendingFiles.splice(idx, 1)
+    },
+    /**
+     * 函数级注释：生成周报附件下载链接
+     */
+    convertWeeklyReportDownloadURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-weekly-report-files/download/${fileId}`
+    },
+    /**
+     * 函数级注释：生成周报附件PDF预览链接
+     */
+    convertWeeklyReportPreviewPdfURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-weekly-report-files/preview/pdf/${fileId}`
+    },
+    /**
+     * 函数级注释：生成周报附件视频预览链接
+     */
+    convertWeeklyReportPreviewVideoURL(fileId) {
+      const API_BASE = __BACKEND_API_URL__
+      return `${API_BASE}/api/constructing-project-weekly-report-files/preview/video/${fileId}`
+    },
+    /**
+     * 函数级注释：获取周报附件二进制数据
+     */
+    async fetchWeeklyReportBlob(fileId) {
+      const url = this.convertWeeklyReportDownloadURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('文件获取失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：获取周报附件预览PDF数据
+     */
+    async fetchWeeklyReportPreviewPdfBlob(fileId) {
+      const url = this.convertWeeklyReportPreviewPdfURL(fileId)
+      const resp = await fetch(url, { credentials: 'include' })
+      if (!resp.ok) throw new Error('PDF 预览失败：' + resp.status)
+      return await resp.blob()
+    },
+    /**
+     * 函数级注释：预览周报附件
+     */
+    async onPreviewWeeklyReportFile(file) {
+      const name = this.fileBaseName(file?.filePath || '')
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      this.previewTitle = name || '文件预览'
+      this.previewLoading = true
+      this.previewError = ''
+      this.previewScale = 1.0
+      this.showPreviewDialog = true
+
+      const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+      if (imageExts.includes(ext)) {
+        this.previewType = 'image'
+        try {
+          const blob = await this.fetchWeeklyReportBlob(file.fileId)
+          const url = URL.createObjectURL(blob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || '图片加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'pdf') {
+        this.previewType = 'pdf'
+        try {
+          const blob = await this.fetchWeeklyReportBlob(file.fileId)
+          const buf = await blob.arrayBuffer()
+          const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+          const url = URL.createObjectURL(pdfBlob)
+          this.previewUrl = url
+        } catch (e) {
+          this.previewError = e?.message || 'PDF 加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'mp4') {
+        this.previewType = 'video'
+        try {
+          this.previewUrl = this.convertWeeklyReportPreviewVideoURL(file.fileId)
+        } catch (e) {
+          this.previewError = e?.message || '视频预览失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'doc' || ext === 'docx') {
+        try {
+          const pdfBlob = await this.fetchWeeklyReportPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          if (ext === 'docx') {
+            try {
+              const blob = await this.fetchWeeklyReportBlob(file.fileId)
+              const buf = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              this.previewType = 'docx'
+              this.previewHTML = result.value || '<div>该文档无法转换为HTML</div>'
+            } catch (err) {
+              this.previewError = err?.message || 'DOCX 预览失败'
+            }
+          } else {
+            this.previewType = 'unsupported'
+            this.previewError = e?.message || 'Word 预览失败，请下载查看'
+          }
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'xls' || ext === 'xlsx') {
+        try {
+          const pdfBlob = await this.fetchWeeklyReportPreviewPdfBlob(file.fileId)
+          const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
+          this.previewType = 'pdf'
+          this.previewUrl = url
+        } catch (e) {
+          this.previewType = 'unsupported'
+          this.previewError = e?.message || 'Excel 预览失败，请下载查看'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'txt') {
+        this.previewType = 'text'
+        try {
+          const blob = await this.fetchWeeklyReportBlob(file.fileId)
+          const text = await blob.text()
+          this.previewText = text
+        } catch (e) {
+          this.previewError = e?.message || '文本加载失败'
+        } finally {
+          this.previewLoading = false
+        }
+        return
+      }
+
+      if (ext === 'ppt' || ext === 'pptx') {
+        try {
+          const pdfBlob = await this.fetchWeeklyReportPreviewPdfBlob(file.fileId)
           const url = URL.createObjectURL(new Blob([await pdfBlob.arrayBuffer()], { type: 'application/pdf' }))
           this.previewType = 'pdf'
           this.previewUrl = url
@@ -5360,6 +6042,26 @@ export default {
   -webkit-text-fill-color: #262626;
   opacity: 1;
   cursor: default;
+}
+
+.extra-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extra-range input {
+  flex: 1;
+  min-width: 0;
+}
+
+.extra-range span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.extra-range:focus-within {
+  outline: none;
 }
 
 .extra-actions {
