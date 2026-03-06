@@ -81,6 +81,9 @@ public class ConstructDeliverableFileService {
     @Autowired
     private ConstructMilestoneRepository constructMilestoneRepository;
 
+    @Autowired
+    private ConstructingProjectModifyRecordService modifyRecordService;
+
     /**
      * 函数级注释：上传并保存项目交付物文件。
      * 路径规则：保存到项目根目录的 `deliverableFiles/<项目编号-项目名称>/<里程碑名称>/[接口或个性化名称]/`。
@@ -256,6 +259,12 @@ public class ConstructDeliverableFileService {
                 saved.add(fileRepository.save(record));
             }
         }
+        if (projectId != null && uploaderId != null && !saved.isEmpty()) {
+            String context = buildDeliverableContext(deliverableId, projectStepId, constructMilestoneId);
+            String beforeText = context + ", 文件=无";
+            String afterText = context + ", 文件=已上传";
+            modifyRecordService.createRecord(projectId, uploaderId, "修改步骤或里程碑交付物", beforeText, afterText);
+        }
         return saved;
     }
 
@@ -320,7 +329,7 @@ public class ConstructDeliverableFileService {
         return projectRoot.resolve(r.getFilePath()).normalize();
     }
 
-    public void deleteFile(Long fileId) {
+    public void deleteFile(Long fileId, Long operatorId) {
         ConstructDeliverableFile r = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("文件记录不存在，ID: " + fileId));
         // 函数级注释：禁止在“已完成”项目下删除交付物文件
@@ -337,8 +346,42 @@ public class ConstructDeliverableFileService {
                 Files.delete(target);
             }
             fileRepository.deleteById(fileId);
+            if (operatorId != null && projectId != null) {
+                String context = buildFileContext(fileId, r.getProjectStepId(), r.getMilestoneId());
+                String beforeText = context + ", 文件=存在";
+                String afterText = context + ", 文件=已删除";
+                modifyRecordService.createRecord(projectId, operatorId, "修改步骤或里程碑交付物", beforeText, afterText);
+            }
         } catch (Exception e) {
             throw new RuntimeException("删除文件失败: " + e.getMessage());
         }
+    }
+
+    private String buildDeliverableContext(Long deliverableId, Long projectStepId, Long milestoneId) {
+        String text = "交付物ID=" + formatValue(deliverableId);
+        if (projectStepId != null) {
+            text = text + ", 步骤ID=" + formatValue(projectStepId);
+        }
+        if (milestoneId != null) {
+            text = text + ", 里程碑ID=" + formatValue(milestoneId);
+        }
+        return text;
+    }
+
+    private String buildFileContext(Long fileId, Long projectStepId, Long milestoneId) {
+        String text = "文件ID=" + formatValue(fileId);
+        if (projectStepId != null) {
+            text = text + ", 步骤ID=" + formatValue(projectStepId);
+        }
+        if (milestoneId != null) {
+            text = text + ", 里程碑ID=" + formatValue(milestoneId);
+        }
+        return text;
+    }
+
+    private String formatValue(Object value) {
+        if (value == null) return "无";
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? "无" : text;
     }
 }

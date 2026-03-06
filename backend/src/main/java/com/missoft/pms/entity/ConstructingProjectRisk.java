@@ -46,6 +46,9 @@ public class ConstructingProjectRisk {
     private LocalDateTime updateTime;
 
     @Transient
+    private Long modifyUser;
+
+    @Transient
     private Boolean hasFiles;
 
     /**
@@ -151,6 +154,10 @@ public class ConstructingProjectRisk {
      * 函数级注释：设置更新时间
      */
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+
+    public Long getModifyUser() { return modifyUser; }
+
+    public void setModifyUser(Long modifyUser) { this.modifyUser = modifyUser; }
 
     /**
      * 函数级注释：获取是否存在附件

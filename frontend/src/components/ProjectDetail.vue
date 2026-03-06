@@ -10,7 +10,8 @@
       <div class="actions">
         <button v-if="activeTab === 'out_contract'" class="add-btn" @click="openExtraDialog('create')">添加需求</button>
         <button v-if="activeTab === 'risk'" class="add-btn" @click="openRiskDialog('create')">添加风险</button>
-        <button v-if="activeTab === 'daily_report'" class="add-btn" @click="openWeeklyReportDialog('create')">添加周报</button>
+        <button v-if="activeTab === 'daily_report'" class="add-btn"
+          @click="openWeeklyReportDialog('create')">添加周报</button>
       </div>
     </div>
 
@@ -22,6 +23,29 @@
         <div v-for="tab in tabs" :key="tab.id" class="tab-item" :class="{ active: activeTab === tab.id }"
           @click="activeTab = tab.id">
           {{ tab.name }}
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'modification_record'" class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">修改日期</span>
+          <input type="date" v-model="modifyFilterStartDate" class="filter-input" />
+          <span class="filter-sep">-</span>
+          <input type="date" v-model="modifyFilterEndDate" class="filter-input" />
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">修改行为</span>
+          <select v-model="modifyFilterAction" class="filter-select">
+            <option value="">全部修改行为</option>
+            <option v-for="opt in modifyActionOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">修改人</span>
+          <select v-model="modifyFilterUser" class="filter-select">
+            <option value="">全部修改人</option>
+            <option v-for="u in modifyUserOptions" :key="String(u.value)" :value="u.value">{{ u.label }}</option>
+          </select>
         </div>
       </div>
 
@@ -76,13 +100,17 @@
                     : (row.rowType + '-' + (row.blockId || idx))))">
                     <tr v-if="row.rowType === 'step'">
                       <td>{{ idx + 1 }}</td>
-                      <td @mouseenter="showTooltip($event, row.sstepName || row.nstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.sstepName || row.nstepName)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.sstepName || row.nstepName }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.type || '标准')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.type || '标准')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.type || '标准' }}</div>
                       </td>
-                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'director')"
+                        @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -96,7 +124,9 @@
                           <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planStartDate')"
+                        @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
@@ -105,7 +135,9 @@
                           <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planEndDate')"
+                        @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
@@ -114,7 +146,9 @@
                           <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualStartDate')"
+                        @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
@@ -123,7 +157,9 @@
                           <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualEndDate')"
+                        @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
@@ -132,14 +168,19 @@
                           <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
-                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      <td
+                        @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))"
+                        @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status ||
+                          '未开始')) }}</div>
                       </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
@@ -205,13 +246,17 @@
                     <!-- 接口开发步骤（支持双击编辑） -->
                     <tr v-else-if="row.rowType === 'interface_step'" class="interface-step-row">
                       <td>{{ idx + 1 }}</td>
-                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.sstepName }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.type }}</div>
                       </td>
-                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'director')"
+                        @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -225,7 +270,9 @@
                           <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planStartDate')"
+                        @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
@@ -234,7 +281,9 @@
                           <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planEndDate')"
+                        @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
@@ -243,7 +292,9 @@
                           <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualStartDate')"
+                        @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
@@ -252,7 +303,9 @@
                           <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualEndDate')"
+                        @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
@@ -261,14 +314,19 @@
                           <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
-                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      <td
+                        @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))"
+                        @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status ||
+                          '未开始')) }}</div>
                       </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
@@ -298,13 +356,17 @@
                     <!-- 个性化开发步骤（支持双击编辑） -->
                     <tr v-else-if="row.rowType === 'personal_step'" class="personal-step-row">
                       <td>{{ idx + 1 }}</td>
-                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.sstepName)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.sstepName }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.type)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.type }}</div>
                       </td>
-                      <td @dblclick="startEdit(row, 'director')" @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'director')"
+                        @mouseenter="showTooltip($event, row.directorName ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'director')">
                           <select v-model="editValue" @change="commitEdit(row, 'director')" @blur="cancelEdit"
                             class="cell-input">
@@ -318,7 +380,9 @@
                           <div class="text-truncate">{{ row.directorName ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planStartDate')" @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planStartDate')"
+                        @mouseenter="showTooltip($event, row.planStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planStartDate')"
                             @blur="commitEdit(row, 'planStartDate')" class="cell-input" />
@@ -327,7 +391,9 @@
                           <div class="text-truncate">{{ row.planStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'planEndDate')" @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'planEndDate')"
+                        @mouseenter="showTooltip($event, row.planEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'planEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'planEndDate')"
                             @blur="commitEdit(row, 'planEndDate')" class="cell-input" />
@@ -336,7 +402,9 @@
                           <div class="text-truncate">{{ row.planEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualStartDate')" @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualStartDate')"
+                        @mouseenter="showTooltip($event, row.actualStartDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualStartDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualStartDate')"
                             @blur="commitEdit(row, 'actualStartDate')" class="cell-input" />
@@ -345,7 +413,9 @@
                           <div class="text-truncate">{{ row.actualStartDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @dblclick="startEdit(row, 'actualEndDate')" @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @dblclick="startEdit(row, 'actualEndDate')"
+                        @mouseenter="showTooltip($event, row.actualEndDate ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <template v-if="isEditing(row, 'actualEndDate')">
                           <input type="date" v-model="editValue" @keyup.enter="commitEdit(row, 'actualEndDate')"
                             @blur="commitEdit(row, 'actualEndDate')" class="cell-input" />
@@ -354,14 +424,19 @@
                           <div class="text-truncate">{{ row.actualEndDate ?? '-' }}</div>
                         </template>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.planPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.planPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.actualPeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.actualPeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
-                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')) }}</div>
+                      <td
+                        @mouseenter="showTooltip($event, row.stepStatus || (row.isCompleted ? '已完成' : (row.status || '未开始')))"
+                        @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                        <div class="text-truncate">{{ row.stepStatus || (row.isCompleted ? '已完成' : (row.status ||
+                          '未开始')) }}</div>
                       </td>
                       <td class="deliverable-actions">
                         <template v-if="shouldShowDeliverableActions(row)">
@@ -406,34 +481,44 @@
                     </tr>
                     <tr v-else class="milestone-row">
                       <td>{{ idx + 1 }}</td>
-                      <td @mouseenter="showTooltip($event, '【里程碑】' + row.milestoneName)" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '【里程碑】' + row.milestoneName)" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">【里程碑】{{ row.milestoneName }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '里程碑')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '里程碑')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">里程碑</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">-</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.milestonePeriod ?? '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.milestonePeriod ?? '-')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.milestonePeriod ?? '-' }}</div>
                       </td>
-                      <td @mouseenter="showTooltip($event, row.iscomplete ? '完成' : '未完成')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                      <td @mouseenter="showTooltip($event, row.iscomplete ? '完成' : '未完成')" @mouseleave="hideTooltip"
+                        @mousemove="updateTooltipPosition">
                         <div class="text-truncate">{{ row.iscomplete ? '完成' : '未完成' }}</div>
                       </td>
                       <td class="deliverable-actions">
@@ -474,6 +559,7 @@
                 <colgroup>
                   <col style="width: 60px">
                   <col> <!-- 需求名称 -->
+                  <col style="width: 140px">
                   <col style="width: 90px">
                   <col style="width: 120px">
                   <col style="width: 90px">
@@ -482,11 +568,13 @@
                   <col style="width: 120px">
                   <col style="width: 160px">
                   <col style="width: 120px">
+                  <col style="width: 120px">
                 </colgroup>
                 <thead>
                   <tr>
                     <th>序号</th>
                     <th>需求名称</th>
+                    <th>需求类型</th>
                     <th>是否付费</th>
                     <th>付费金额（元）</th>
                     <th>是否交付</th>
@@ -494,35 +582,52 @@
                     <th>是否产品化</th>
                     <th>工作量</th>
                     <th>开发负责人</th>
+                    <th>创建日期</th>
                     <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(r, idx) in extraRequirements" :key="r.requirementId || (r.id ?? idx)">
                     <td>{{ idx + 1 }}</td>
-                    <td @mouseenter="showTooltip($event, r.requirementName || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.requirementName || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.requirementName || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.isPay ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.requirementType || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.requirementType || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.isPay ? '是' : '否')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.isPay ? '是' : '否' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.payAmount != null ? String(r.payAmount) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.payAmount != null ? String(r.payAmount) : '-')"
+                      @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.payAmount != null ? String(r.payAmount) : '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.isDeliver ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.isDeliver ? '是' : '否')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.isDeliver ? '是' : '否' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.isComplete ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.isComplete ? '是' : '否')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.isComplete ? '是' : '否' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.isProductization ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.isProductization ? '是' : '否')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.isProductization ? '是' : '否' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.workload != null ? String(r.workload) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.workload != null ? String(r.workload) : '-')"
+                      @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.workload != null ? String(r.workload) : '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, userName(r.developer) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, userName(r.developer) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ userName(r.developer) || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, formatDateOnly(r.createTime) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ formatDateOnly(r.createTime) || '-' }}</div>
                     </td>
                     <td class="deliverable-actions">
                       <div class="actions-inner">
@@ -549,7 +654,7 @@
                     </td>
                   </tr>
                   <tr v-if="!extraRequirements || extraRequirements.length === 0">
-                    <td colspan="10" class="empty">当前暂无合同外需求</td>
+                    <td colspan="12" class="empty">当前暂无合同外需求</td>
                   </tr>
                 </tbody>
               </table>
@@ -593,25 +698,32 @@
                 <tbody>
                   <tr v-for="(r, idx) in projectRisks" :key="r.riskId || (r.id ?? idx)">
                     <td>{{ idx + 1 }}</td>
-                    <td @mouseenter="showTooltip($event, r.riskType || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.riskType || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.riskType || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.riskLevel || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.riskLevel || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.riskLevel || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.isRelieve ? '是' : '否')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.isRelieve ? '是' : '否')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.isRelieve ? '是' : '否' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.relieveWay || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.relieveWay || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.relieveWay || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.riskDescription || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.riskDescription || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.riskDescription || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.riskEvaluate || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.riskEvaluate || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.riskEvaluate || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, userName(r.creator) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, userName(r.creator) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ userName(r.creator) || '-' }}</div>
                     </td>
                     <td class="deliverable-actions">
@@ -679,24 +791,30 @@
                 <tbody>
                   <tr v-for="(r, idx) in weeklyReports" :key="r.weeklyReportId || (r.id ?? idx)">
                     <td>{{ idx + 1 }}</td>
-                    <td @mouseenter="showTooltip($event, r.period || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.period || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.period || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, userName(r.submitUser) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, userName(r.submitUser) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ userName(r.submitUser) || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, formatDateOnly(r.submitDate) || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, formatDateOnly(r.submitDate) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ formatDateOnly(r.submitDate) || '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.weeklyWorkload != null ? String(r.weeklyWorkload) : '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.weeklyWorkload != null ? String(r.weeklyWorkload) : '-')"
+                      @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.weeklyWorkload != null ? String(r.weeklyWorkload) : '-' }}</div>
                     </td>
-                    <td @mouseenter="showTooltip($event, r.workDifficulties || '-')" @mouseleave="hideTooltip" @mousemove="updateTooltipPosition">
+                    <td @mouseenter="showTooltip($event, r.workDifficulties || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
                       <div class="text-truncate">{{ r.workDifficulties || '-' }}</div>
                     </td>
                     <td class="deliverable-actions">
                       <div class="actions-inner">
-                        <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看" @click="viewWeeklyReport(r)">
+                        <button class="icon-btn" :class="{ 'has-files': r.hasFiles }" title="查看"
+                          @click="viewWeeklyReport(r)">
                           <svg viewBox="0 0 24 24">
                             <path
                               d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
@@ -709,8 +827,8 @@
                               d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                           </svg>
                         </button>
-                        <button class="icon-btn" title="删除" @click="deleteWeeklyReport(r)" :disabled="isProjectCompleted"
-                          :class="{ disabled: isProjectCompleted }">
+                        <button class="icon-btn" title="删除" @click="deleteWeeklyReport(r)"
+                          :disabled="isProjectCompleted" :class="{ disabled: isProjectCompleted }">
                           <svg viewBox="0 0 24 24">
                             <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
                           </svg>
@@ -741,7 +859,8 @@
                     <span class="compose-title">发表评论</span>
                   </div>
                   <div class="compose-body">
-                    <textarea v-model="commentForm.content" rows="3" placeholder="写下你的想法...请控制评论内容在1000汉字和字符内"></textarea>
+                    <textarea v-model="commentForm.content" rows="3"
+                      placeholder="写下你的想法...请控制评论内容在1000汉字和字符内"></textarea>
                     <div class="comment-upload">
                       <div class="comment-upload-head">
                         <span class="comment-upload-title">附件</span>
@@ -749,10 +868,13 @@
                           <input type="file" multiple @change="onCommentFileChange" />
                           选择文件
                         </label>
-                        <span v-if="commentPendingFiles.length" class="comment-upload-count">已选 {{ commentPendingFiles.length }} 个</span>
+                        <span v-if="commentPendingFiles.length" class="comment-upload-count">已选 {{
+                          commentPendingFiles.length }}
+                          个</span>
                       </div>
                       <div v-if="commentPendingFiles.length" class="comment-upload-list">
-                        <div v-for="(file, index) in commentPendingFiles" :key="file.name + file.size + index" class="comment-upload-item">
+                        <div v-for="(file, index) in commentPendingFiles" :key="file.name + file.size + index"
+                          class="comment-upload-item">
                           <span class="comment-upload-name">{{ file.name }}</span>
                           <span class="comment-upload-size">{{ prettySize(file.size) }}</span>
                           <button class="icon-btn" type="button" @click="removeCommentPendingFile(index)">×</button>
@@ -765,7 +887,8 @@
                     <div class="compose-footer">
                       <span class="comment-count" v-if="commentList.length > 0">共 {{ commentList.length }} 条评论</span>
                       <span class="comment-count" v-else>暂无评论，快来抢沙发吧~</span>
-                      <button class="btn primary submit-btn" @click="submitProjectComment" :disabled="commentSubmitting">
+                      <button class="btn primary submit-btn" @click="submitProjectComment"
+                        :disabled="commentSubmitting">
                         {{ commentSubmitting ? '发送中...' : '发送' }}
                       </button>
                     </div>
@@ -791,28 +914,34 @@
                       </div>
                       <div class="comment-main">
                         <div class="comment-header">
-                          <span class="comment-author">{{ item.displayName || item.userName || item.userId || '未知用户' }}</span>
+                          <span class="comment-author">{{ item.displayName || item.userName || item.userId || '未知用户'
+                          }}</span>
                           <div class="comment-actions">
                             <span class="comment-date">{{ formatDate(item.createTime) }}</span>
-                            <button v-if="Number(item.userId) === Number(currentUserId)" class="comment-delete-btn" type="button" @click="deleteProjectComment(item)">删除</button>
+                            <button v-if="Number(item.userId) === Number(currentUserId)" class="comment-delete-btn"
+                              type="button" @click="deleteProjectComment(item)">删除</button>
                           </div>
                         </div>
                         <div class="comment-text">{{ item.content }}</div>
                         <div v-if="(commentFilesByCommentId[item.commentId] || []).length" class="comment-file-list">
-                          <div v-for="file in commentFilesByCommentId[item.commentId]" :key="file.fileId" class="comment-file-item">
+                          <div v-for="file in commentFilesByCommentId[item.commentId]" :key="file.fileId"
+                            class="comment-file-item">
                             <template v-if="isImageFile(file.filePath)">
                               <button class="comment-image-link" type="button" @click="openCommentImagePreview(file)">
-                                <img :src="commentPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)" class="comment-image-thumb" />
+                                <img :src="commentPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)"
+                                  class="comment-image-thumb" />
                               </button>
                               <div class="comment-file-meta">
-                                <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)"
+                                  :download="fileBaseName(file.filePath)" target="_blank">
                                   {{ fileBaseName(file.filePath) }}
                                 </a>
                                 <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
                               </div>
                             </template>
                             <template v-else>
-                              <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                              <a class="comment-file-name" :href="commentDownloadUrl(file.fileId)"
+                                :download="fileBaseName(file.filePath)" target="_blank">
                                 {{ fileBaseName(file.filePath) }}
                               </a>
                               <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
@@ -820,58 +949,77 @@
                           </div>
                         </div>
                         <div class="comment-footer">
-                          <button class="comment-reply-btn" type="button" @click="toggleReplyForm(item.commentId)">回复</button>
+                          <button class="comment-reply-btn" type="button"
+                            @click="toggleReplyForm(item.commentId)">回复</button>
                         </div>
                         <div v-if="replyFormVisibleByCommentId[item.commentId]" class="comment-reply-editor">
-                          <textarea v-model="replyFormContentByCommentId[item.commentId]" rows="2" placeholder="输入回复内容"></textarea>
+                          <textarea v-model="replyFormContentByCommentId[item.commentId]" rows="2"
+                            placeholder="输入回复内容"></textarea>
                           <div class="comment-reply-upload">
                             <label class="comment-upload-btn">
                               <input type="file" multiple @change="onReplyFileChange(item.commentId, $event)" />
                               选择文件
                             </label>
-                            <span v-if="(replyPendingFilesByCommentId[item.commentId] || []).length" class="comment-upload-count">已选 {{ (replyPendingFilesByCommentId[item.commentId] || []).length }} 个</span>
+                            <span v-if="(replyPendingFilesByCommentId[item.commentId] || []).length"
+                              class="comment-upload-count">已选 {{ (replyPendingFilesByCommentId[item.commentId] ||
+                                []).length }}
+                              个</span>
                           </div>
-                          <div v-if="(replyPendingFilesByCommentId[item.commentId] || []).length" class="comment-upload-list">
-                            <div v-for="(file, index) in (replyPendingFilesByCommentId[item.commentId] || [])" :key="file.name + file.size + index" class="comment-upload-item">
+                          <div v-if="(replyPendingFilesByCommentId[item.commentId] || []).length"
+                            class="comment-upload-list">
+                            <div v-for="(file, index) in (replyPendingFilesByCommentId[item.commentId] || [])"
+                              :key="file.name + file.size + index" class="comment-upload-item">
                               <span class="comment-upload-name">{{ file.name }}</span>
                               <span class="comment-upload-size">{{ prettySize(file.size) }}</span>
-                              <button class="icon-btn" type="button" @click="removeReplyPendingFile(item.commentId, index)">×</button>
+                              <button class="icon-btn" type="button"
+                                @click="removeReplyPendingFile(item.commentId, index)">×</button>
                             </div>
                           </div>
                           <div v-if="replyUploadingByCommentId[item.commentId]" class="comment-upload-progress">
-                            <div class="comment-upload-bar" :style="{ width: (replyUploadProgressByCommentId[item.commentId] || 0) + '%' }"></div>
+                            <div class="comment-upload-bar"
+                              :style="{ width: (replyUploadProgressByCommentId[item.commentId] || 0) + '%' }"></div>
                           </div>
                           <div class="comment-reply-actions">
-                            <button class="btn primary submit-btn" type="button" @click="submitReply(item)" :disabled="replySubmittingByCommentId[item.commentId]">
+                            <button class="btn primary submit-btn" type="button" @click="submitReply(item)"
+                              :disabled="replySubmittingByCommentId[item.commentId]">
                               {{ replySubmittingByCommentId[item.commentId] ? '发送中...' : '发送回复' }}
                             </button>
                           </div>
                         </div>
                         <div v-if="(replyListByCommentId[item.commentId] || []).length" class="comment-reply-list">
-                          <div v-for="reply in replyListByCommentId[item.commentId]" :key="reply.replyId" class="comment-reply-item">
+                          <div v-for="reply in replyListByCommentId[item.commentId]" :key="reply.replyId"
+                            class="comment-reply-item">
                             <div class="comment-reply-header">
-                              <span class="comment-reply-author">{{ reply.displayName || reply.userName || reply.userId || '未知用户' }}</span>
+                              <span class="comment-reply-author">{{ reply.displayName || reply.userName || reply.userId
+                                ||
+                                '未知用户' }}</span>
                               <div class="comment-reply-actions">
                                 <span class="comment-reply-date">{{ formatDate(reply.createTime) }}</span>
-                                <button v-if="Number(reply.userId) === Number(currentUserId)" class="comment-reply-delete-btn" type="button" @click="deleteReply(reply, item.commentId)">删除</button>
+                                <button v-if="Number(reply.userId) === Number(currentUserId)"
+                                  class="comment-reply-delete-btn" type="button"
+                                  @click="deleteReply(reply, item.commentId)">删除</button>
                               </div>
                             </div>
                             <div class="comment-reply-content">{{ reply.content }}</div>
                             <div v-if="(replyFilesByReplyId[reply.replyId] || []).length" class="comment-file-list">
-                              <div v-for="file in replyFilesByReplyId[reply.replyId]" :key="file.fileId" class="comment-file-item">
+                              <div v-for="file in replyFilesByReplyId[reply.replyId]" :key="file.fileId"
+                                class="comment-file-item">
                                 <template v-if="isImageFile(file.filePath)">
                                   <button class="comment-image-link" type="button" @click="openReplyImagePreview(file)">
-                                    <img :src="replyPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)" class="comment-image-thumb" />
+                                    <img :src="replyPreviewUrl(file.fileId)" :alt="fileBaseName(file.filePath)"
+                                      class="comment-image-thumb" />
                                   </button>
                                   <div class="comment-file-meta">
-                                    <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                    <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)"
+                                      :download="fileBaseName(file.filePath)" target="_blank">
                                       {{ fileBaseName(file.filePath) }}
                                     </a>
                                     <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
                                   </div>
                                 </template>
                                 <template v-else>
-                                  <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)" :download="fileBaseName(file.filePath)" target="_blank">
+                                  <a class="comment-file-name" :href="replyDownloadUrl(file.fileId)"
+                                    :download="fileBaseName(file.filePath)" target="_blank">
                                     {{ fileBaseName(file.filePath) }}
                                   </a>
                                   <span class="comment-file-size">{{ prettySize(file.fileSize) }}</span>
@@ -1102,372 +1250,446 @@
           </div>
         </div>
 
-
-
-      </div>
-
-      <!-- 其他标签页空白占位 -->
-      <div v-show="['warning', 'statistics', 'modification_record'].includes(activeTab)"
-        class="empty-tab">
-        <div class="empty-state">
-          <div class="empty-icon">📂</div>
-          <h3>{{ getTabName(activeTab) }}</h3>
-          <p>该模块正在建设中...</p>
-        </div>
-      </div>
-    </div>
-    <!-- 新增合同外需求弹窗 -->
-    <div v-if="showExtraDialog" class="dialog-mask extra-modal-overlay">
-      <div class="extra-modal">
-        <div class="extra-modal-header">
-          <h3>{{ extraDialogMode === 'create' ? '新增合同外需求' : (extraDialogMode === 'edit' ? '编辑合同外需求' : '查看合同外需求') }}</h3>
-          <button class="extra-close" @click="closeExtraDialog">&times;</button>
-        </div>
-        <div class="extra-modal-body">
-          <form class="extra-form" @submit.prevent>
-            <div class="extra-section">
-              <div class="extra-grid">
-                <div class="extra-group">
-                  <label>需求名称 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <input type="text" v-model.trim="extraForm.requirementName" placeholder="请输入需求名称"
-                    :disabled="extraDialogMode === 'view'" />
-                </div>
-                <div class="extra-group">
-                  <label>是否付费 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <select v-model="extraForm.isPay" :disabled="extraDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option :value="false">否</option>
-                    <option :value="true">是</option>
-                  </select>
-                </div>
-                <div class="extra-group" v-if="extraForm.isPay">
-                  <label>付费金额 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <input type="number" v-model.number="extraForm.payAmount" step="0.01" placeholder="请输入金额（元）"
-                    :disabled="extraDialogMode === 'view'" />
-                </div>
-                <div class="extra-group">
-                  <label>是否交付 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <select v-model="extraForm.isDeliver" :disabled="extraDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option :value="false">否</option>
-                    <option :value="true">是</option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>是否完成 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <select v-model="extraForm.isComplete" :disabled="extraDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option :value="false">否</option>
-                    <option :value="true">是</option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>是否产品化 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
-                  <select v-model="extraForm.isProductization" :disabled="extraDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option :value="false">否</option>
-                    <option :value="true">是</option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>工作量</label>
-                  <input type="number" v-model.number="extraForm.workload" step="0.01" placeholder="请输入工作量（人天）"
-                    :disabled="extraDialogMode === 'view'" />
-                </div>
-                <div class="extra-group">
-                  <label>开发负责人</label>
-                  <select v-model="extraForm.developer" :disabled="extraDialogMode === 'view'">
-                    <option :value="null">请选择负责人</option>
-                    <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
-                      {{ u.name || u.userName }}
-                    </option>
-                  </select>
-                </div>
-                <div class="extra-group full-width">
-                  <div class="extra-section-title">上传附件</div>
-                  <div class="extra-upload-card">
-                    <div class="extra-upload-head" v-if="extraDialogMode === 'edit' || extraDialogMode === 'create'">
-                      <button type="button" class="btn primary select-btn"
-                        @click="triggerExtraAttachmentInput">选择文件</button>
-                      <input ref="extraAttachmentInput" type="file" multiple class="hidden-file"
-                        @change="onExtraFilesSelected($event)" />
-                    </div>
-                    <div class="extra-upload-body">
-                      <div class="progress" v-if="extraUploading">
-                        <div class="bar" :style="{ width: extraUploadProgress + '%' }"></div>
-                        <span class="percent">{{ extraUploadProgress }}%</span>
-                      </div>
-                      <div class="uploaded-list" v-if="extraDialogMode === 'create' && extraPendingFiles.length">
-                        <div class="template-title">待上传附件：</div>
-                        <ul class="file-list compact">
-                          <li v-for="(f, idx) in extraPendingFiles" :key="f.name + '-' + idx" class="file-item">
-                            <span class="file-link">{{ f.name }}</span>
-                            <span class="size">{{ prettySize(f.size) }}</span>
-                            <button class="icon-btn danger" title="移除" @click="removeExtraPendingFile(idx)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-if="extraAttachments.length">
-                        <ul class="file-list compact">
-                          <li v-for="f in extraAttachments" :key="f.fileId" class="file-item">
-                            <button type="button" class="file-link preview-link" @click="onPreviewExtraFile(f)">{{
-                              fileBaseName(f.filePath) }}</button>
-                            <span class="size">{{ prettySize(f.fileSize) }}</span>
-                            <a class="icon-btn" :href="convertExtraDownloadURL(f.fileId)"
-                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
-                              </svg>
-                            </a>
-                            <button class="icon-btn danger" v-if="extraDialogMode === 'edit'" title="删除"
-                              @click="onDeleteExtraFile(f)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-else-if="!extraPendingFiles.length">
-                        <div class="template-title" style="color:#999">暂无附件</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div v-show="activeTab === 'modification_record'" class="content-grid">
+          <section class="card wide">
+            <div class="table-scroll">
+              <table class="table table-fixed no-wrap-table">
+                <colgroup>
+                  <col style="width: 60px">
+                  <col style="width: 120px">
+                  <col style="width: 220px">
+                  <col style="width: 140px">
+                  <col>
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>修改日期</th>
+                    <th>修改行为</th>
+                    <th>修改人</th>
+                    <th>修改描述</th>
+                  </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(r, idx) in filteredModifyRecords" :key="r.recordId || (r.id ?? idx)">
+                    <td>{{ idx + 1 }}</td>
+                    <td @mouseenter="showTooltip($event, formatDateOnly(r.modifyDate) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ formatDateOnly(r.modifyDate) || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.modifyAction || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.modifyAction || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, userName(r.modifyUser) || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ userName(r.modifyUser) || '-' }}</div>
+                    </td>
+                    <td @mouseenter="showTooltip($event, r.modifyDescription || '-')" @mouseleave="hideTooltip"
+                      @mousemove="updateTooltipPosition">
+                      <div class="text-truncate">{{ r.modifyDescription || '-' }}</div>
+                    </td>
+                  </tr>
+                <tr v-if="!filteredModifyRecords || filteredModifyRecords.length === 0">
+                    <td colspan="5" class="empty">当前暂无修改记录</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </form>
+            <div class="pagination">
+              <button class="btn" disabled>上一页</button>
+            <span class="page-info">共 {{ filteredModifyRecords.length }} 条</span>
+              <button class="btn" disabled>下一页</button>
+            </div>
+          </section>
         </div>
-        <div class="extra-modal-footer">
-          <div class="extra-actions">
-            <button class="btn primary" @click="confirmExtra">{{ extraDialogMode === 'view' ? '关闭' : '确定' }}</button>
-            <button class="btn ghost" @click="closeExtraDialog" v-if="extraDialogMode !== 'view'">取消</button>
+
+        <!-- 其他标签页空白占位 -->
+        <div v-show="['warning', 'statistics'].includes(activeTab)" class="empty-tab">
+          <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <h3>{{ getTabName(activeTab) }}</h3>
+            <p>该模块正在建设中...</p>
           </div>
         </div>
       </div>
-    </div>
-    <div v-if="showWeeklyReportDialog" class="dialog-mask extra-modal-overlay">
-      <div class="extra-modal">
-        <div class="extra-modal-header">
-          <h3>{{ weeklyReportDialogMode === 'create' ? '新增项目周报' : (weeklyReportDialogMode === 'edit' ? '编辑项目周报' : '查看项目周报') }}</h3>
-          <button class="extra-close" @click="closeWeeklyReportDialog">&times;</button>
-        </div>
-        <div class="extra-modal-body">
-          <form class="extra-form" @submit.prevent>
-            <div class="extra-section">
-              <div class="extra-grid">
-                <div class="extra-group">
-                  <label>周期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
-                  <div class="extra-range">
-                    <input type="date" v-model="weeklyReportForm.periodStartDate" :disabled="weeklyReportDialogMode === 'view'" />
-                    <span>至</span>
-                    <input type="date" v-model="weeklyReportForm.periodEndDate" :disabled="weeklyReportDialogMode === 'view'" />
+      <!-- 新增合同外需求弹窗 -->
+      <div v-if="showExtraDialog" class="dialog-mask extra-modal-overlay">
+        <div class="extra-modal">
+          <div class="extra-modal-header">
+            <h3>{{ extraDialogMode === 'create' ? '新增合同外需求' : (extraDialogMode === 'edit' ? '编辑合同外需求' : '查看合同外需求') }}
+            </h3>
+            <button class="extra-close" @click="closeExtraDialog">&times;</button>
+          </div>
+          <div class="extra-modal-body">
+            <form class="extra-form" @submit.prevent>
+              <div class="extra-section">
+                <div class="extra-grid">
+                  <div class="extra-group">
+                    <label>需求名称 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <input type="text" v-model.trim="extraForm.requirementName" placeholder="请输入需求名称"
+                      :disabled="extraDialogMode === 'view'" />
                   </div>
-                </div>
-                <div class="extra-group">
-                  <label>提交人 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
-                  <select v-model="weeklyReportForm.submitUser" :disabled="weeklyReportDialogMode === 'view'">
-                    <option :value="null">请选择提交人</option>
-                    <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
-                      {{ u.name || u.userName }}
-                    </option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>提交日期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
-                  <input type="date" v-model="weeklyReportForm.submitDate" :disabled="weeklyReportDialogMode === 'view'" />
-                </div>
-                <div class="extra-group">
-                  <label>本周工作量（人天） <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
-                  <input type="number" v-model.number="weeklyReportForm.weeklyWorkload" step="0.01" placeholder="请输入工作量（人天）"
-                    :disabled="weeklyReportDialogMode === 'view'" />
-                </div>
-                <div class="extra-group full-width">
-                  <label>工作难点</label>
-                  <textarea rows="3" v-model.trim="weeklyReportForm.workDifficulties" placeholder="请输入工作难点"
-                    :disabled="weeklyReportDialogMode === 'view'"></textarea>
-                </div>
-                <div class="extra-group full-width">
-                  <div class="extra-section-title">上传附件</div>
-                  <div class="extra-upload-card">
-                    <div class="extra-upload-head" v-if="weeklyReportDialogMode === 'edit' || weeklyReportDialogMode === 'create'">
-                      <button type="button" class="btn primary select-btn"
-                        @click="triggerWeeklyReportAttachmentInput">选择文件</button>
-                      <input ref="weeklyReportAttachmentInput" type="file" multiple class="hidden-file"
-                        @change="onWeeklyReportFilesSelected($event)" />
-                    </div>
-                    <div class="extra-upload-body">
-                      <div class="progress" v-if="weeklyReportUploading">
-                        <div class="bar" :style="{ width: weeklyReportUploadProgress + '%' }"></div>
-                        <span class="percent">{{ weeklyReportUploadProgress }}%</span>
+                  <div class="extra-group">
+                    <label>需求类型 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <select v-model="extraForm.requirementType" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option v-for="t in requirementTypeOptions" :key="t" :value="t">{{ t }}</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>是否付费 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <select v-model="extraForm.isPay" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option :value="false">否</option>
+                      <option :value="true">是</option>
+                    </select>
+                  </div>
+                  <div class="extra-group" v-if="extraForm.isPay">
+                    <label>付费金额 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <input type="number" v-model.number="extraForm.payAmount" step="0.01" placeholder="请输入金额（元）"
+                      :disabled="extraDialogMode === 'view'" />
+                  </div>
+                  <div class="extra-group">
+                    <label>是否交付 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <select v-model="extraForm.isDeliver" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option :value="false">否</option>
+                      <option :value="true">是</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>是否完成 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <select v-model="extraForm.isComplete" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option :value="false">否</option>
+                      <option :value="true">是</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>是否产品化 <span class="required" v-if="extraDialogMode !== 'view'">*</span></label>
+                    <select v-model="extraForm.isProductization" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option :value="false">否</option>
+                      <option :value="true">是</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>工作量</label>
+                    <input type="number" v-model.number="extraForm.workload" step="0.01" placeholder="请输入工作量（人天）"
+                      :disabled="extraDialogMode === 'view'" />
+                  </div>
+                  <div class="extra-group">
+                    <label>开发负责人</label>
+                    <select v-model="extraForm.developer" :disabled="extraDialogMode === 'view'">
+                      <option :value="null">请选择负责人</option>
+                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                        {{ u.name || u.userName }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>创建日期</label>
+                    <input type="text" :value="formatDateOnly(extraForm.createTime) || '-'" disabled />
+                  </div>
+                  <div class="extra-group full-width">
+                    <div class="extra-section-title">上传附件</div>
+                    <div class="extra-upload-card">
+                      <div class="extra-upload-head" v-if="extraDialogMode === 'edit' || extraDialogMode === 'create'">
+                        <button type="button" class="btn primary select-btn"
+                          @click="triggerExtraAttachmentInput">选择文件</button>
+                        <input ref="extraAttachmentInput" type="file" multiple class="hidden-file"
+                          @change="onExtraFilesSelected($event)" />
                       </div>
-                      <div class="uploaded-list" v-if="weeklyReportDialogMode === 'create' && weeklyReportPendingFiles.length">
-                        <div class="template-title">待上传附件：</div>
-                        <ul class="file-list compact">
-                          <li v-for="(f, idx) in weeklyReportPendingFiles" :key="f.name + '-' + idx" class="file-item">
-                            <span class="file-link">{{ f.name }}</span>
-                            <span class="size">{{ prettySize(f.size) }}</span>
-                            <button class="icon-btn danger" title="移除" @click="removeWeeklyReportPendingFile(idx)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-if="weeklyReportAttachments.length">
-                        <ul class="file-list compact">
-                          <li v-for="f in weeklyReportAttachments" :key="f.fileId" class="file-item">
-                            <button type="button" class="file-link preview-link" @click="onPreviewWeeklyReportFile(f)">{{
-                              fileBaseName(f.filePath) }}</button>
-                            <span class="size">{{ prettySize(f.fileSize) }}</span>
-                            <a class="icon-btn" :href="convertWeeklyReportDownloadURL(f.fileId)"
-                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
-                              </svg>
-                            </a>
-                            <button class="icon-btn danger" v-if="weeklyReportDialogMode === 'edit'" title="删除"
-                              @click="onDeleteWeeklyReportFile(f)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-else-if="!weeklyReportPendingFiles.length">
-                        <div class="template-title" style="color:#999">暂无附件</div>
+                      <div class="extra-upload-body">
+                        <div class="progress" v-if="extraUploading">
+                          <div class="bar" :style="{ width: extraUploadProgress + '%' }"></div>
+                          <span class="percent">{{ extraUploadProgress }}%</span>
+                        </div>
+                        <div class="uploaded-list" v-if="extraDialogMode === 'create' && extraPendingFiles.length">
+                          <div class="template-title">待上传附件：</div>
+                          <ul class="file-list compact">
+                            <li v-for="(f, idx) in extraPendingFiles" :key="f.name + '-' + idx" class="file-item">
+                              <span class="file-link">{{ f.name }}</span>
+                              <span class="size">{{ prettySize(f.size) }}</span>
+                              <button class="icon-btn danger" title="移除" @click="removeExtraPendingFile(idx)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-if="extraAttachments.length">
+                          <ul class="file-list compact">
+                            <li v-for="f in extraAttachments" :key="f.fileId" class="file-item">
+                              <button type="button" class="file-link preview-link" @click="onPreviewExtraFile(f)">{{
+                                fileBaseName(f.filePath) }}</button>
+                              <span class="size">{{ prettySize(f.fileSize) }}</span>
+                              <a class="icon-btn" :href="convertExtraDownloadURL(f.fileId)"
+                                :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                                </svg>
+                              </a>
+                              <button class="icon-btn danger" v-if="extraDialogMode === 'edit'" title="删除"
+                                @click="onDeleteExtraFile(f)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-else-if="!extraPendingFiles.length">
+                          <div class="template-title" style="color:#999">暂无附件</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </form>
+          </div>
+          <div class="extra-modal-footer">
+            <div class="extra-actions">
+              <button class="btn primary" @click="confirmExtra">{{ extraDialogMode === 'view' ? '关闭' : '确定' }}</button>
+              <button class="btn ghost" @click="closeExtraDialog" v-if="extraDialogMode !== 'view'">取消</button>
             </div>
-          </form>
-        </div>
-        <div class="extra-modal-footer">
-          <div class="extra-actions">
-            <button class="btn primary" @click="confirmWeeklyReport">{{ weeklyReportDialogMode === 'view' ? '关闭' : '确定' }}</button>
-            <button class="btn ghost" @click="closeWeeklyReportDialog" v-if="weeklyReportDialogMode !== 'view'">取消</button>
           </div>
         </div>
       </div>
-    </div>
-    <div v-if="showRiskDialog" class="dialog-mask extra-modal-overlay">
-      <div class="extra-modal">
-        <div class="extra-modal-header">
-          <h3>{{ riskDialogMode === 'create' ? '新增项目风险' : (riskDialogMode === 'edit' ? '编辑项目风险' : '查看项目风险') }}</h3>
-          <button class="extra-close" @click="closeRiskDialog">&times;</button>
-        </div>
-        <div class="extra-modal-body">
-          <form class="extra-form" @submit.prevent>
-            <div class="extra-section">
-              <div class="extra-grid">
-                <div class="extra-group">
-                  <label>风险类型 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
-                  <select v-model="riskForm.riskType" :disabled="riskDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option v-for="t in riskTypeOptions" :key="t" :value="t">{{ t }}</option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>风险级别 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
-                  <select v-model="riskForm.riskLevel" :disabled="riskDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option v-for="t in riskLevelOptions" :key="t" :value="t">{{ t }}</option>
-                  </select>
-                </div>
-                <div class="extra-group">
-                  <label>是否解除 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
-                  <select v-model="riskForm.isRelieve" :disabled="riskDialogMode === 'view'">
-                    <option :value="null">请选择</option>
-                    <option :value="false">否</option>
-                    <option :value="true">是</option>
-                  </select>
-                </div>
-                <div class="extra-group full-width" v-if="riskForm.isRelieve">
-                  <label>解除方式 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
-                  <textarea rows="2" v-model.trim="riskForm.relieveWay" placeholder="请输入解除方式"
-                    :disabled="riskDialogMode === 'view'"></textarea>
-                </div>
-                <div class="extra-group full-width">
-                  <label>风险描述 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
-                  <textarea rows="3" v-model.trim="riskForm.riskDescription" placeholder="请输入风险描述"
-                    :disabled="riskDialogMode === 'view'"></textarea>
-                </div>
-                <div class="extra-group full-width">
-                  <label>风险评估</label>
-                  <textarea rows="3" v-model.trim="riskForm.riskEvaluate" placeholder="请输入风险评估"
-                    :disabled="riskDialogMode === 'view'"></textarea>
-                </div>
-                <div class="extra-group full-width">
-                  <div class="extra-section-title">上传附件</div>
-                  <div class="extra-upload-card">
-                    <div class="extra-upload-head" v-if="riskDialogMode === 'edit' || riskDialogMode === 'create'">
-                      <button type="button" class="btn primary select-btn"
-                        @click="triggerRiskAttachmentInput">选择文件</button>
-                      <input ref="riskAttachmentInput" type="file" multiple class="hidden-file"
-                        @change="onRiskFilesSelected($event)" />
+      <div v-if="showWeeklyReportDialog" class="dialog-mask extra-modal-overlay">
+        <div class="extra-modal">
+          <div class="extra-modal-header">
+            <h3>{{ weeklyReportDialogMode === 'create' ? '新增项目周报' : (weeklyReportDialogMode === 'edit' ? '编辑项目周报' :
+              '查看项目周报')
+            }}</h3>
+            <button class="extra-close" @click="closeWeeklyReportDialog">&times;</button>
+          </div>
+          <div class="extra-modal-body">
+            <form class="extra-form" @submit.prevent>
+              <div class="extra-section">
+                <div class="extra-grid">
+                  <div class="extra-group">
+                    <label>周期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                    <div class="extra-range">
+                      <input type="date" v-model="weeklyReportForm.periodStartDate"
+                        :disabled="weeklyReportDialogMode === 'view'" />
+                      <span>至</span>
+                      <input type="date" v-model="weeklyReportForm.periodEndDate"
+                        :disabled="weeklyReportDialogMode === 'view'" />
                     </div>
-                    <div class="extra-upload-body">
-                      <div class="progress" v-if="riskUploading">
-                        <div class="bar" :style="{ width: riskUploadProgress + '%' }"></div>
-                        <span class="percent">{{ riskUploadProgress }}%</span>
+                  </div>
+                  <div class="extra-group">
+                    <label>提交人 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                    <select v-model="weeklyReportForm.submitUser" :disabled="weeklyReportDialogMode === 'view'">
+                      <option :value="null">请选择提交人</option>
+                      <option v-for="u in allUsers" :key="u.userId" :value="u.userId">
+                        {{ u.name || u.userName }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>提交日期 <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                    <input type="date" v-model="weeklyReportForm.submitDate"
+                      :disabled="weeklyReportDialogMode === 'view'" />
+                  </div>
+                  <div class="extra-group">
+                    <label>本周工作量（人天） <span class="required" v-if="weeklyReportDialogMode !== 'view'">*</span></label>
+                    <input type="number" v-model.number="weeklyReportForm.weeklyWorkload" step="0.01"
+                      placeholder="请输入工作量（人天）" :disabled="weeklyReportDialogMode === 'view'" />
+                  </div>
+                  <div class="extra-group full-width">
+                    <label>工作难点</label>
+                    <textarea rows="3" v-model.trim="weeklyReportForm.workDifficulties" placeholder="请输入工作难点"
+                      :disabled="weeklyReportDialogMode === 'view'"></textarea>
+                  </div>
+                  <div class="extra-group full-width">
+                    <div class="extra-section-title">上传附件</div>
+                    <div class="extra-upload-card">
+                      <div class="extra-upload-head"
+                        v-if="weeklyReportDialogMode === 'edit' || weeklyReportDialogMode === 'create'">
+                        <button type="button" class="btn primary select-btn"
+                          @click="triggerWeeklyReportAttachmentInput">选择文件</button>
+                        <input ref="weeklyReportAttachmentInput" type="file" multiple class="hidden-file"
+                          @change="onWeeklyReportFilesSelected($event)" />
                       </div>
-                      <div class="uploaded-list" v-if="riskDialogMode === 'create' && riskPendingFiles.length">
-                        <div class="template-title">待上传附件：</div>
-                        <ul class="file-list compact">
-                          <li v-for="(f, idx) in riskPendingFiles" :key="f.name + '-' + idx" class="file-item">
-                            <span class="file-link">{{ f.name }}</span>
-                            <span class="size">{{ prettySize(f.size) }}</span>
-                            <button class="icon-btn danger" title="移除" @click="removeRiskPendingFile(idx)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-if="riskAttachments.length">
-                        <ul class="file-list compact">
-                          <li v-for="f in riskAttachments" :key="f.fileId" class="file-item">
-                            <button type="button" class="file-link preview-link" @click="onPreviewRiskFile(f)">{{
-                              fileBaseName(f.filePath) }}</button>
-                            <span class="size">{{ prettySize(f.fileSize) }}</span>
-                            <a class="icon-btn" :href="convertRiskDownloadURL(f.fileId)"
-                              :download="fileBaseName(f.filePath)" title="下载" target="_blank">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
-                              </svg>
-                            </a>
-                            <button class="icon-btn danger" v-if="riskDialogMode === 'edit'" title="删除"
-                              @click="onDeleteRiskFile(f)">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
-                              </svg>
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                      <div class="uploaded-list" v-else-if="!riskPendingFiles.length">
-                        <div class="template-title" style="color:#999">暂无附件</div>
+                      <div class="extra-upload-body">
+                        <div class="progress" v-if="weeklyReportUploading">
+                          <div class="bar" :style="{ width: weeklyReportUploadProgress + '%' }"></div>
+                          <span class="percent">{{ weeklyReportUploadProgress }}%</span>
+                        </div>
+                        <div class="uploaded-list"
+                          v-if="weeklyReportDialogMode === 'create' && weeklyReportPendingFiles.length">
+                          <div class="template-title">待上传附件：</div>
+                          <ul class="file-list compact">
+                            <li v-for="(f, idx) in weeklyReportPendingFiles" :key="f.name + '-' + idx"
+                              class="file-item">
+                              <span class="file-link">{{ f.name }}</span>
+                              <span class="size">{{ prettySize(f.size) }}</span>
+                              <button class="icon-btn danger" title="移除" @click="removeWeeklyReportPendingFile(idx)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-if="weeklyReportAttachments.length">
+                          <ul class="file-list compact">
+                            <li v-for="f in weeklyReportAttachments" :key="f.fileId" class="file-item">
+                              <button type="button" class="file-link preview-link"
+                                @click="onPreviewWeeklyReportFile(f)">{{
+                                  fileBaseName(f.filePath) }}</button>
+                              <span class="size">{{ prettySize(f.fileSize) }}</span>
+                              <a class="icon-btn" :href="convertWeeklyReportDownloadURL(f.fileId)"
+                                :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                                </svg>
+                              </a>
+                              <button class="icon-btn danger" v-if="weeklyReportDialogMode === 'edit'" title="删除"
+                                @click="onDeleteWeeklyReportFile(f)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-else-if="!weeklyReportPendingFiles.length">
+                          <div class="template-title" style="color:#999">暂无附件</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </form>
+          </div>
+          <div class="extra-modal-footer">
+            <div class="extra-actions">
+              <button class="btn primary" @click="confirmWeeklyReport">{{ weeklyReportDialogMode === 'view' ? '关闭' :
+                '确定'
+              }}</button>
+              <button class="btn ghost" @click="closeWeeklyReportDialog"
+                v-if="weeklyReportDialogMode !== 'view'">取消</button>
             </div>
-          </form>
+          </div>
         </div>
-        <div class="extra-modal-footer">
-          <div class="extra-actions">
-            <button class="btn primary" @click="confirmRisk">{{ riskDialogMode === 'view' ? '关闭' : '确定' }}</button>
-            <button class="btn ghost" @click="closeRiskDialog" v-if="riskDialogMode !== 'view'">取消</button>
+      </div>
+      <div v-if="showRiskDialog" class="dialog-mask extra-modal-overlay">
+        <div class="extra-modal">
+          <div class="extra-modal-header">
+            <h3>{{ riskDialogMode === 'create' ? '新增项目风险' : (riskDialogMode === 'edit' ? '编辑项目风险' : '查看项目风险') }}</h3>
+            <button class="extra-close" @click="closeRiskDialog">&times;</button>
+          </div>
+          <div class="extra-modal-body">
+            <form class="extra-form" @submit.prevent>
+              <div class="extra-section">
+                <div class="extra-grid">
+                  <div class="extra-group">
+                    <label>风险类型 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                    <select v-model="riskForm.riskType" :disabled="riskDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option v-for="t in riskTypeOptions" :key="t" :value="t">{{ t }}</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>风险级别 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                    <select v-model="riskForm.riskLevel" :disabled="riskDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option v-for="t in riskLevelOptions" :key="t" :value="t">{{ t }}</option>
+                    </select>
+                  </div>
+                  <div class="extra-group">
+                    <label>是否解除 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                    <select v-model="riskForm.isRelieve" :disabled="riskDialogMode === 'view'">
+                      <option :value="null">请选择</option>
+                      <option :value="false">否</option>
+                      <option :value="true">是</option>
+                    </select>
+                  </div>
+                  <div class="extra-group full-width" v-if="riskForm.isRelieve">
+                    <label>解除方式 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                    <textarea rows="2" v-model.trim="riskForm.relieveWay" placeholder="请输入解除方式"
+                      :disabled="riskDialogMode === 'view'"></textarea>
+                  </div>
+                  <div class="extra-group full-width">
+                    <label>风险描述 <span class="required" v-if="riskDialogMode !== 'view'">*</span></label>
+                    <textarea rows="3" v-model.trim="riskForm.riskDescription" placeholder="请输入风险描述"
+                      :disabled="riskDialogMode === 'view'"></textarea>
+                  </div>
+                  <div class="extra-group full-width">
+                    <label>风险评估</label>
+                    <textarea rows="3" v-model.trim="riskForm.riskEvaluate" placeholder="请输入风险评估"
+                      :disabled="riskDialogMode === 'view'"></textarea>
+                  </div>
+                  <div class="extra-group full-width">
+                    <div class="extra-section-title">上传附件</div>
+                    <div class="extra-upload-card">
+                      <div class="extra-upload-head" v-if="riskDialogMode === 'edit' || riskDialogMode === 'create'">
+                        <button type="button" class="btn primary select-btn"
+                          @click="triggerRiskAttachmentInput">选择文件</button>
+                        <input ref="riskAttachmentInput" type="file" multiple class="hidden-file"
+                          @change="onRiskFilesSelected($event)" />
+                      </div>
+                      <div class="extra-upload-body">
+                        <div class="progress" v-if="riskUploading">
+                          <div class="bar" :style="{ width: riskUploadProgress + '%' }"></div>
+                          <span class="percent">{{ riskUploadProgress }}%</span>
+                        </div>
+                        <div class="uploaded-list" v-if="riskDialogMode === 'create' && riskPendingFiles.length">
+                          <div class="template-title">待上传附件：</div>
+                          <ul class="file-list compact">
+                            <li v-for="(f, idx) in riskPendingFiles" :key="f.name + '-' + idx" class="file-item">
+                              <span class="file-link">{{ f.name }}</span>
+                              <span class="size">{{ prettySize(f.size) }}</span>
+                              <button class="icon-btn danger" title="移除" @click="removeRiskPendingFile(idx)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-if="riskAttachments.length">
+                          <ul class="file-list compact">
+                            <li v-for="f in riskAttachments" :key="f.fileId" class="file-item">
+                              <button type="button" class="file-link preview-link" @click="onPreviewRiskFile(f)">{{
+                                fileBaseName(f.filePath) }}</button>
+                              <span class="size">{{ prettySize(f.fileSize) }}</span>
+                              <a class="icon-btn" :href="convertRiskDownloadURL(f.fileId)"
+                                :download="fileBaseName(f.filePath)" title="下载" target="_blank">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M5 20h14v-2H5v2zM12 4v8l4-4h-3l-1 1-1-1H8l4 4V4z" />
+                                </svg>
+                              </a>
+                              <button class="icon-btn danger" v-if="riskDialogMode === 'edit'" title="删除"
+                                @click="onDeleteRiskFile(f)">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
+                                </svg>
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                        <div class="uploaded-list" v-else-if="!riskPendingFiles.length">
+                          <div class="template-title" style="color:#999">暂无附件</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="extra-modal-footer">
+            <div class="extra-actions">
+              <button class="btn primary" @click="confirmRisk">{{ riskDialogMode === 'view' ? '关闭' : '确定' }}</button>
+              <button class="btn ghost" @click="closeRiskDialog" v-if="riskDialogMode !== 'view'">取消</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1486,6 +1708,7 @@ import { createPersonalDevelope, listPersonalDevelopesByProject, deletePersonalD
 import { createExtraRequirement, listExtraRequirementsByProject, updateExtraRequirement, deleteExtraRequirement, uploadExtraRequirementFiles, listExtraRequirementFiles, deleteExtraRequirementFile } from '../api/extraRequirement';
 import { createConstructingProjectRisk, listConstructingProjectRisksByProject, updateConstructingProjectRisk, deleteConstructingProjectRisk, uploadConstructingProjectRiskFiles, listConstructingProjectRiskFiles, deleteConstructingProjectRiskFile } from '../api/constructingProjectRisk';
 import { createConstructingProjectWeeklyReport, listConstructingProjectWeeklyReportsByProject, updateConstructingProjectWeeklyReport, deleteConstructingProjectWeeklyReport, uploadConstructingProjectWeeklyReportFiles, listConstructingProjectWeeklyReportFiles, deleteConstructingProjectWeeklyReportFile } from '../api/constructingProjectWeeklyReport';
+import { listConstructingProjectModifyRecordsByProject } from '../api/constructingProjectModifyRecord';
 import { listConstructingProjectComments, createConstructingProjectComment, deleteConstructingProjectComment } from '../api/constructingProjectComment';
 import { createConstructingProjectCommentReply, listConstructingProjectCommentReplies, deleteConstructingProjectCommentReply } from '../api/constructingProjectCommentReply';
 import { uploadConstructingProjectCommentReplyFiles, listConstructingProjectCommentReplyFilesByComment, getConstructingProjectCommentReplyFilePreviewUrl, getConstructingProjectCommentReplyFileDownloadUrl } from '../api/constructingProjectCommentReplyFile';
@@ -1604,15 +1827,18 @@ export default {
       extraPendingFiles: [],
       extraUploading: false,
       extraUploadProgress: 0,
+      requirementTypeOptions: ['个性化需求', '接口需求', '其他需求'],
       extraForm: {
         requirementName: '',
+        requirementType: null,
         isPay: null,
         payAmount: null,
         isDeliver: null,
         isComplete: null,
         isProductization: null,
         workload: null,
-        developer: null
+        developer: null,
+        createTime: null
       },
       projectRisks: [],
       showRiskDialog: false,
@@ -1646,6 +1872,11 @@ export default {
         weeklyWorkload: null,
         workDifficulties: ''
       },
+      modifyRecords: [],
+      modifyFilterStartDate: '',
+      modifyFilterEndDate: '',
+      modifyFilterAction: '',
+      modifyFilterUser: '',
       commentList: [],
       commentLoading: false,
       commentSubmitting: false,
@@ -1673,6 +1904,54 @@ export default {
       const s = this.project && this.project.projectState ? String(this.project.projectState).trim() : ''
       const lower = s.toLowerCase()
       return s === '已完成' || s === '完成' || lower === 'completed'
+    },
+    modifyActionOptions() {
+      const list = Array.isArray(this.modifyRecords) ? this.modifyRecords : []
+      const set = new Set()
+      for (const r of list) {
+        const v = String(r?.modifyAction || '').trim()
+        if (v) set.add(v)
+      }
+      return Array.from(set)
+    },
+    modifyUserOptions() {
+      const list = Array.isArray(this.modifyRecords) ? this.modifyRecords : []
+      const map = new Map()
+      for (const r of list) {
+        const uid = r?.modifyUser
+        if (uid == null || uid === '') continue
+        const label = this.userName(uid) || String(uid)
+        if (!map.has(uid)) map.set(uid, label)
+      }
+      return Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+    },
+    filteredModifyRecords() {
+      const records = Array.isArray(this.modifyRecords) ? this.modifyRecords : []
+      const start = this.modifyFilterStartDate ? new Date(this.modifyFilterStartDate) : null
+      const end = this.modifyFilterEndDate ? new Date(this.modifyFilterEndDate) : null
+      if (start) start.setHours(0, 0, 0, 0)
+      if (end) end.setHours(23, 59, 59, 999)
+      const action = String(this.modifyFilterAction || '').trim()
+      const user = this.modifyFilterUser
+      const hasDate = !!(start || end)
+      const hasAction = !!action
+      const hasUser = user !== null && user !== '' && user !== undefined
+      if (!hasDate && !hasAction && !hasUser) return records
+      return records.filter(r => {
+        if (hasDate) {
+          const d = r?.modifyDate ? new Date(r.modifyDate) : null
+          let ok = false
+          if (d && !isNaN(d.getTime())) {
+            if (start && end) ok = d >= start && d <= end
+            else if (start) ok = d >= start
+            else if (end) ok = d <= end
+          }
+          if (!ok) return false
+        }
+        if (hasAction && String(r?.modifyAction || '').trim() !== action) return false
+        if (hasUser && String(r?.modifyUser ?? '') !== String(user)) return false
+        return true
+      })
     },
     // 将步骤与里程碑合并后用于渲染的行
     /*
@@ -1824,6 +2103,16 @@ export default {
     getTabName(id) {
       const tab = this.tabs.find(t => t.id === id);
       return tab ? tab.name : '';
+    },
+    /**
+     * 函数级注释：重置修改记录筛选条件
+     * @returns {void}
+     */
+    resetModifyFilters() {
+      this.modifyFilterStartDate = ''
+      this.modifyFilterEndDate = ''
+      this.modifyFilterAction = ''
+      this.modifyFilterUser = ''
     },
     /**
      * 函数级注释：显示表格单元格的悬浮提示
@@ -2211,9 +2500,10 @@ export default {
           .filter(id => id != null)
         if (fileIds.length === 0) return 0
         const tasks = fileIds.map(id => (async () => {
-          try { await deleteConstructDeliverableFile(id) } catch (_) { /* 单个失败不阻断 */ }
+          try { await deleteConstructDeliverableFile(id, this.currentUserId ?? null) } catch (_) { /* 单个失败不阻断 */ }
         })())
         await Promise.allSettled(tasks)
+        await this.loadModifyRecords()
         return fileIds.length
       } catch (_) {
         return 0
@@ -2518,6 +2808,7 @@ export default {
         // 仅刷新当前交付物的已上传文件列表并本地同步摘要文件映射，避免整页闪烁
         await this.refreshUploadedFiles(deliverableId)
         this.applyUploadedFilesToSummary(deliverableId)
+        await this.loadModifyRecords()
       } catch (e) {
         this.showError('上传失败：' + (e?.message || '未知错误'))
       }
@@ -2591,11 +2882,12 @@ export default {
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该文件？') : window.confirm('确认删除该文件？')
         if (!ok) return
-        await deleteConstructDeliverableFile(fileId)
+        await deleteConstructDeliverableFile(fileId, this.currentUserId ?? null)
         this.$message && this.$message.success('删除成功')
         // 刷新当前交付物的列表并同步到摘要，确保“查看”按钮颜色即时更新
         await this.refreshUploadedFiles(deliverableId)
         this.applyUploadedFilesToSummary(deliverableId)
+        await this.loadModifyRecords()
       } catch (e) {
         this.showError('删除失败：' + (e?.message || '未知错误'))
       }
@@ -2676,6 +2968,9 @@ export default {
         } catch (_) { }
         try {
           await this.loadProjectComments();
+        } catch (_) { }
+        try {
+          await this.loadModifyRecords();
         } catch (_) { }
       } catch (err) {
         const backendMsg = err?.response?.data?.message || err?.response?.data?.error;
@@ -2779,6 +3074,7 @@ export default {
         let val = this.editValue;
         if (val === '') val = null;
         payload[field] = val;
+        payload.modifyUser = this.currentUserId ?? null;
 
         // 基础校验函数
         const pairValid = (start, end) => {
@@ -2891,6 +3187,7 @@ export default {
             }
           }
         }
+        await this.loadModifyRecords()
       } catch (e) {
         this.$message && this.$message.error('更新失败: ' + (e?.message || '未知错误'));
       } finally {
@@ -3584,7 +3881,8 @@ export default {
         relieveWay: isRelieve ? ((this.riskForm.relieveWay || '').trim() || null) : null,
         riskDescription: (this.riskForm.riskDescription || '').trim(),
         riskEvaluate: (this.riskForm.riskEvaluate || '').trim() || null,
-        creator: creatorId
+        creator: creatorId,
+        modifyUser: this.currentUserId ?? null
       }
       try {
         let resp
@@ -3606,6 +3904,7 @@ export default {
 
         this.showRiskDialog = false
         await this.loadProjectRisks()
+        await this.loadModifyRecords()
       } catch (e) {
         const msg = e?.response?.data?.error || e?.message || (this.riskDialogMode === 'edit' ? '更新失败' : '添加失败')
         this.showError(msg)
@@ -3858,6 +4157,16 @@ export default {
         await this.refreshWeeklyReportHasFiles()
       } catch (e) {
         this.weeklyReports = []
+      }
+    },
+    async loadModifyRecords() {
+      if (!this.project || !this.project.projectId) return
+      try {
+        const resp = await listConstructingProjectModifyRecordsByProject(this.project.projectId)
+        const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.records || resp || [])
+        this.modifyRecords = Array.isArray(list) ? list.map(r => ({ ...r })) : []
+      } catch (e) {
+        this.modifyRecords = []
       }
     },
     /**
@@ -4379,7 +4688,7 @@ export default {
             if (!replyFilesMap[key]) replyFilesMap[key] = []
             replyFilesMap[key].push(file)
           }
-        } catch (_) {}
+        } catch (_) { }
       }))
       this.replyListByCommentId = replyMap
       this.replyFilesByReplyId = replyFilesMap
@@ -4668,26 +4977,30 @@ export default {
       if (mode === 'create') {
         this.extraForm = {
           requirementName: '',
+          requirementType: null,
           isPay: null,
           payAmount: null,
           isDeliver: null,
           isComplete: null,
           isProductization: null,
           workload: null,
-          developer: null
+          developer: null,
+          createTime: null
         }
       } else if (row) {
         // 复制数据
         this.extraForm = {
           requirementId: row.requirementId,
           requirementName: row.requirementName,
+          requirementType: row.requirementType ?? null,
           isPay: row.isPay,
           payAmount: row.payAmount,
           isDeliver: row.isDeliver,
           isComplete: row.isComplete,
           isProductization: row.isProductization,
           workload: row.workload,
-          developer: row.developer
+          developer: row.developer,
+          createTime: row.createTime ?? null
         }
         this.loadExtraRequirementFiles(row.requirementId)
       }
@@ -4748,6 +5061,10 @@ export default {
         this.showError('请填写需求名称')
         return
       }
+      if (!this.extraForm.requirementType) {
+        this.showError('请选择需求类型')
+        return
+      }
       if (this.extraForm.isPay === null) {
         this.showError('请选择是否付费')
         return
@@ -4771,13 +5088,15 @@ export default {
       const payload = {
         projectId: this.project?.projectId,
         requirementName: name,
+        requirementType: this.extraForm.requirementType,
         isPay: !!this.extraForm.isPay,
         payAmount: this.extraForm.isPay ? (this.extraForm.payAmount ?? null) : null,
         isDeliver: !!this.extraForm.isDeliver,
         isComplete: !!this.extraForm.isComplete,
         isProductization: !!this.extraForm.isProductization,
         workload: this.extraForm.workload ?? null,
-        developer: this.extraForm.developer ?? null
+        developer: this.extraForm.developer ?? null,
+        modifyUser: this.currentUserId ?? null
       }
       try {
         let resp
@@ -4803,6 +5122,7 @@ export default {
 
         this.showExtraDialog = false
         await this.loadExtraRequirements()
+        await this.loadModifyRecords()
       } catch (e) {
         const msg = e?.response?.data?.error || e?.message || (this.extraDialogMode === 'edit' ? '更新失败' : '添加失败')
         this.showError(msg)
@@ -5075,6 +5395,14 @@ export default {
   box-sizing: border-box;
 }
 
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -5241,7 +5569,8 @@ export default {
 .comment-section {
   background-color: #fff;
   border-radius: 8px;
-  padding: 0 !important; /* 重置内边距，由内部容器控制 */
+  padding: 0 !important;
+  /* 重置内边距，由内部容器控制 */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -5438,8 +5767,15 @@ export default {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .comment-avatar {
@@ -5708,7 +6044,9 @@ export default {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .comment-error {
@@ -5722,7 +6060,12 @@ export default {
 }
 
 /* 旧样式清理 (如有冲突请删除) */
-.comment-compose, .comment-list, .comment-item, .comment-meta, .comment-user, .comment-content {
+.comment-compose,
+.comment-list,
+.comment-item,
+.comment-meta,
+.comment-user,
+.comment-content {
   /* 保留或移除，新样式已使用新类名 */
 }
 
@@ -5733,9 +6076,11 @@ export default {
   border-collapse: separate;
   border-spacing: 0;
 }
+
 .table.table-fixed {
   table-layout: fixed;
 }
+
 .table.no-wrap-table th,
 .table.no-wrap-table td {
   white-space: nowrap;
@@ -6626,6 +6971,65 @@ export default {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.filter-bar {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-label {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.filter-input,
+.filter-select {
+  padding: 6px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.filter-sep {
+  color: #9ca3af;
+}
+
+.filter-reset-btn {
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  color: #262626;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filter-reset-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
 .tab-item {
   padding: 8px 16px;
   /* 减小内边距以降低高度 */
@@ -6731,6 +7135,7 @@ export default {
   color: #666;
   font-size: 12px;
 }
+
 .text-truncate {
   white-space: nowrap;
   overflow: hidden;
@@ -6738,6 +7143,7 @@ export default {
   width: 100%;
   display: block;
 }
+
 .custom-tooltip {
   position: fixed;
   z-index: 9999;

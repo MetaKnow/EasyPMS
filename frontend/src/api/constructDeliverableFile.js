@@ -102,9 +102,10 @@ export async function listConstructDeliverableFiles(projectId, deliverableId, op
  * @param {number} fileId 文件记录ID
  * @returns {Promise<void>}
  */
-export async function deleteConstructDeliverableFile(fileId) {
+export async function deleteConstructDeliverableFile(fileId, operatorId = null) {
   try {
-    const response = await fetch(`${API_BASE_URL}/construct-deliverable-files/${fileId}`, {
+    const qs = operatorId != null ? `?operatorId=${encodeURIComponent(operatorId)}` : ''
+    const response = await fetch(`${API_BASE_URL}/construct-deliverable-files/${fileId}${qs}`, {
       method: 'DELETE'
     })
     if (!response.ok) {

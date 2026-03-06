@@ -91,6 +91,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/constructing-project-weekly-reports/**").permitAll()
                 // 允许访问项目周报附件接口（临时开放）
                 .requestMatchers("/api/constructing-project-weekly-report-files/**").permitAll()
+                .requestMatchers("/api/constructing-project-modify-records/**").permitAll()
                 .requestMatchers("/api/constructing-project-comments/**").permitAll()
                 .requestMatchers("/api/constructing-project-comment-files/**").permitAll()
                 .requestMatchers("/api/constructing-project-comment-replies/**").permitAll()

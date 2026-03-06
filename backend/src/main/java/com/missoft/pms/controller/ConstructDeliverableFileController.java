@@ -601,9 +601,10 @@ public class ConstructDeliverableFileController {
      * 删除文件
      */
     @DeleteMapping("/{fileId}")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long fileId) {
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long fileId,
+                                                      @RequestParam(value = "operatorId", required = false) Long operatorId) {
         try {
-            fileService.deleteFile(fileId);
+            fileService.deleteFile(fileId, operatorId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("message", "文件删除成功");
             resp.put("fileId", fileId);

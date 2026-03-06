@@ -168,6 +168,9 @@ public class ConstructingProject {
     @Column(name = "updateTime")
     private LocalDateTime updateTime;
 
+    @Transient
+    private Long modifyUser;
+
     /**
      * 默认构造函数
      */
@@ -402,6 +405,10 @@ public class ConstructingProject {
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
     }
+
+    public Long getModifyUser() { return modifyUser; }
+
+    public void setModifyUser(Long modifyUser) { this.modifyUser = modifyUser; }
 
     @Override
     public String toString() {

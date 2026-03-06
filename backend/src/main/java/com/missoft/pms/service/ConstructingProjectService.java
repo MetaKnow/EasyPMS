@@ -50,6 +50,8 @@ public class ConstructingProjectService {
     @Autowired
     private ConstructMilestoneService constructMilestoneService;
     @Autowired
+    private ConstructingProjectModifyRecordService modifyRecordService;
+    @Autowired
     private com.missoft.pms.repository.StandardConstructStepRepository standardConstructStepRepository;
     @Autowired
     private com.missoft.pms.repository.StandardMilestoneRepository standardMilestoneRepository;
@@ -244,6 +246,10 @@ public class ConstructingProjectService {
         // 记录编辑前的建设内容与产品ID
         String oldConstructContent = existingProject.getConstructContent();
         Long oldSoftId = existingProject.getSoftId();
+        var oldStartDate = existingProject.getStartDate();
+        var oldPlanEndDate = existingProject.getPlanEndDate();
+        var oldActualEndDate = existingProject.getActualEndDate();
+        var oldAcceptanceDate = existingProject.getAcceptanceDate();
 
         // 验证必填字段
         validateConstructingProject(constructingProject);
@@ -310,6 +316,30 @@ public class ConstructingProjectService {
 
         // 保存更新
         ConstructingProject saved = constructingProjectRepository.save(existingProject);
+
+        Long modifyUser = resolveModifyUser(constructingProject, existingProject);
+        if (modifyUser != null) {
+            if (!java.util.Objects.equals(oldStartDate, saved.getStartDate())) {
+                modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改项目开始日期",
+                        "项目开始日期=" + formatValue(oldStartDate), "项目开始日期=" + formatValue(saved.getStartDate()));
+            }
+            if (!java.util.Objects.equals(oldPlanEndDate, saved.getPlanEndDate())) {
+                modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改项目计划结束日期",
+                        "项目计划结束日期=" + formatValue(oldPlanEndDate), "项目计划结束日期=" + formatValue(saved.getPlanEndDate()));
+            }
+            if (!java.util.Objects.equals(oldActualEndDate, saved.getActualEndDate())) {
+                modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改项目实际结束日期",
+                        "项目实际结束日期=" + formatValue(oldActualEndDate), "项目实际结束日期=" + formatValue(saved.getActualEndDate()));
+            }
+            if (!java.util.Objects.equals(oldAcceptanceDate, saved.getAcceptanceDate())) {
+                modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改项目验收日期",
+                        "项目验收日期=" + formatValue(oldAcceptanceDate), "项目验收日期=" + formatValue(saved.getAcceptanceDate()));
+            }
+            if (!java.util.Objects.equals(oldConstructContent, saved.getConstructContent())) {
+                modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改项目建设内容",
+                        "建设内容=" + formatValue(oldConstructContent), "建设内容=" + formatValue(saved.getConstructContent()));
+            }
+        }
 
         // 计算取消勾选的建设内容类型，用于删除对应步骤与里程碑的交付物文件
         // 函数级注释：在调整里程碑与步骤关系前执行删除，以避免FK置空后难以定位关联文件
@@ -446,7 +476,7 @@ public class ConstructingProjectService {
                                 .findByProjectIdAndProjectStepId(projectId, rel.getRelationId());
                         if (files != null) {
                             for (com.missoft.pms.entity.ConstructDeliverableFile f : files) {
-                                try { constructDeliverableFileService.deleteFile(f.getFileId()); } catch (Exception ignore) {}
+                                try { constructDeliverableFileService.deleteFile(f.getFileId(), null); } catch (Exception ignore) {}
                             }
                         }
 
@@ -492,7 +522,7 @@ public class ConstructingProjectService {
                         constructDeliverableFileRepository.findByProjectIdAndMilestoneId(projectId, mid);
                 if (files != null) {
                     for (com.missoft.pms.entity.ConstructDeliverableFile f : files) {
-                        try { constructDeliverableFileService.deleteFile(f.getFileId()); } catch (Exception ignore) {}
+                        try { constructDeliverableFileService.deleteFile(f.getFileId(), null); } catch (Exception ignore) {}
                     }
                 }
             }
@@ -773,5 +803,27 @@ public class ConstructingProjectService {
             }
         }
         return set;
+    }
+
+    private Long resolveModifyUser(ConstructingProject incoming, ConstructingProject existing) {
+        if (incoming != null && incoming.getModifyUser() != null) {
+            return incoming.getModifyUser();
+        }
+        if (existing != null && existing.getProjectLeader() != null) {
+            return existing.getProjectLeader();
+        }
+        if (incoming != null && incoming.getProjectLeader() != null) {
+            return incoming.getProjectLeader();
+        }
+        if (existing != null && existing.getSaleLeader() != null) {
+            return existing.getSaleLeader();
+        }
+        return null;
+    }
+
+    private String formatValue(Object value) {
+        if (value == null) return "无";
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? "无" : text;
     }
 }

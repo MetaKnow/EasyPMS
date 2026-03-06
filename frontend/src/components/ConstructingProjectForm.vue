@@ -865,6 +865,15 @@ export default {
           ...this.form,
           constructContent: selectedContents.join('/')
         }
+        if (this.isEdit) {
+          let modifyUser = null
+          try {
+            const raw = sessionStorage.getItem('userInfo')
+            const userInfo = raw ? JSON.parse(raw) : null
+            if (userInfo && userInfo.userId != null) modifyUser = userInfo.userId
+          } catch (_) {}
+          projectData.modifyUser = modifyUser
+        }
         
         const API_BASE = __BACKEND_API_URL__ + '/api'
         const url = this.isEdit 

@@ -2,6 +2,7 @@ package com.missoft.pms.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "extra_requirement")
 public class ExtraRequirement {
@@ -16,6 +17,9 @@ public class ExtraRequirement {
 
     @Column(name = "requirementName", nullable = false, length = 200)
     private String requirementName;
+
+    @Column(name = "requirementType", length = 20)
+    private String requirementType;
 
     @Column(name = "isPay")
     private Boolean isPay;
@@ -38,6 +42,15 @@ public class ExtraRequirement {
     @Column(name = "developer")
     private Long developer;
 
+    @Column(name = "createTime", updatable = false)
+    private LocalDateTime createTime;
+
+    @Column(name = "updateTime")
+    private LocalDateTime updateTime;
+
+    @Transient
+    private Long modifyUser;
+
     @Transient
     private Boolean hasFiles;
 
@@ -52,6 +65,10 @@ public class ExtraRequirement {
     public String getRequirementName() { return requirementName; }
 
     public void setRequirementName(String requirementName) { this.requirementName = requirementName; }
+
+    public String getRequirementType() { return requirementType; }
+
+    public void setRequirementType(String requirementType) { this.requirementType = requirementType; }
 
     public Boolean getIsPay() { return isPay; }
 
@@ -81,6 +98,30 @@ public class ExtraRequirement {
 
     public void setDeveloper(Long developer) { this.developer = developer; }
 
+    public LocalDateTime getCreateTime() { return createTime; }
+
+    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
+
+    public LocalDateTime getUpdateTime() { return updateTime; }
+
+    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+
+    public Long getModifyUser() { return modifyUser; }
+
+    public void setModifyUser(Long modifyUser) { this.modifyUser = modifyUser; }
+
     public Boolean getHasFiles() { return hasFiles; }
     public void setHasFiles(Boolean hasFiles) { this.hasFiles = hasFiles; }
+
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createTime = now;
+        this.updateTime = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updateTime = LocalDateTime.now();
+    }
 }
