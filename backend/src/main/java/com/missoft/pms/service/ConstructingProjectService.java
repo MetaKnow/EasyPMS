@@ -25,6 +25,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import com.missoft.pms.entity.ConstructingProjectParticipant;
 
 /**
  * 在建项目服务类
@@ -39,6 +41,8 @@ public class ConstructingProjectService {
 
     @Autowired
     private ConstructingProjectRepository constructingProjectRepository;
+    @Autowired
+    private com.missoft.pms.repository.ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
     @Autowired
     private ConstructDeliverableFileRepository constructDeliverableFileRepository;
     @Autowired
@@ -128,7 +132,7 @@ public class ConstructingProjectService {
      */
     public Page<ConstructingProjectDTO> getConstructingProjectsWithCustomerName(int page, int size, String projectName,
                                                                                Integer year, String projectState, Long projectLeader,
-                                                                               Long saleLeader, Long customerId, String customerName, String softName,
+                                                                               Long saleLeader, Long participantUserId, Long customerId, String customerName, String softName,
                                                                                String sortBy, String sortDir) {
         // 创建排序对象
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
@@ -140,7 +144,7 @@ public class ConstructingProjectService {
 
         // 使用多条件查询（包含客户名称）
         return constructingProjectRepository.findByMultipleConditionsWithCustomerName(
-                projectName, year, projectState, projectLeader, saleLeader, customerId, customerName, softName, pageable);
+                projectName, year, projectState, projectLeader, saleLeader, participantUserId, customerId, customerName, softName, pageable);
     }
 
     /**
@@ -152,8 +156,18 @@ public class ConstructingProjectService {
      */
     @Transactional(readOnly = true)
     public ConstructingProject getConstructingProjectById(Long projectId) {
-        return constructingProjectRepository.findById(projectId)
+        ConstructingProject project = constructingProjectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("项目不存在，ID: " + projectId));
+        
+        // 加载项目参与人员
+        java.util.List<ConstructingProjectParticipant> participants = constructingProjectParticipantRepository.findByProjectId(projectId);
+        if (participants != null && !participants.isEmpty()) {
+            project.setParticipantIds(participants.stream()
+                    .map(ConstructingProjectParticipant::getUserId)
+                    .collect(Collectors.toList()));
+        }
+        
+        return project;
     }
 
     /**
@@ -201,6 +215,18 @@ public class ConstructingProjectService {
 
         // 保存项目后优先生成项目里程碑（函数级注释：确保随后生成的步骤关系可正确回填 milestoneId）
         ConstructingProject saved = constructingProjectRepository.save(constructingProject);
+        
+        // 保存项目参与人员
+        if (constructingProject.getParticipantIds() != null && !constructingProject.getParticipantIds().isEmpty()) {
+            for (Long userId : constructingProject.getParticipantIds()) {
+                if (userId != null) {
+                    ConstructingProjectParticipant participant = new ConstructingProjectParticipant();
+                    participant.setProjectId(saved.getProjectId());
+                    participant.setUserId(userId);
+                    constructingProjectParticipantRepository.save(participant);
+                }
+            }
+        }
         try {
             constructMilestoneService.generateMilestonesForProject(saved);
         } catch (Exception ignore) {
@@ -241,8 +267,22 @@ public class ConstructingProjectService {
      * @throws RuntimeException 如果项目不存在或数据验证失败
      */
     public ConstructingProject updateConstructingProject(Long projectId, ConstructingProject constructingProject) {
+        return updateConstructingProject(projectId, constructingProject, constructingProject != null ? constructingProject.getModifyUser() : null);
+    }
+
+    /**
+     * 更新项目
+     *
+     * @param projectId           项目ID
+     * @param constructingProject 项目对象
+     * @param operatorUserId      操作人用户ID
+     * @return 更新后的项目对象
+     * @throws RuntimeException 如果项目不存在或数据验证失败
+     */
+    public ConstructingProject updateConstructingProject(Long projectId, ConstructingProject constructingProject, Long operatorUserId) {
         // 检查项目是否存在
         ConstructingProject existingProject = getConstructingProjectById(projectId);
+        assertParticipantReadOnly(existingProject, operatorUserId);
         // 记录编辑前的建设内容与产品ID
         String oldConstructContent = existingProject.getConstructContent();
         Long oldSoftId = existingProject.getSoftId();
@@ -316,6 +356,24 @@ public class ConstructingProjectService {
 
         // 保存更新
         ConstructingProject saved = constructingProjectRepository.save(existingProject);
+
+        // 更新项目参与人员
+        if (constructingProject.getParticipantIds() != null) {
+            constructingProjectParticipantRepository.deleteByProjectId(saved.getProjectId());
+            if (!constructingProject.getParticipantIds().isEmpty()) {
+                for (Long userId : constructingProject.getParticipantIds()) {
+                    if (userId != null) {
+                        ConstructingProjectParticipant participant = new ConstructingProjectParticipant();
+                        participant.setProjectId(saved.getProjectId());
+                        participant.setUserId(userId);
+                        constructingProjectParticipantRepository.save(participant);
+                    }
+                }
+            }
+            saved.setParticipantIds(constructingProject.getParticipantIds());
+        } else if (existingProject.getParticipantIds() != null) {
+            saved.setParticipantIds(existingProject.getParticipantIds());
+        }
 
         Long modifyUser = resolveModifyUser(constructingProject, existingProject);
         if (modifyUser != null) {
@@ -544,6 +602,17 @@ public class ConstructingProjectService {
      * @throws RuntimeException 如果项目不存在
      */
     public void deleteConstructingProject(Long projectId) {
+        deleteConstructingProject(projectId, null);
+    }
+
+    /**
+     * 删除项目
+     *
+     * @param projectId 项目ID
+     * @param operatorUserId 操作人用户ID
+     * @throws RuntimeException 如果项目不存在
+     */
+    public void deleteConstructingProject(Long projectId, Long operatorUserId) {
         // 函数级注释：删除在建项目，同时最佳努力清理该项目的交付物文件与记录。
         // 处理顺序：
         // 1. 获取项目信息以构建 deliverableFiles/<项目编号-项目名称>/ 路径前缀；
@@ -553,6 +622,7 @@ public class ConstructingProjectService {
 
         ConstructingProject project = constructingProjectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("项目不存在，ID: " + projectId));
+        assertParticipantReadOnly(project, operatorUserId);
 
         // 删除交付物文件数据库记录
         try {
@@ -584,6 +654,16 @@ public class ConstructingProjectService {
      * @param projectIds 项目ID列表
      */
     public void batchDeleteConstructingProjects(List<Long> projectIds) {
+        batchDeleteConstructingProjects(projectIds, null);
+    }
+
+    /**
+     * 批量删除项目
+     *
+     * @param projectIds 项目ID列表
+     * @param operatorUserId 操作人用户ID
+     */
+    public void batchDeleteConstructingProjects(List<Long> projectIds, Long operatorUserId) {
         if (projectIds == null || projectIds.isEmpty()) {
             throw new RuntimeException("项目ID列表不能为空");
         }
@@ -591,6 +671,10 @@ public class ConstructingProjectService {
         for (Long projectId : projectIds) {
             if (!constructingProjectRepository.existsById(projectId)) {
                 throw new RuntimeException("项目不存在，ID: " + projectId);
+            }
+            if (operatorUserId != null) {
+                ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+                assertParticipantReadOnly(project, operatorUserId);
             }
         }
         
@@ -819,6 +903,21 @@ public class ConstructingProjectService {
             return existing.getSaleLeader();
         }
         return null;
+    }
+
+    private void assertParticipantReadOnly(ConstructingProject project, Long operatorUserId) {
+        if (project == null || operatorUserId == null) {
+            return;
+        }
+        boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
+        boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
+        if (isLeader || isSalesLeader) {
+            return;
+        }
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(project.getProjectId(), operatorUserId);
+        if (isParticipant) {
+            throw new RuntimeException("项目参与人仅可查看项目，无编辑或删除权限");
+        }
     }
 
     private String formatValue(Object value) {

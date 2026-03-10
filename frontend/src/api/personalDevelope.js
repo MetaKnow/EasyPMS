@@ -33,9 +33,10 @@ export function listPersonalDevelopesByProject(projectId) {
  * @param {number} personalDevId 个性化开发ID
  * @returns {Promise} 响应数据
  */
-export function deletePersonalDevelope(personalDevId) {
+export function deletePersonalDevelope(personalDevId, operatorUserId) {
   return request({
     url: `/api/personal-developes/${personalDevId}`,
-    method: 'delete'
+    method: 'delete',
+    params: operatorUserId != null ? { operatorUserId } : {}
   })
 }

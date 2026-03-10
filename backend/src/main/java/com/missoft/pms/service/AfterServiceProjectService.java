@@ -8,12 +8,8 @@ import com.missoft.pms.entity.ArchieveSoft;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.entity.User;
 import com.missoft.pms.entity.ConstructMilestone;
-import com.missoft.pms.repository.AfterServiceProjectRepository;
-import com.missoft.pms.repository.AfterServiceEventRepository;
-import com.missoft.pms.repository.ArchieveSoftRepository;
-import com.missoft.pms.repository.ConstructingProjectRepository;
-import com.missoft.pms.repository.CustomerRepository;
-import com.missoft.pms.repository.UserRepository;
+import com.missoft.pms.entity.AfterServiceProjectParticipant;
+import com.missoft.pms.repository.*;
 import com.missoft.pms.service.AfterServiceEventService;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.BeanUtils;
@@ -37,7 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 
 /**
- * 运维项目服务
+ * 运维项目服务类
  */
 @Service
 @Transactional
@@ -68,7 +64,10 @@ public class AfterServiceProjectService {
   private com.missoft.pms.repository.ConstructMilestoneRepository constructMilestoneRepository;
 
   @Autowired
-  private ConstructMilestoneService constructMilestoneService;
+    private ConstructMilestoneService constructMilestoneService;
+
+    @Autowired
+    private com.missoft.pms.repository.AfterServiceProjectParticipantRepository afterServiceProjectParticipantRepository;
 
     /**
      * 分页查询项目列表
@@ -188,6 +187,7 @@ public class AfterServiceProjectService {
             project.setProjectNum(generateUniqueProjectNum());
         }
         AfterServiceProject saved = afterServiceProjectRepository.save(project);
+        saveProjectParticipants(saved.getProjectId(), dto.getParticipantIds());
         return convertToDTO(saved);
     }
 
@@ -204,6 +204,7 @@ public class AfterServiceProjectService {
         project.setProjectId(id);
         
         AfterServiceProject saved = afterServiceProjectRepository.save(project);
+        replaceProjectParticipants(saved.getProjectId(), dto.getParticipantIds());
         return convertToDTO(saved);
     }
 
@@ -236,6 +237,8 @@ public class AfterServiceProjectService {
                 Files.delete(dir); // 空目录可删除；非空会抛异常，忽略
             } catch (Exception ignore) {}
         } catch (Exception ignore) {}
+
+        afterServiceProjectParticipantRepository.deleteByProjectId(id);
 
         // 最后删除项目记录
         afterServiceProjectRepository.deleteById(id);
@@ -272,6 +275,11 @@ public class AfterServiceProjectService {
             userRepository.findById(entity.getServiceDirector())
                     .ifPresent(user -> dto.setServiceDirectorName(user.getName()));
         }
+
+        List<AfterServiceProjectParticipant> participants = afterServiceProjectParticipantRepository.findByProjectId(entity.getProjectId());
+        dto.setParticipantIds(participants.stream()
+                .map(AfterServiceProjectParticipant::getUserId)
+                .collect(Collectors.toList()));
 
         // 计算并填充总工时字段
         dto.setTotalHours(computeTotalHours(entity.getProjectId()));
@@ -320,6 +328,23 @@ public class AfterServiceProjectService {
      */
     public String generateNewProjectNum() {
         return generateUniqueProjectNum();
+    }
+
+    private void saveProjectParticipants(Long projectId, List<Long> participantIds) {
+        if (projectId == null || participantIds == null || participantIds.isEmpty()) return;
+        for (Long userId : participantIds) {
+            if (userId == null) continue;
+            AfterServiceProjectParticipant participant = new AfterServiceProjectParticipant();
+            participant.setProjectId(projectId);
+            participant.setUserId(userId);
+            afterServiceProjectParticipantRepository.save(participant);
+        }
+    }
+
+    private void replaceProjectParticipants(Long projectId, List<Long> participantIds) {
+        if (projectId == null) return;
+        afterServiceProjectParticipantRepository.deleteByProjectId(projectId);
+        saveProjectParticipants(projectId, participantIds);
     }
 
     private String safe(String s) {

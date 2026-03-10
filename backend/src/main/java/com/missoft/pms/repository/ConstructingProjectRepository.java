@@ -123,6 +123,7 @@ public interface ConstructingProjectRepository extends JpaRepository<Constructin
            "(:projectState IS NULL OR cp.projectState = :projectState) AND " +
            "(:projectLeader IS NULL OR cp.projectLeader = :projectLeader) AND " +
            "(:saleLeader IS NULL OR cp.saleLeader = :saleLeader) AND " +
+           "(:participantUserId IS NULL OR cp.projectLeader = :participantUserId OR cp.saleLeader = :participantUserId OR EXISTS (SELECT cpp.id FROM ConstructingProjectParticipant cpp WHERE cpp.projectId = cp.projectId AND cpp.userId = :participantUserId)) AND " +
            "(:customerId IS NULL OR cp.customerId = :customerId) AND " +
            "(:customerName IS NULL OR LOWER(c.customerName) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
            "(:softName IS NULL OR LOWER(a.softName) LIKE LOWER(CONCAT('%', :softName, '%')))")
@@ -132,6 +133,7 @@ public interface ConstructingProjectRepository extends JpaRepository<Constructin
             @Param("projectState") String projectState,
             @Param("projectLeader") Long projectLeader,
             @Param("saleLeader") Long saleLeader,
+            @Param("participantUserId") Long participantUserId,
             @Param("customerId") Long customerId,
             @Param("customerName") String customerName,
             @Param("softName") String softName,

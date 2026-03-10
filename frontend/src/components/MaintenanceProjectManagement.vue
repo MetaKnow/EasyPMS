@@ -752,7 +752,7 @@ export default {
      * 显示创建表单
      */
     showCreateForm() {
-      this.$emit('show-afterservice-project-form')
+      this.$emit('show-afterservice-project-form', {}, false)
     },
 
     /**
@@ -766,9 +766,7 @@ export default {
     /**
      * 编辑项目
      */
-    editProject(project) {
-      this.$emit('show-afterservice-project-form', project)
-    },
+    // Removed duplicate editProject implementation to fix conflict
 
     /**
      * 删除项目
@@ -823,15 +821,37 @@ export default {
     /**
      * 查看项目
      */
-    viewProject(project) {
-      this.$emit('show-afterservice-project-form', project, true)
+    async viewProject(project) {
+      try {
+        const response = await getAfterserviceProjectById(project.projectId)
+        if (response.data.success) {
+          this.$emit('show-afterservice-project-form', response.data.data, true)
+        } else {
+          console.error('获取项目详情失败:', response.data.message)
+          alert('获取项目详情失败')
+        }
+      } catch (error) {
+        console.error('获取项目详情失败:', error)
+        alert('获取项目详情失败')
+      }
     },
 
     /**
      * 编辑项目
      */
-    editProject(project) {
-      this.$emit('show-afterservice-project-form', project)
+    async editProject(project) {
+      try {
+        const response = await getAfterserviceProjectById(project.projectId)
+        if (response.data.success) {
+          this.$emit('show-afterservice-project-form', response.data.data, false)
+        } else {
+          console.error('获取项目详情失败:', response.data.message)
+          alert('获取项目详情失败')
+        }
+      } catch (error) {
+        console.error('获取项目详情失败:', error)
+        alert('获取项目详情失败')
+      }
     },
 
     /**

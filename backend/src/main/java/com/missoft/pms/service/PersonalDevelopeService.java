@@ -5,6 +5,7 @@ import com.missoft.pms.repository.PersonalDevelopeRepository;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.service.ConstructMilestoneService;
 import com.missoft.pms.repository.ConstructingProjectRepository;
+import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class PersonalDevelopeService {
 
     @Autowired
     private ConstructMilestoneService constructMilestoneService;
+
+    @Autowired
+    private ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
 
     /**
      * 函数级注释：创建个性化开发条目，并生成“个性化功能开发”里程碑对应的步骤关系。
@@ -119,7 +123,7 @@ public class PersonalDevelopeService {
      * @param personalDevId 个性化开发ID
      * @return 是否删除成功
      */
-    public boolean deleteById(Long personalDevId) {
+    public boolean deleteById(Long personalDevId, Long operatorUserId) {
         if (personalDevId == null) {
             return false;
         }
@@ -135,9 +139,13 @@ public class PersonalDevelopeService {
                 throw new IllegalStateException("已完成项目不可删除个性化功能需求");
             }
         }
+        List<com.missoft.pms.entity.ProjectSstepRelation> rels = null;
+        if (projectId != null) {
+            rels = projectSstepRelationRepository.findByProjectIdAndPersonalDevId(projectId, personalDevId);
+            assertParticipantCanDelete(projectId, rels, operatorUserId);
+        }
         // 删除该个性化开发关联的项目-步骤关系
         if (projectId != null) {
-            var rels = projectSstepRelationRepository.findByProjectIdAndPersonalDevId(projectId, personalDevId);
             if (rels != null && !rels.isEmpty()) {
                 projectSstepRelationRepository.deleteAll(rels);
             }
@@ -155,5 +163,33 @@ public class PersonalDevelopeService {
             }
         }
         return true;
+    }
+
+    private void assertParticipantCanDelete(Long projectId,
+                                            List<com.missoft.pms.entity.ProjectSstepRelation> rels,
+                                            Long operatorUserId) {
+        if (projectId == null || operatorUserId == null) {
+            return;
+        }
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return;
+        }
+        boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
+        boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
+        if (isLeader || isSalesLeader) {
+            return;
+        }
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, operatorUserId);
+        if (!isParticipant) {
+            return;
+        }
+        if (rels == null || rels.isEmpty()) {
+            throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
+        }
+        boolean allOwned = rels.stream().allMatch(r -> r != null && java.util.Objects.equals(r.getDirector(), operatorUserId));
+        if (!allOwned) {
+            throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
+        }
     }
 }

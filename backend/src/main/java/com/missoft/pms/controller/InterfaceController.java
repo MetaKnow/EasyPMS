@@ -63,9 +63,10 @@ public class InterfaceController {
      * 前端在接口信息行点击删除时调用，删除成功后前端应刷新项目摘要以更新里程碑与步骤展示。
      */
     @DeleteMapping("/{interfaceId}")
-    public ResponseEntity<Map<String, Object>> deleteById(@PathVariable Long interfaceId) {
+    public ResponseEntity<Map<String, Object>> deleteById(@PathVariable Long interfaceId,
+                                                           @RequestParam(required = false) Long operatorUserId) {
         try {
-            boolean ok = service.deleteInterfaceById(interfaceId);
+            boolean ok = service.deleteInterfaceById(interfaceId, operatorUserId);
             if (!ok) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "接口不存在或已删除"));
@@ -75,8 +76,13 @@ public class InterfaceController {
             resp.put("interfaceId", interfaceId);
             return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
+            String message = e.getMessage() == null ? "" : e.getMessage();
+            if (message.contains("项目参与人")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", message));
+            }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", message));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "删除接口失败", "message", e.getMessage()));

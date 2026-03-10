@@ -20,9 +20,10 @@ export function listInterfacesByProject(projectId) {
  * @param {number} interfaceId 接口ID
  * @returns {Promise} 响应数据
  */
-export function deleteInterface(interfaceId) {
+export function deleteInterface(interfaceId, operatorUserId) {
   return request({
     url: `/api/interfaces/${interfaceId}`,
-    method: 'delete'
+    method: 'delete',
+    params: operatorUserId != null ? { operatorUserId } : {}
   })
 }

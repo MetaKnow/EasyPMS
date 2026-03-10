@@ -172,6 +172,12 @@ public class ConstructingProject {
     private Long modifyUser;
 
     /**
+     * 项目参与人员ID列表（非持久化字段）
+     */
+    @Transient
+    private java.util.List<Long> participantIds;
+
+    /**
      * 默认构造函数
      */
     public ConstructingProject() {
@@ -409,6 +415,14 @@ public class ConstructingProject {
     public Long getModifyUser() { return modifyUser; }
 
     public void setModifyUser(Long modifyUser) { this.modifyUser = modifyUser; }
+
+    public java.util.List<Long> getParticipantIds() {
+        return participantIds;
+    }
+
+    public void setParticipantIds(java.util.List<Long> participantIds) {
+        this.participantIds = participantIds;
+    }
 
     @Override
     public String toString() {

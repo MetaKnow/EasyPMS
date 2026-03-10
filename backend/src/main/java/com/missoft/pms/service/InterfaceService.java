@@ -7,6 +7,7 @@ import com.missoft.pms.service.ProjectSstepRelationService;
 import com.missoft.pms.repository.InterfaceRepository;
 import com.missoft.pms.repository.ProjectSstepRelationRepository;
 import com.missoft.pms.repository.ConstructingProjectRepository;
+import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class InterfaceService {
     private final ProjectSstepRelationService relationService;
     private final ProjectSstepRelationRepository relationRepository;
     private final ConstructingProjectRepository constructingProjectRepository;
+    private final ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
     private final ConstructMilestoneService constructMilestoneService;
 
     /**
@@ -34,12 +36,14 @@ public class InterfaceService {
             ProjectSstepRelationService relationService,
             ProjectSstepRelationRepository relationRepository,
             ConstructingProjectRepository constructingProjectRepository,
+            ConstructingProjectParticipantRepository constructingProjectParticipantRepository,
             ConstructMilestoneService constructMilestoneService
     ) {
         this.repository = repository;
         this.relationService = relationService;
         this.relationRepository = relationRepository;
         this.constructingProjectRepository = constructingProjectRepository;
+        this.constructingProjectParticipantRepository = constructingProjectParticipantRepository;
         this.constructMilestoneService = constructMilestoneService;
     }
 
@@ -116,7 +120,7 @@ public class InterfaceService {
      * @return 是否删除成功
      */
     @Transactional
-    public boolean deleteInterfaceById(Long interfaceId) {
+    public boolean deleteInterfaceById(Long interfaceId, Long operatorUserId) {
         if (interfaceId == null) {
             return false;
         }
@@ -132,9 +136,13 @@ public class InterfaceService {
                 throw new IllegalStateException("已完成项目不可删除接口需求");
             }
         }
+        List<ProjectSstepRelation> rels = null;
+        if (projectId != null) {
+            rels = relationRepository.findByProjectIdAndInterfaceId(projectId, interfaceId);
+            assertParticipantCanDelete(projectId, rels, operatorUserId);
+        }
         // 删除该接口关联的项目-步骤关系
         if (projectId != null) {
-            List<ProjectSstepRelation> rels = relationRepository.findByProjectIdAndInterfaceId(projectId, interfaceId);
             if (rels != null && !rels.isEmpty()) {
                 relationRepository.deleteAll(rels);
             }
@@ -152,5 +160,31 @@ public class InterfaceService {
             }
         }
         return true;
+    }
+
+    private void assertParticipantCanDelete(Long projectId, List<ProjectSstepRelation> rels, Long operatorUserId) {
+        if (projectId == null || operatorUserId == null) {
+            return;
+        }
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            return;
+        }
+        boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
+        boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
+        if (isLeader || isSalesLeader) {
+            return;
+        }
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, operatorUserId);
+        if (!isParticipant) {
+            return;
+        }
+        if (rels == null || rels.isEmpty()) {
+            throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
+        }
+        boolean allOwned = rels.stream().allMatch(r -> r != null && java.util.Objects.equals(r.getDirector(), operatorUserId));
+        if (!allOwned) {
+            throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
+        }
     }
 }

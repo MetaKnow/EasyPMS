@@ -48,10 +48,11 @@ export function createConstructingProject(data) {
  * @param {Object} data 项目数据
  * @returns {Promise} 响应数据
  */
-export function updateConstructingProject(id, data) {
+export function updateConstructingProject(id, data, operatorUserId) {
   return request({
     url: `/api/constructing-projects/${id}`,
     method: 'put',
+    params: operatorUserId != null ? { operatorUserId } : {},
     data
   })
 }
@@ -61,10 +62,11 @@ export function updateConstructingProject(id, data) {
  * @param {number} id 项目ID
  * @returns {Promise} 响应数据
  */
-export function deleteConstructingProject(id) {
+export function deleteConstructingProject(id, operatorUserId) {
   return request({
     url: `/api/constructing-projects/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: operatorUserId != null ? { operatorUserId } : {}
   })
 }
 
@@ -73,10 +75,11 @@ export function deleteConstructingProject(id) {
  * @param {Array} ids 项目ID数组
  * @returns {Promise} 响应数据
  */
-export function batchDeleteConstructingProjects(ids) {
+export function batchDeleteConstructingProjects(ids, operatorUserId) {
   return request({
     url: '/api/constructing-projects/batch',
     method: 'delete',
+    params: operatorUserId != null ? { operatorUserId } : {},
     data: { ids }
   })
 }

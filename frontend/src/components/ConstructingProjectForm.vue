@@ -122,6 +122,25 @@
             </div>
 
             <div class="form-group">
+              <label>项目参与人</label>
+              <el-select 
+                v-model="form.participantIds" 
+                multiple 
+                filterable
+                placeholder="请选择项目参与人" 
+                style="width: 100%"
+                :disabled="isViewMode"
+              >
+                <el-option
+                  v-for="user in users"
+                  :key="user.userId"
+                  :label="user.name || user.userName"
+                  :value="user.userId"
+                />
+              </el-select>
+            </div>
+
+            <div class="form-group">
               <label for="startDate">开始日期 <span class="required">*</span></label>
               <input 
                 type="date" 
@@ -386,6 +405,7 @@ export default {
         projectType: '',
         projectLeader: '',
         saleLeader: '',
+        participantIds: [],
         projectState: '待开始',
         softId: '',
         startDate: '',
@@ -569,6 +589,7 @@ export default {
           projectType: this.projectData.projectType || '',
           projectLeader: this.projectData.projectLeader ? parseInt(this.projectData.projectLeader) : '',
           saleLeader: this.projectData.saleLeader ? parseInt(this.projectData.saleLeader) : '',
+          participantIds: this.projectData.participantIds ? this.projectData.participantIds.map(id => Number(id)) : [],
           projectState: this.projectData.projectState || '待开始',
           softId: this.projectData.softId || '',
           startDate: this.projectData.startDate || '',
@@ -626,6 +647,7 @@ export default {
         projectType: '',
         projectLeader: '',
         saleLeader: '',
+        participantIds: [],
         projectState: '待开始',
         softId: '',
         startDate: '',
@@ -881,8 +903,14 @@ export default {
           : `${API_BASE}/constructing-projects`
         
         const method = this.isEdit ? 'put' : 'post'
-        
-        const response = await axios[method](url, projectData)
+        let response
+        if (this.isEdit) {
+          const operatorUserId = projectData.modifyUser != null ? Number(projectData.modifyUser) : null
+          const config = operatorUserId != null ? { params: { operatorUserId } } : {}
+          response = await axios[method](url, projectData, config)
+        } else {
+          response = await axios[method](url, projectData)
+        }
         
         if (response.data.success) {
           this.$emit('success', response.data.data)
@@ -893,7 +921,16 @@ export default {
         }
       } catch (error) {
         console.error(this.isEdit ? '保存项目失败:' : '创建项目失败:', error)
-        alert(this.isEdit ? '保存失败，请稍后重试' : '创建失败，请稍后重试')
+        const responseData = error && error.response ? error.response.data : null
+        const messageText = responseData && responseData.message ? String(responseData.message) : ''
+        const errorText = responseData && responseData.error ? String(responseData.error) : ''
+        const serverMessage = messageText || errorText
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (this.isEdit && (permissionText.includes('没有编辑项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限'))) {
+          alert('您没有编辑项目的权限')
+        } else {
+          alert(serverMessage || (this.isEdit ? '保存失败，请稍后重试' : '创建失败，请稍后重试'))
+        }
       } finally {
         this.isSubmitting = false
       }
@@ -1047,6 +1084,41 @@ export default {
   border-radius: 6px;
   font-size: 14px;
   transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Element Plus Select 样式覆盖 */
+.form-group :deep(.el-select) {
+  width: 100%;
+}
+
+.form-group :deep(.el-select .el-input__wrapper) {
+  padding: 8px 12px !important;
+  box-shadow: none !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px !important;
+  background-color: white !important;
+  min-height: 38px !important; /* 匹配原生输入框高度 */
+}
+
+.form-group :deep(.el-select .el-input.is-focus .el-input__wrapper),
+.form-group :deep(.el-select .el-input__wrapper.is-focus) {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.form-group :deep(.el-select .el-input.is-disabled .el-input__wrapper) {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  cursor: not-allowed !important;
+}
+
+.form-group :deep(.el-input__inner) {
+  font-size: 14px !important;
+  color: #262626 !important;
+  height: 22px !important; /* 确保内容垂直居中 */
+  line-height: 22px !important;
 }
 
 .form-group input:focus,

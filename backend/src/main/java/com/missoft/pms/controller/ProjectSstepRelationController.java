@@ -66,6 +66,26 @@ public class ProjectSstepRelationController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
                 }
             }
+            Long operatorUserId = parseLong(body.get("modifyUser"));
+            if (project != null && operatorUserId != null) {
+                boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
+                boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
+                if (!isLeader && !isSalesLeader) {
+                    boolean isParticipant = constructingProjectRepositoryParticipantExists(projectId, operatorUserId);
+                    if (isParticipant) {
+                        if (body.containsKey("director")) {
+                            Map<String, Object> error = new HashMap<>();
+                            error.put("error", "项目参与人不能修改负责人字段");
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+                        }
+                        if (!java.util.Objects.equals(rel.getDirector(), operatorUserId)) {
+                            Map<String, Object> error = new HashMap<>();
+                            error.put("error", "项目参与人仅可修改本人负责的步骤或里程碑字段");
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+                        }
+                    }
+                }
+            }
 
             Long oldDirector = rel.getDirector();
             LocalDate oldPlanStartDate = rel.getPlanStartDate();
@@ -189,5 +209,15 @@ public class ProjectSstepRelationController {
         String userName = user.getUserName();
         if (userName != null && !userName.trim().isEmpty()) return userName.trim() + "(ID=" + userId + ")";
         return "用户ID=" + userId;
+    }
+
+    @Autowired
+    private com.missoft.pms.repository.ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
+
+    private boolean constructingProjectRepositoryParticipantExists(Long projectId, Long userId) {
+        if (projectId == null || userId == null) {
+            return false;
+        }
+        return constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, userId);
     }
 }

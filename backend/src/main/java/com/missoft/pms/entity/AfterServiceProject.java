@@ -66,6 +66,20 @@ public class AfterServiceProject {
     @Column(name = "constructingProjectId")
     private Long constructingProjectId;
 
+    /**
+     * 项目参与人员ID列表（非持久化字段）
+     */
+    @Transient
+    private java.util.List<Long> participantIds;
+
+    public java.util.List<Long> getParticipantIds() {
+        return participantIds;
+    }
+
+    public void setParticipantIds(java.util.List<Long> participantIds) {
+        this.participantIds = participantIds;
+    }
+
     @Column(name = "totalHours", precision = 10, scale = 1)
     private BigDecimal totalHours;
 

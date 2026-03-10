@@ -220,8 +220,8 @@
                       <td></td>
                       <td></td>
                       <td>
-                        <button class="btn ghost" :class="{ disabled: isProjectCompleted }"
-                          :disabled="isProjectCompleted" @click="onDeleteInterface(row.blockId)">删除</button>
+                        <button class="btn ghost" :class="{ disabled: isProjectCompleted || !canDeleteInterfaceBlock(row.blockId) }"
+                          :disabled="isProjectCompleted || !canDeleteInterfaceBlock(row.blockId)" @click="onDeleteInterface(row.blockId)">删除</button>
                       </td>
                       <td class="deliverable-actions"></td>
                     </tr>
@@ -238,8 +238,8 @@
                       <td></td>
                       <td></td>
                       <td>
-                        <button class="btn ghost" :class="{ disabled: isProjectCompleted }"
-                          :disabled="isProjectCompleted" @click="onDeletePersonal(row.blockId)">删除</button>
+                        <button class="btn ghost" :class="{ disabled: isProjectCompleted || !canDeletePersonalBlock(row.blockId) }"
+                          :disabled="isProjectCompleted || !canDeletePersonalBlock(row.blockId)" @click="onDeletePersonal(row.blockId)">删除</button>
                       </td>
                       <td class="deliverable-actions"></td>
                     </tr>
@@ -1181,7 +1181,7 @@
                           <button type="button" class="file-link preview-link" @click="onPreviewFile(f)">{{
                             fileBaseName(f.filePath) }}</button>
                           <span class="size">{{ prettySize(f.fileSize) }}</span>
-                          <button class="icon-btn danger" :class="{ disabled: isProjectCompleted }"
+                          <button v-if="canDeleteUploadedFile(f)" class="icon-btn danger" :class="{ disabled: isProjectCompleted }"
                             :disabled="isProjectCompleted" title="删除"
                             @click="deleteUploadedFile(f.fileId, d.deliverableId)">
                             <svg viewBox="0 0 24 24">
@@ -2879,6 +2879,12 @@ export default {
         this.showError('已完成项目不能删除交付物文件');
         return;
       }
+      const allFiles = Object.values(this.uploadedFilesByDeliverableId || {}).flat()
+      const currentFile = allFiles.find(f => Number(f?.fileId) === Number(fileId))
+      if (!this.canDeleteUploadedFile(currentFile)) {
+        this.showError('仅可删除自己上传的交付物')
+        return
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该文件？') : window.confirm('确认删除该文件？')
         if (!ok) return
@@ -3019,12 +3025,52 @@ export default {
     isEditing(step, field) {
       return this.editing.relationId === step.relationId && this.editing.field === field;
     },
+    isCurrentUserProjectManager() {
+      if (!this.project || this.currentUserId == null) return false
+      return Number(this.project.projectLeader) === Number(this.currentUserId) ||
+        Number(this.project.saleLeader) === Number(this.currentUserId)
+    },
+    canParticipantEditOwnedRow(step, field) {
+      if (!step || this.currentUserId == null) return false
+      if (field === 'director') return false
+      return Number(step.director) === Number(this.currentUserId)
+    },
+    canEditStepField(step, field) {
+      if (!step || !step.relationId) return false
+      if (this.isCurrentUserProjectManager()) return true
+      return this.canParticipantEditOwnedRow(step, field)
+    },
+    canDeleteInterfaceBlock(interfaceId) {
+      if (this.isCurrentUserProjectManager()) return true
+      const rows = (this.steps || []).filter(s => s && s.type === '接口开发' && s.interfaceId === interfaceId)
+      if (!rows.length) return false
+      return rows.every(s => Number(s?.director) === Number(this.currentUserId))
+    },
+    canDeletePersonalBlock(personalDevId) {
+      if (this.isCurrentUserProjectManager()) return true
+      const rows = (this.steps || []).filter(s => s && s.type === '个性化功能开发' && s.personalDevId === personalDevId)
+      if (!rows.length) return false
+      return rows.every(s => Number(s?.director) === Number(this.currentUserId))
+    },
+    canDeleteUploadedFile(file) {
+      if (!file || this.currentUserId == null) return false
+      if (this.project && Number(this.project.projectLeader) === Number(this.currentUserId)) return true
+      return Number(file?.uploaderId) === Number(this.currentUserId)
+    },
     startEdit(step, field) {
       if (this.isProjectCompleted) {
         this.showError('已完成项目不能修改步骤字段');
         return;
       }
       if (!step.relationId) return;
+      if (!this.canEditStepField(step, field)) {
+        if (field === 'director') {
+          this.showError('项目参与人不能修改负责人字段')
+        } else {
+          this.showError('项目参与人仅可修改本人负责的步骤或里程碑字段')
+        }
+        return
+      }
       // 规则3：当计划开始日期为空时，不允许填写计划结束日期
       if (field === 'planEndDate' && (!step.planStartDate || step.planStartDate === '')) {
         this.showError('请先填写计划开始日期，再填写计划结束日期');
@@ -3639,6 +3685,9 @@ export default {
       if (this.isProjectCompleted) {
         return this.showError('已完成项目不能删除接口需求')
       }
+      if (!this.canDeleteInterfaceBlock(interfaceId)) {
+        return this.showError('项目参与人仅可删除本人负责的步骤或里程碑字段')
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该接口及其生成的步骤关系？') : window.confirm('确认删除该接口及其生成的步骤关系？')
         if (!ok) return
@@ -3648,7 +3697,7 @@ export default {
           .map(s => s.relationId)
           .filter(id => id != null)
         const removedCount = await this.deleteFilesByRelationIds(relIds)
-        await deleteInterface(interfaceId)
+        await deleteInterface(interfaceId, this.currentUserId ?? null)
         // 本地移除并刷新摘要
         this.interfaceBlocks = (this.interfaceBlocks || []).filter(b => b.id !== interfaceId)
         if (this.$message && removedCount > 0) {
@@ -3669,6 +3718,9 @@ export default {
       if (this.isProjectCompleted) {
         return this.showError('已完成项目不能删除个性化功能需求')
       }
+      if (!this.canDeletePersonalBlock(personalDevId)) {
+        return this.showError('项目参与人仅可删除本人负责的步骤或里程碑字段')
+      }
       try {
         const ok = this.$confirm ? await this.$confirm('确认删除该个性化需求及其生成的步骤关系？') : window.confirm('确认删除该个性化需求及其生成的步骤关系？')
         if (!ok) return
@@ -3678,7 +3730,7 @@ export default {
           .map(s => s.relationId)
           .filter(id => id != null)
         const removedCount = await this.deleteFilesByRelationIds(relIds)
-        await deletePersonalDevelope(personalDevId)
+        await deletePersonalDevelope(personalDevId, this.currentUserId ?? null)
         this.personalBlocks = (this.personalBlocks || []).filter(b => b.id !== personalDevId)
         if (this.$message && removedCount > 0) {
           this.$message.success(`个性化需求已删除，同时清理交付物文件 ${removedCount} 个`)

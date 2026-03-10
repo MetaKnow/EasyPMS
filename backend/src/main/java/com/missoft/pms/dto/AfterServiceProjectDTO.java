@@ -25,6 +25,7 @@ public class AfterServiceProjectDTO {
     private Long serviceDirector;
     private String serviceDirectorName;
     private Long constructingProjectId;
+    private java.util.List<Long> participantIds;
     private BigDecimal totalHours;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
@@ -155,6 +156,14 @@ public class AfterServiceProjectDTO {
 
     public void setConstructingProjectId(Long constructingProjectId) {
         this.constructingProjectId = constructingProjectId;
+    }
+
+    public java.util.List<Long> getParticipantIds() {
+        return participantIds;
+    }
+
+    public void setParticipantIds(java.util.List<Long> participantIds) {
+        this.participantIds = participantIds;
     }
 
     public BigDecimal getTotalHours() {

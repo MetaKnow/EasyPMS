@@ -120,6 +120,24 @@
             </div>
 
             <div class="form-group">
+              <label>项目参与人</label>
+              <el-select 
+                v-model="form.participantIds" 
+                multiple 
+                filterable
+                placeholder="请选择项目参与人" 
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="user in users"
+                  :key="user.userId"
+                  :label="user.name || user.userName"
+                  :value="user.userId"
+                />
+              </el-select>
+            </div>
+
+            <div class="form-group">
               <label for="startDate">开始日期 <span class="required">*</span></label>
               <input 
                 type="date" 
@@ -380,6 +398,7 @@ export default {
         customerId: '',
         projectLeader: '',
         saleLeader: '',
+        participantIds: [],
         projectState: '待开始',
         softId: '',
         startDate: '',
@@ -530,6 +549,7 @@ export default {
         customerId: '',
         projectLeader: '',
         saleLeader: '',
+        participantIds: [],
         projectState: '待开始',
         softId: '',
         startDate: '',
@@ -993,6 +1013,41 @@ export default {
   border-radius: 6px;
   font-size: 14px;
   transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Element Plus Select 样式覆盖 */
+.form-group :deep(.el-select) {
+  width: 100%;
+}
+
+.form-group :deep(.el-select .el-input__wrapper) {
+  padding: 8px 12px !important;
+  box-shadow: none !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 6px !important;
+  background-color: white !important;
+  min-height: 38px !important; /* 匹配原生输入框高度 */
+}
+
+.form-group :deep(.el-select .el-input.is-focus .el-input__wrapper),
+.form-group :deep(.el-select .el-input__wrapper.is-focus) {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+.form-group :deep(.el-select .el-input.is-disabled .el-input__wrapper) {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  cursor: not-allowed !important;
+}
+
+.form-group :deep(.el-input__inner) {
+  font-size: 14px !important;
+  color: #262626 !important;
+  height: 22px !important; /* 确保内容垂直居中 */
+  line-height: 22px !important;
 }
 
 .form-group input:focus,

@@ -52,6 +52,7 @@ public class ConstructingProjectController {
             @RequestParam(required = false) String projectState,
             @RequestParam(required = false) Long projectLeader,
             @RequestParam(required = false) Long saleLeader,
+            @RequestParam(required = false) Long participantUserId,
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String softName,
@@ -60,7 +61,7 @@ public class ConstructingProjectController {
         
         try {
             Page<ConstructingProjectDTO> projectPage = constructingProjectService.getConstructingProjectsWithCustomerName(
-                    page, size, projectName, year, projectState, projectLeader, saleLeader, customerId, customerName, softName, sortBy, sortDir);
+                    page, size, projectName, year, projectState, projectLeader, saleLeader, participantUserId, customerId, customerName, softName, sortBy, sortDir);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -161,9 +162,10 @@ public class ConstructingProjectController {
     @PutMapping("/{projectId}")
     public ResponseEntity<Map<String, Object>> updateConstructingProject(
             @PathVariable Long projectId, 
+            @RequestParam(required = false) Long operatorUserId,
             @Valid @RequestBody ConstructingProject constructingProject) {
         try {
-            ConstructingProject updatedProject = constructingProjectService.updateConstructingProject(projectId, constructingProject);
+            ConstructingProject updatedProject = constructingProjectService.updateConstructingProject(projectId, constructingProject, operatorUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -173,6 +175,12 @@ public class ConstructingProjectController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有编辑项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
             errorResponse.put("success", false);
             errorResponse.put("message", "项目更新失败");
             errorResponse.put("error", e.getMessage());
@@ -193,9 +201,10 @@ public class ConstructingProjectController {
      * @return 删除结果
      */
     @DeleteMapping("/{projectId}")
-    public ResponseEntity<Map<String, Object>> deleteConstructingProject(@PathVariable Long projectId) {
+    public ResponseEntity<Map<String, Object>> deleteConstructingProject(@PathVariable Long projectId,
+                                                                         @RequestParam(required = false) Long operatorUserId) {
         try {
-            constructingProjectService.deleteConstructingProject(projectId);
+            constructingProjectService.deleteConstructingProject(projectId, operatorUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -204,6 +213,12 @@ public class ConstructingProjectController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有删除项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
             errorResponse.put("success", false);
             errorResponse.put("message", "项目删除失败");
             errorResponse.put("error", e.getMessage());
@@ -224,7 +239,8 @@ public class ConstructingProjectController {
      * @return 删除结果
      */
     @DeleteMapping("/batch")
-    public ResponseEntity<Map<String, Object>> batchDeleteConstructingProjects(@RequestBody Map<String, List<Long>> request) {
+    public ResponseEntity<Map<String, Object>> batchDeleteConstructingProjects(@RequestBody Map<String, List<Long>> request,
+                                                                                @RequestParam(required = false) Long operatorUserId) {
         try {
             List<Long> projectIds = request.get("ids");
             if (projectIds == null || projectIds.isEmpty()) {
@@ -234,7 +250,7 @@ public class ConstructingProjectController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
             }
 
-            constructingProjectService.batchDeleteConstructingProjects(projectIds);
+            constructingProjectService.batchDeleteConstructingProjects(projectIds, operatorUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -243,6 +259,12 @@ public class ConstructingProjectController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有删除项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
             errorResponse.put("success", false);
             errorResponse.put("message", "批量删除失败");
             errorResponse.put("error", e.getMessage());

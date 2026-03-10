@@ -613,6 +613,9 @@ public class ConstructDeliverableFileController {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "删除文件失败");
             error.put("message", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("仅可删除自己上传的交付物")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();

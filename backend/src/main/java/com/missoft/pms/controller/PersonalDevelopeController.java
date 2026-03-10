@@ -66,9 +66,10 @@ public class PersonalDevelopeController {
      * @return 删除结果（成功/失败信息）
      */
     @DeleteMapping("/{personalDevId}")
-    public ResponseEntity<Map<String, Object>> deleteById(@PathVariable Long personalDevId) {
+    public ResponseEntity<Map<String, Object>> deleteById(@PathVariable Long personalDevId,
+                                                           @RequestParam(required = false) Long operatorUserId) {
         try {
-            boolean ok = personalDevelopeService.deleteById(personalDevId);
+            boolean ok = personalDevelopeService.deleteById(personalDevId, operatorUserId);
             if (!ok) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "个性化开发不存在或已删除"));
@@ -78,8 +79,13 @@ public class PersonalDevelopeController {
             resp.put("personalDevId", personalDevId);
             return ResponseEntity.ok(resp);
         } catch (RuntimeException e) {
+            String message = e.getMessage() == null ? "" : e.getMessage();
+            if (message.contains("项目参与人")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", message));
+            }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", message));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "删除个性化开发失败", "message", e.getMessage()));

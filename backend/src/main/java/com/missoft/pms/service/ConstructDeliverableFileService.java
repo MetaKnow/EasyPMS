@@ -18,6 +18,7 @@ import com.missoft.pms.repository.ConstructMilestoneRepository;
 import com.missoft.pms.repository.ProjectSstepRelationRepository;
 import com.missoft.pms.repository.InterfaceRepository;
 import com.missoft.pms.repository.PersonalDevelopeRepository;
+import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -80,6 +81,9 @@ public class ConstructDeliverableFileService {
 
     @Autowired
     private ConstructMilestoneRepository constructMilestoneRepository;
+
+    @Autowired
+    private ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
 
     @Autowired
     private ConstructingProjectModifyRecordService modifyRecordService;
@@ -307,6 +311,7 @@ public class ConstructDeliverableFileService {
             info.put("filePath", r.getFilePath());
             info.put("fileSize", r.getFileSize());
             info.put("milestoneId", r.getMilestoneId());
+            info.put("uploaderId", r.getUploaderId());
             Path target = projectRoot.resolve(r.getFilePath()).normalize();
             try {
                 info.put("exists", Files.exists(target));
@@ -338,6 +343,16 @@ public class ConstructDeliverableFileService {
             ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
             if (project != null && "已完成".equals(project.getProjectState())) {
                 throw new RuntimeException("已完成项目不允许删除交付物文件");
+            }
+            if (operatorId != null && project != null) {
+                boolean isLeader = java.util.Objects.equals(operatorId, project.getProjectLeader());
+                if (!isLeader && !java.util.Objects.equals(operatorId, r.getUploaderId())) {
+                    boolean isSalesLeader = java.util.Objects.equals(operatorId, project.getSaleLeader());
+                    boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, operatorId);
+                    if (isSalesLeader || isParticipant) {
+                        throw new RuntimeException("仅可删除自己上传的交付物");
+                    }
+                }
             }
         }
         Path target = resolveFilePath(fileId);
