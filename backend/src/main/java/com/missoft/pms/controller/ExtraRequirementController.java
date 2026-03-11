@@ -28,14 +28,22 @@ public class ExtraRequirementController {
      * @return 创建后的实体
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody ExtraRequirement payload) {
+    public ResponseEntity<Map<String, Object>> create(@RequestBody ExtraRequirement payload,
+                                                      @RequestParam(required = false) Long operatorUserId) {
         try {
-            ExtraRequirement saved = extraRequirementService.create(payload);
+            ExtraRequirement saved = extraRequirementService.create(payload, operatorUserId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("success", true);
             resp.put("extraRequirement", saved);
             return ResponseEntity.ok(resp);
         } catch (IllegalArgumentException e) {
+            if (e.getMessage() != null && e.getMessage().contains("没有新增合同外需求的权限")) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "您没有新增合同外需求的权限");
+                error.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -53,8 +61,9 @@ public class ExtraRequirementController {
      * @return 合同外需求列表（直接返回列表，便于前端处理）
      */
     @GetMapping("/by-project/{projectId}")
-    public ResponseEntity<List<ExtraRequirement>> listByProject(@PathVariable Long projectId) {
-        List<ExtraRequirement> list = extraRequirementService.listByProjectId(projectId);
+    public ResponseEntity<List<ExtraRequirement>> listByProject(@PathVariable Long projectId,
+                                                                @RequestParam(required = false) Long operatorUserId) {
+        List<ExtraRequirement> list = extraRequirementService.listByProjectId(projectId, operatorUserId);
         return ResponseEntity.ok(list);
     }
 
@@ -65,14 +74,23 @@ public class ExtraRequirementController {
      * @return 更新后的实体
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @RequestBody ExtraRequirement payload) {
+    public ResponseEntity<Map<String, Object>> update(@PathVariable Long id,
+                                                      @RequestBody ExtraRequirement payload,
+                                                      @RequestParam(required = false) Long operatorUserId) {
         try {
-            ExtraRequirement updated = extraRequirementService.update(id, payload);
+            ExtraRequirement updated = extraRequirementService.update(id, payload, operatorUserId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("success", true);
             resp.put("extraRequirement", updated);
             return ResponseEntity.ok(resp);
         } catch (IllegalArgumentException e) {
+            if (e.getMessage() != null && e.getMessage().contains("没有编辑合同外需求的权限")) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "您没有编辑合同外需求的权限");
+                error.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -90,14 +108,22 @@ public class ExtraRequirementController {
      * @return 删除结果
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id,
+                                                      @RequestParam(required = false) Long operatorUserId) {
         try {
-            extraRequirementService.delete(id);
+            extraRequirementService.delete(id, operatorUserId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("success", true);
             resp.put("message", "删除成功");
             return ResponseEntity.ok(resp);
         } catch (IllegalArgumentException e) {
+            if (e.getMessage() != null && e.getMessage().contains("没有删除合同外需求的权限")) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "您没有删除合同外需求的权限");
+                error.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);

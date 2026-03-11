@@ -30,6 +30,18 @@ public class DatabaseBackup {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -87,5 +99,21 @@ public class DatabaseBackup {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
     }
 }

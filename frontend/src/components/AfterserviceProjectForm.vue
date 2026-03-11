@@ -191,8 +191,12 @@
 </template>
 
 <script>
-import axios from 'axios'
-import { createAfterserviceProject, updateAfterserviceProject } from '../api/afterserviceProject'
+import { 
+  createAfterserviceProject, 
+  updateAfterserviceProject,
+  generateAfterserviceProjectNum
+} from '../api/afterserviceProject'
+import request from '../api/request'
 
 export default {
   name: 'AfterserviceProjectForm',
@@ -327,7 +331,7 @@ export default {
      */
     async loadProjectNum() {
       try {
-        const resp = await axios.get(`${this.API_BASE}/afterservice-projects/new-project-num`)
+        const resp = await generateAfterserviceProjectNum()
         const num = resp?.data?.data?.projectNum
         if (num) {
           this.form.projectNum = num
@@ -364,7 +368,7 @@ export default {
      */
     async loadUsers() {
       try {
-        const response = await axios.get(`${this.API_BASE}/users?size=1000`)
+        const response = await request.get('/api/users?size=1000')
         if (response.data && response.data.users) {
           this.users = response.data.users
         }
@@ -387,7 +391,7 @@ export default {
      */
     async loadCustomers() {
       try {
-        const response = await axios.get(`${this.API_BASE}/customers?size=1000`)
+        const response = await request.get('/api/customers?size=1000')
         if (response.data && response.data.customers) {
           this.customers = response.data.customers
           this.updateCustomerSearchText()
@@ -402,7 +406,7 @@ export default {
      */
     async loadProducts() {
       try {
-        const response = await axios.get(`${this.API_BASE}/products?size=1000`)
+        const response = await request.get('/api/products?size=1000')
         if (response.data && response.data.products) {
           this.products = response.data.products
         }
@@ -417,11 +421,6 @@ export default {
     async submitForm() {
       this.isSubmitting = true
       try {
-        const url = this.isEdit 
-          ? `${this.API_BASE}/afterservice-projects/${this.projectData.projectId}`
-          : `${this.API_BASE}/afterservice-projects`
-        
-        const method = this.isEdit ? 'put' : 'post'
         // 函数级注释：提交时排除 totalHours，防止用户修改统计值
         const payload = { ...this.form }
         delete payload.totalHours
@@ -433,7 +432,12 @@ export default {
           payload.participantIds = []
         }
 
-        const response = await axios[method](url, payload)
+        let response;
+        if (this.isEdit) {
+            response = await updateAfterserviceProject(this.projectData.projectId, payload);
+        } else {
+            response = await createAfterserviceProject(payload);
+        }
         
         if (response.data.success) {
           this.$emit('success', response.data.data)

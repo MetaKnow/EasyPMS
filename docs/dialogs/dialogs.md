@@ -98,46 +98,4 @@
 2026-02-15 增加constructing_project_risk表，字段包括riskId（主键）、riskType（风险类型，值域为“需求控制、需求敲定、协调配合、数据迁移、商务关系、其他”）、riskLevel（风险级别，值域为“高、中、低”）、isRelieve（是否解除）、relieveWay（解除方式）、riskDescription（风险描述）、riskEvaluate（风险评估）、creator（创建人、user表外键）、projectId（constructing_project表外键）。只生成数据库迁移文件，不要做其他操作。
 2026-02-15 增加constructing_project_riskFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、riskId（constructing_project_risk表外键）。只生成数据库迁移文件，不要做其他操作。
 2026-02-15 在建项目新增项目风险页签，样式与合同外需求一致；支持添加/查看/编辑/删除风险，附件上传下载浏览删除与合同外需求一致，附件保存到deliverableFiles/<项目编号-项目名称>/项目风险/<风险ID>/并写入constructing_project_riskFiles表。
-2026-02-15 将constructing_project_risk表的relieveWay字段长度改为2000；表单中仅在“是否解除”选择“是”时显示解除方式。
-2026-02-15 解除方式输入框独占一行并改为多行文本框；风险描述必填；若是否解除为“是”，解除方式必填。
-2026-02-15 多行文本框只允许改变高度，不能改变宽度。
-2026-02-15 生成的代码需要补充类级注释与函数级注释，并覆盖项目风险相关前后端代码。
-2026-02-15 项目风险接口返回403，需要修复（/api/constructing-project-risks）。
-2026-02-15 合同外需求、项目风险列表字段内容不换行显示，鼠标移入单元格显示浮动提示，参考运维事件页签实现方式。
-2026-02-15 修复项目风险列表样式未生效的问题，统一使用colgroup控制列宽，强制不换行。
-2026-02-15 合同内建设内容页签也实现单元格不换行与悬浮提示效果。
-2026-02-15 补充合同内建设内容中“里程碑”行的悬浮提示效果。
-2026-02-15 合同外需求、项目风险列表字段不换行且不改变行宽度，单元格内缩略显示，并对齐运维事件页签实现。
-2026-02-15 反馈仍未生效，要求继续按运维事件页签方式确保单元格不换行且缩略显示。
-2026-02-16 增加constructing_project_weeklyReport表，字段包括weeklyReportId（主键）、period（周期，起止日期）、submitUser（提交用户，user表外键）、submitDate（提交日期）、weeklyWorkload（本周工作量（人天））、workDifficulties（工作难点，字段长度2000）。只生成数据库迁移文件，不要做其他操作。
-2026-02-16 constructing_project_weeklyReport 表增加projectId（constructing_project表外键），只生成数据库迁移文件。
-2026-02-16 增加constructing_project_weeklyReportFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、weeklyReportId（constructing_project_weeklyReport表外键）。只生成数据库迁移文件。
-2026-02-16 生成在建项目中项目周报页签的前后端。页面与项目风险页签一致，可以添加周报并上传附件，数据存储在constructing_project_weeklyReport表中；附件存储在项目根目录的“deliverableFiles/<项目编号-项目名称>/项目周报/<weeklyReportId>”路径中，并在constructing_project_weeklyReportFiles表生成记录。
-2026-02-16 项目周报提交日期默认为当前日期，周期改为可选择的起止日期。
-2026-02-16 项目周报本周工作量必填，周期起止日期输入框进行UI美化。
-2026-02-17 去掉项目周报周期日期输入框的外侧灰色区域。
-2026-02-17 项目周报列表周期列加宽，提交日期仅显示日期。
-2026-02-17 extra_requirement表增加requirementType字段，值域为“个性化需求、接口需求、其他需求”。并在合同外需求页签的添加需求、查看需求、编辑需求表单页面显示出来，放在需求名称后面。
-2026-02-17 合同外需求列表中显示需求类型，放在需求名称后面。
-2026-02-17 extra_requirement表增加createTime和updateTime字段，字段值自动生成；表单和列表中显示创建日期，放在最后面，仅显示日期。
-2026-02-17 合同外需求列表中的创建日期放在操作前面。
-2026-02-17 合同外需求表单中的创建日期放在开发负责人后面。
-2026-02-17 增加constructing_project_modifyRecord表，字段包括recordId、modifyUser、modifyDate、modifyAction、modifyDescription、projectId，仅生成数据库迁移文件。
-2026-02-17 在建项目发生指定修改行为时自动生成修改记录，显示于修改记录页签。
-2026-02-18 修改记录的每项modifyAction描述需体现修改人、修改前值、修改后值，并按不同modifyAction输出合理描述。
-128→2026-03-06 打包后端
-129→2026-03-06 关闭后端Debug日志配置（JPA show-sql=false, logging level=INFO）以提升响应速度
-130→2026-03-06 进一步关闭 Hibernate SQL 日志 (org.hibernate.SQL=INFO) 以消除控制台刷屏
-131→2026-03-06 打包后端
-2026-02-18 排查并修复 ProjectDetail.vue 第2行报错。
-2026-02-18 修改记录页签增加筛选功能：按修改日期范围、修改行为、修改人筛选，条件为并集。
-2026-02-18 修改记录筛选区域增加重置按钮，重置筛选条件。
-2026-02-18 修改记录多条件筛选改为并且关系。
-2026-03-09 增加constructing_project_participants表，字段包括Id、projectId（constructing_project表外键）、userId（user表外键）；增加afterservice_project_participants表，字段包括Id、projectId（afterservice_project表外键）、userId（user表外键）；只生成数据库迁移文件，不要做其他操作
-2026-03-10 在建项目的项目参与人，具有查看本项目的权限，没有编辑、删除本项目的权限。
-2026-03-10 项目编号为MS-20260212235035的项目，项目参与人中有“tianliang”，但登录tianliang的账户看不到这个项目。
-2026-03-10 tianliang可以看到该项目了。编辑后报错或删除项目时，会提示失败，这个应该是上面你改权限后的正常现象吧。请给一个提示“您没有编辑项目的权限”或“您没有删除项目的权限”，而不是提示失败。
-2026-03-10 项目参与人编辑项目报错失败，开发者工具报错。项目负责任人编辑保存正常。
-2026-03-10 在建项目的合同内建设内容中，项目参与人只能修改或删除负责人是自己的步骤或里程碑字段（负责人字段不能修改删除）。
-2026-03-10 合同内建设内容的交付物，项目参与人能够查看所有交付物，但不能删除其他人上传的交付物，只能删除自己上传的；所有步骤和里程碑都允许项目参与人上传交付物。
-2026-03-10 销售负责人也能够查看所有交付物，但不能删除其他人上传的交付物，只能删除自己上传的；所有步骤和里程碑都允许上传交付物。
+2026-03-11 除了migration_history表以外，给其他表都增加createUser和updateUser字段，都为user表的外键。创建数据或修改数据时自动生成。

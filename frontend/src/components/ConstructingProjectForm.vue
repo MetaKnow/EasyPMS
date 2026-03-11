@@ -904,12 +904,21 @@ export default {
         
         const method = this.isEdit ? 'put' : 'post'
         let response
+        let operatorUserId = null
+        try {
+          const raw = sessionStorage.getItem('userInfo')
+          const userInfo = raw ? JSON.parse(raw) : null
+          if (userInfo && userInfo.userId != null) {
+            operatorUserId = Number(userInfo.userId)
+          }
+        } catch (_) {}
         if (this.isEdit) {
-          const operatorUserId = projectData.modifyUser != null ? Number(projectData.modifyUser) : null
+          operatorUserId = projectData.modifyUser != null ? Number(projectData.modifyUser) : operatorUserId
           const config = operatorUserId != null ? { params: { operatorUserId } } : {}
           response = await axios[method](url, projectData, config)
         } else {
-          response = await axios[method](url, projectData)
+          const config = operatorUserId != null ? { params: { operatorUserId } } : {}
+          response = await axios[method](url, projectData, config)
         }
         
         if (response.data.success) {

@@ -26,7 +26,19 @@ public class Organ {
     
     @Column(name = "path", length = 500)
     private String path;
-    
+
+    /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
     /**
      * 默认构造函数
      */
@@ -108,7 +120,23 @@ public class Organ {
     public void setPath(String path) {
         this.path = path;
     }
-    
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
+    }
+
     @Override
     public String toString() {
         return "Organ{" +

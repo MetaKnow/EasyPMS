@@ -3,10 +3,12 @@ package com.missoft.pms.repository;
 import com.missoft.pms.entity.ConstructingProject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -180,4 +182,9 @@ public interface ConstructingProjectRepository extends JpaRepository<Constructin
      * @return 项目数量
      */
     long countByProjectState(String projectState);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE constructing_project SET createUser = COALESCE(createUser, :operatorUserId), updateUser = :operatorUserId WHERE projectId = :projectId", nativeQuery = true)
+    void updateAuditUser(@Param("projectId") Long projectId, @Param("operatorUserId") Long operatorUserId);
 }

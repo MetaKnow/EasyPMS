@@ -1,6 +1,9 @@
 package com.missoft.pms.service;
 
 import com.missoft.pms.entity.ExtraRequirement;
+import com.missoft.pms.entity.ConstructingProject;
+import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
+import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ExtraRequirementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,22 +32,26 @@ public class ExtraRequirementService {
     private ConstructingProjectModifyRecordService modifyRecordService;
 
     @Autowired
-    private com.missoft.pms.repository.ConstructingProjectRepository constructingProjectRepository;
+    private ConstructingProjectRepository constructingProjectRepository;
+
+    @Autowired
+    private ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
 
     /**
      * 函数级注释：创建合同外需求条目
      * @param payload ExtraRequirement 数据
      * @return 保存后的实体
      */
-    public ExtraRequirement create(ExtraRequirement payload) {
+    public ExtraRequirement create(ExtraRequirement payload, Long operatorUserId) {
         if (payload == null || payload.getProjectId() == null) {
             throw new IllegalArgumentException("projectId 不能为空");
         }
         if (payload.getRequirementName() == null || payload.getRequirementName().trim().isEmpty()) {
             throw new IllegalArgumentException("需求名称不能为空");
         }
+        Long modifyUser = resolveOperatorUserId(operatorUserId, payload.getModifyUser());
+        assertCanCreate(payload.getProjectId(), modifyUser);
         validateRequirementType(payload.getRequirementType());
-        // 处理 isPay/payAmount 的基本一致性：不付费时金额置空
         Boolean isPay = payload.getIsPay() != null ? payload.getIsPay() : Boolean.FALSE;
         if (!isPay) {
             payload.setPayAmount(null);
@@ -54,8 +61,11 @@ public class ExtraRequirementService {
                 throw new IllegalArgumentException("付费金额不能为负数");
             }
         }
+        if (modifyUser != null) {
+            payload.setCreateUser(modifyUser);
+            payload.setUpdateUser(modifyUser);
+        }
         ExtraRequirement saved = extraRequirementRepository.save(payload);
-        Long modifyUser = resolveModifyUser(payload.getProjectId(), payload.getModifyUser(), payload.getDeveloper());
         if (modifyUser != null) {
             String beforeText = "无";
             String afterText = "需求ID=" + formatValue(saved.getRequirementId())
@@ -66,21 +76,33 @@ public class ExtraRequirementService {
         return saved;
     }
 
+    public ExtraRequirement create(ExtraRequirement payload) {
+        return create(payload, null);
+    }
+
     /**
      * 函数级注释：按项目查询合同外需求列表
      * @param projectId 项目ID
      * @return 列表
      */
     @Transactional(readOnly = true)
-    public List<ExtraRequirement> listByProjectId(Long projectId) {
+    public List<ExtraRequirement> listByProjectId(Long projectId, Long operatorUserId) {
         if (projectId == null) return List.of();
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
         List<ExtraRequirement> list = extraRequirementRepository.findByProjectId(projectId);
         for (ExtraRequirement r : list) {
             if (r != null && r.getRequirementId() != null) {
                 r.setHasFiles(extraRequirementDeliverableFileService.hasFiles(r.getRequirementId()));
+                r.setCanEdit(canEditRequirement(project, r, operatorUserId));
+                r.setCanDelete(canDeleteRequirement(project, r, operatorUserId));
             }
         }
         return list;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExtraRequirement> listByProjectId(Long projectId) {
+        return listByProjectId(projectId, null);
     }
 
     /**
@@ -89,9 +111,11 @@ public class ExtraRequirementService {
      * @param payload 更新数据
      * @return 更新后的实体
      */
-    public ExtraRequirement update(Long id, ExtraRequirement payload) {
+    public ExtraRequirement update(Long id, ExtraRequirement payload, Long operatorUserId) {
         ExtraRequirement existing = extraRequirementRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("未找到指定的合同外需求"));
+        Long modifyUser = resolveOperatorUserId(operatorUserId, payload == null ? null : payload.getModifyUser());
+        assertCanUpdate(existing, modifyUser);
 
         String oldRequirementName = existing.getRequirementName();
         String oldRequirementType = existing.getRequirementType();
@@ -135,8 +159,10 @@ public class ExtraRequirementService {
         if (payload.getWorkload() != null) existing.setWorkload(payload.getWorkload());
         if (payload.getDeveloper() != null) existing.setDeveloper(payload.getDeveloper());
         
+        if (modifyUser != null) {
+            existing.setUpdateUser(modifyUser);
+        }
         ExtraRequirement saved = extraRequirementRepository.save(existing);
-        Long modifyUser = resolveModifyUser(saved.getProjectId(), payload.getModifyUser(), payload.getDeveloper());
         if (modifyUser != null) {
             String beforeText = buildRequirementBeforeText(oldRequirementName, oldRequirementType, oldIsPay, oldPayAmount,
                     oldIsDeliver, oldIsComplete, oldIsProductization, oldWorkload, oldDeveloper);
@@ -144,6 +170,10 @@ public class ExtraRequirementService {
             modifyRecordService.createRecord(saved.getProjectId(), modifyUser, "修改合同外需求", beforeText, afterText);
         }
         return saved;
+    }
+
+    public ExtraRequirement update(Long id, ExtraRequirement payload) {
+        return update(id, payload, null);
     }
 
     private void validateRequirementType(String requirementType) {
@@ -159,24 +189,95 @@ public class ExtraRequirementService {
      * 函数级注释：删除合同外需求条目并清理附件
      * @param id 需求ID
      */
-    public void delete(Long id) {
+    public void delete(Long id, Long operatorUserId) {
         if (id == null) {
             throw new IllegalArgumentException("需求ID不能为空");
         }
         ExtraRequirement existing = extraRequirementRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("未找到指定的合同外需求"));
+        assertCanDelete(existing, operatorUserId);
         extraRequirementDeliverableFileService.deleteFilesByRequirementId(id);
         extraRequirementRepository.delete(existing);
     }
 
-    private Long resolveModifyUser(Long projectId, Long preferUserId, Long fallbackUserId) {
-        if (preferUserId != null) return preferUserId;
-        if (fallbackUserId != null) return fallbackUserId;
-        if (projectId == null) return null;
-        var project = constructingProjectRepository.findById(projectId).orElse(null);
-        if (project != null && project.getProjectLeader() != null) return project.getProjectLeader();
-        if (project != null) return project.getSaleLeader();
-        return null;
+    public void delete(Long id) {
+        delete(id, null);
+    }
+
+    private Long resolveOperatorUserId(Long operatorUserId, Long payloadModifyUser) {
+        if (operatorUserId != null) return operatorUserId;
+        return payloadModifyUser;
+    }
+
+    private void assertCanCreate(Long projectId, Long operatorUserId) {
+        if (projectId == null || operatorUserId == null) return;
+        ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
+        if (project == null) return;
+        if (isProjectManager(project, operatorUserId)) return;
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, operatorUserId);
+        if (isParticipant) return;
+        throw new IllegalArgumentException("您没有新增合同外需求的权限");
+    }
+
+    private void assertCanUpdate(ExtraRequirement requirement, Long operatorUserId) {
+        if (requirement == null || requirement.getProjectId() == null || operatorUserId == null) return;
+        ConstructingProject project = constructingProjectRepository.findById(requirement.getProjectId()).orElse(null);
+        if (project != null && isProjectManager(project, operatorUserId)) return;
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
+        if (!isParticipant) {
+            throw new IllegalArgumentException("您没有编辑合同外需求的权限");
+        }
+        if (isCreator(requirement, operatorUserId)) return;
+        if (isDeveloper(requirement, operatorUserId)) return;
+        throw new IllegalArgumentException("您没有编辑合同外需求的权限");
+    }
+
+    private void assertCanDelete(ExtraRequirement requirement, Long operatorUserId) {
+        if (requirement == null || requirement.getProjectId() == null || operatorUserId == null) return;
+        ConstructingProject project = constructingProjectRepository.findById(requirement.getProjectId()).orElse(null);
+        if (project != null && isProjectManager(project, operatorUserId)) return;
+        boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
+        if (!isParticipant) {
+            throw new IllegalArgumentException("您没有删除合同外需求的权限");
+        }
+        if (isCreator(requirement, operatorUserId)) return;
+        throw new IllegalArgumentException("您没有删除合同外需求的权限");
+    }
+
+    private boolean canEditRequirement(ConstructingProject project, ExtraRequirement requirement, Long operatorUserId) {
+        if (operatorUserId == null) return true;
+        if (project != null && isProjectManager(project, operatorUserId)) return true;
+        boolean isParticipant = requirement != null
+                && requirement.getProjectId() != null
+                && constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
+        if (!isParticipant) return false;
+        return isCreator(requirement, operatorUserId) || isDeveloper(requirement, operatorUserId);
+    }
+
+    private boolean canDeleteRequirement(ConstructingProject project, ExtraRequirement requirement, Long operatorUserId) {
+        if (operatorUserId == null) return true;
+        if (project != null && isProjectManager(project, operatorUserId)) return true;
+        boolean isParticipant = requirement != null
+                && requirement.getProjectId() != null
+                && constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
+        if (!isParticipant) return false;
+        return isCreator(requirement, operatorUserId);
+    }
+
+    private boolean isProjectManager(ConstructingProject project, Long userId) {
+        if (project == null || userId == null) return false;
+        return java.util.Objects.equals(project.getProjectLeader(), userId)
+                || java.util.Objects.equals(project.getSaleLeader(), userId);
+    }
+
+    private boolean isCreator(ExtraRequirement requirement, Long userId) {
+        if (requirement == null || userId == null) return false;
+        return java.util.Objects.equals(requirement.getCreateUser(), userId);
+    }
+
+    private boolean isDeveloper(ExtraRequirement requirement, Long userId) {
+        if (requirement == null || userId == null) return false;
+        return java.util.Objects.equals(requirement.getDeveloper(), userId);
     }
 
     private String buildRequirementBeforeText(String oldRequirementName,

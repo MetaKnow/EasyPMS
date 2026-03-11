@@ -18,10 +18,20 @@ const request = axios.create({
  */
 request.interceptors.request.use(
   config => {
-    // 添加token到请求头
     const token = sessionStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    const userInfoRaw = sessionStorage.getItem('userInfo')
+    if (userInfoRaw) {
+      try {
+        const userInfo = JSON.parse(userInfoRaw)
+        if (userInfo && userInfo.userId != null) {
+          config.headers['X-User-Id'] = String(userInfo.userId)
+        }
+      } catch (e) {
+        console.error('解析userInfo失败:', e)
+      }
     }
     return config
   },

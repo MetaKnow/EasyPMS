@@ -75,6 +75,18 @@ public class StandardDeliverable {
     private LocalDateTime updateTime;
 
     /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
+    /**
      * 默认构造函数
      */
     public StandardDeliverable() {
@@ -273,8 +285,24 @@ public class StandardDeliverable {
         this.updateTime = updateTime;
     }
 
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
+    }
+
     /**
-     * 在持久化之前设置创建时间和更新时间
+     * 默认构造函数
      */
     @PrePersist
     protected void onCreate() {

@@ -45,7 +45,7 @@ const routes = [
         path: 'customers',
         name: 'CustomerManagement',
         component: CustomerManagement,
-        meta: { title: '客户管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', 'sales', '销售总监', '销售总监角色'] }
+        meta: { title: '客户管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
       },
       {
         path: 'construction',
@@ -75,43 +75,43 @@ const routes = [
         path: 'system/organization',
         name: 'OrganizationManagement',
         component: OrganizationUserManagement,
-        meta: { title: '机构用户管理', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '机构用户管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/roles',
         name: 'RoleManagement',
         component: RoleManagement,
-        meta: { title: '角色管理', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '角色管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/milestones',
         name: 'StandardMilestoneManagement',
         component: StandardMilestoneManagement,
-        meta: { title: '标准里程碑', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '标准里程碑', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/steps',
         name: 'StandardConstructStepManagement',
         component: StandardConstructStepManagement,
-        meta: { title: '标准交付步骤', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '标准交付步骤', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/deliverables',
         name: 'StandardDeliverableManagement',
         component: StandardDeliverableManagement,
-        meta: { title: '标准交付物', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '标准交付物', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/products',
         name: 'BaseProductManagement',
         component: ProductManagement,
-        meta: { title: '基础产品维护', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
+        meta: { title: '基础产品维护', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin'] }
       },
       {
         path: 'system/partners',
         name: 'ChannelDistributorManagement',
         component: ChannelDistributorManagement,
-        meta: { title: '渠道管理', roles: ['管理员', '公司领导', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
+        meta: { title: '渠道管理', roles: ['管理员', '公司领导', '公司领导角色', '超级管理员', 'admin', 'leader', 'super admin', 'superadmin', '销售', '销售角色', 'sales', '销售总监', '销售总监角色'] }
       },
       {
         path: 'system/backup',
@@ -178,7 +178,7 @@ router.beforeEach((to, from, next) => {
     }
   } else {
     const lower = roleName ? roleName.toLowerCase() : ''
-    const isPrivileged = (roleName === '管理员' || roleName === '公司领导' || roleName === '超级管理员' || roleName === '销售总监' || roleName === '项目总监' || lower === 'admin' || lower === 'leader' || lower === 'super admin' || lower === 'superadmin' || lower === 'sales director' || lower === 'project director')
+    const isPrivileged = (roleName === '管理员' || roleName === '公司领导' || roleName === '公司领导角色' || roleName === '超级管理员' || roleName === '销售总监' || roleName === '销售总监角色' || roleName === '项目总监' || roleName === '项目总监角色' || lower === 'admin' || lower === 'leader' || lower === 'super admin' || lower === 'superadmin' || lower === 'sales director' || lower === 'project director')
     if (!isPrivileged) {
       const path = to.path || ''
       const ok = (

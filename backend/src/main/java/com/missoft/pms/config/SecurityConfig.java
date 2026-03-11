@@ -101,11 +101,14 @@ public class SecurityConfig {
                 // 允许访问项目-标准步骤关系编辑接口（临时开放）
                 .requestMatchers("/api/project-relations/**").permitAll()
                 // 允许访问运维项目管理接口（临时开放）
-                .requestMatchers("/api/afterservice-projects/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/afterservice-projects", "/api/afterservice-projects/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/afterservice-projects", "/api/afterservice-projects/**").permitAll()
+                .requestMatchers(HttpMethod.PUT, "/api/afterservice-projects/**").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/afterservice-projects/**").permitAll()
                 // 允许访问运维事件接口（临时开放，后续可加认证）
-                .requestMatchers("/api/afterservice-events/**").permitAll()
+                .requestMatchers("/api/afterservice-events", "/api/afterservice-events/**").permitAll()
                 // 允许访问运维销售线索接口（临时开放）
-                .requestMatchers("/api/afterservice-leads/**").permitAll()
+                .requestMatchers("/api/afterservice-leads", "/api/afterservice-leads/**").permitAll()
                 .requestMatchers("/api/afterservice-lead-files/**").permitAll()
                 // 允许访问运维事件附件上传/下载/预览接口（临时开放）
                 .requestMatchers("/api/afterservice-deliverable-files/**").permitAll()

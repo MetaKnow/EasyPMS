@@ -637,15 +637,17 @@
                               d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z" />
                           </svg>
                         </button>
-                        <button class="icon-btn" title="编辑" @click="editExtra(r)" :disabled="isProjectCompleted"
-                          :class="{ disabled: isProjectCompleted }">
+                        <button class="icon-btn" title="编辑" @click="editExtra(r)"
+                          :disabled="isProjectCompleted || !canEditExtraRequirement(r)"
+                          :class="{ disabled: isProjectCompleted || !canEditExtraRequirement(r) }">
                           <svg viewBox="0 0 24 24">
                             <path
                               d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                           </svg>
                         </button>
-                        <button class="icon-btn" title="删除" @click="deleteExtra(r)" :disabled="isProjectCompleted"
-                          :class="{ disabled: isProjectCompleted }">
+                        <button class="icon-btn" title="删除" @click="deleteExtra(r)"
+                          :disabled="isProjectCompleted || !canDeleteExtraRequirement(r)"
+                          :class="{ disabled: isProjectCompleted || !canDeleteExtraRequirement(r) }">
                           <svg viewBox="0 0 24 24">
                             <path d="M6 7h12v2H6V7zm2 4h8v8H8v-8zM9 4h6v2H9V4z" />
                           </svg>
@@ -3057,6 +3059,23 @@ export default {
       if (this.project && Number(this.project.projectLeader) === Number(this.currentUserId)) return true
       return Number(file?.uploaderId) === Number(this.currentUserId)
     },
+    canEditExtraRequirement(row) {
+      if (!row) return false
+      if (this.currentUserId == null) return true
+      if (this.isCurrentUserProjectManager()) return true
+      if (typeof row?.canEdit === 'boolean') return row.canEdit
+      if (row?.createUser != null && Number(row.createUser) === Number(this.currentUserId)) return true
+      if (row?.developer != null && Number(row.developer) === Number(this.currentUserId)) return true
+      return false
+    },
+    canDeleteExtraRequirement(row) {
+      if (!row) return false
+      if (this.currentUserId == null) return true
+      if (this.isCurrentUserProjectManager()) return true
+      if (typeof row?.canDelete === 'boolean') return row.canDelete
+      if (row?.createUser != null && Number(row.createUser) === Number(this.currentUserId)) return true
+      return false
+    },
     startEdit(step, field) {
       if (this.isProjectCompleted) {
         this.showError('已完成项目不能修改步骤字段');
@@ -3748,7 +3767,7 @@ export default {
     async loadExtraRequirements() {
       if (!this.project || !this.project.projectId) return
       try {
-        const resp = await listExtraRequirementsByProject(this.project.projectId)
+        const resp = await listExtraRequirementsByProject(this.project.projectId, this.currentUserId ?? null)
         const list = Array.isArray(resp?.data) ? resp.data : (resp?.data?.extraRequirements || resp || [])
         this.extraRequirements = Array.isArray(list) ? list.map(r => ({ ...r })) : []
         await this.refreshExtraHasFiles()
@@ -5069,6 +5088,10 @@ export default {
      * @param {Object} row 
      */
     editExtra(row) {
+      if (!this.canEditExtraRequirement(row)) {
+        this.showError('您没有编辑合同外需求的权限')
+        return
+      }
       this.openExtraDialog('edit', row)
     },
     /**
@@ -5079,10 +5102,13 @@ export default {
       if (this.isProjectCompleted) {
         return this.showError('已完成项目不能删除合同外需求')
       }
+      if (!this.canDeleteExtraRequirement(row)) {
+        return this.showError('您没有删除合同外需求的权限')
+      }
       const ok = this.$confirm ? await this.$confirm('确认删除该合同外需求及其附件？') : window.confirm('确认删除该合同外需求及其附件？')
       if (!ok) return
       try {
-        await deleteExtraRequirement(row.requirementId)
+        await deleteExtraRequirement(row.requirementId, this.currentUserId ?? null)
         this.$message && this.$message.success('合同外需求已删除')
         await this.loadExtraRequirements()
       } catch (e) {
@@ -5153,9 +5179,9 @@ export default {
       try {
         let resp
         if (this.extraDialogMode === 'edit') {
-          resp = await updateExtraRequirement(this.extraForm.requirementId, payload)
+          resp = await updateExtraRequirement(this.extraForm.requirementId, payload, this.currentUserId ?? null)
         } else {
-          resp = await createExtraRequirement(payload)
+          resp = await createExtraRequirement(payload, this.currentUserId ?? null)
         }
 
         if (resp?.data?.success) {

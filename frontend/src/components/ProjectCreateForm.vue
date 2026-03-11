@@ -759,7 +759,16 @@ export default {
         }
         
         const API_BASE = __BACKEND_API_URL__ + '/api'
-        const response = await axios.post(`${API_BASE}/constructing-projects`, projectData)
+        let operatorUserId = null
+        try {
+          const raw = sessionStorage.getItem('userInfo')
+          const userInfo = raw ? JSON.parse(raw) : null
+          if (userInfo && userInfo.userId != null) {
+            operatorUserId = Number(userInfo.userId)
+          }
+        } catch (_) {}
+        const config = operatorUserId != null ? { params: { operatorUserId } } : {}
+        const response = await axios.post(`${API_BASE}/constructing-projects`, projectData, config)
         
         if (response.data.success) {
           this.$emit('success', response.data.data)

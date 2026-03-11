@@ -55,6 +55,18 @@ public class AfterServiceEvent {
     @Column(name = "updateTime")
     private LocalDateTime updateTime;
 
+    /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
     public Long getEventId() {
         return eventId;
     }
@@ -149,6 +161,22 @@ public class AfterServiceEvent {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
     }
 }
 

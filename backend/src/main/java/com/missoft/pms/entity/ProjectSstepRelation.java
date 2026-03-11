@@ -57,6 +57,18 @@ public class ProjectSstepRelation {
     private LocalDateTime updateTime;
 
     /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
+    /**
      * 关联的接口ID（当步骤类型为“接口开发”时用于区分具体接口）
      */
     @Column(name = "interfaceId")
@@ -133,6 +145,22 @@ public class ProjectSstepRelation {
 
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
+    }
 
     /**
      * 获取关联的接口ID

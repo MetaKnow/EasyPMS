@@ -1,5 +1,6 @@
 package com.missoft.pms.service;
 
+import com.missoft.pms.config.UserContextHolder;
 import com.missoft.pms.dto.ConstructingProjectDTO;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.repository.ConstructingProjectRepository;
@@ -213,6 +214,12 @@ public class ConstructingProjectService {
         // 计算未回款金额
         calculateUnreceiveMoney(constructingProject);
 
+        // 设置创建人和更新人
+        if (constructingProject.getModifyUser() != null) {
+            constructingProject.setCreateUser(constructingProject.getModifyUser());
+            constructingProject.setUpdateUser(constructingProject.getModifyUser());
+        }
+
         // 保存项目后优先生成项目里程碑（函数级注释：确保随后生成的步骤关系可正确回填 milestoneId）
         ConstructingProject saved = constructingProjectRepository.save(constructingProject);
         
@@ -354,9 +361,15 @@ public class ConstructingProjectService {
         // 计算未回款金额
         calculateUnreceiveMoney(existingProject);
 
+        // 设置更新人
+        Long updateUserId = resolveOperatorUserId(operatorUserId);
+        if (updateUserId != null) {
+            existingProject.setUpdateUser(updateUserId);
+        }
+
         // 保存更新
         ConstructingProject saved = constructingProjectRepository.save(existingProject);
-
+        
         // 更新项目参与人员
         if (constructingProject.getParticipantIds() != null) {
             constructingProjectParticipantRepository.deleteByProjectId(saved.getProjectId());
@@ -903,6 +916,13 @@ public class ConstructingProjectService {
             return existing.getSaleLeader();
         }
         return null;
+    }
+
+    private Long resolveOperatorUserId(Long preferUserId) {
+        if (preferUserId != null) {
+            return preferUserId;
+        }
+        return UserContextHolder.getCurrentUserId();
     }
 
     private void assertParticipantReadOnly(ConstructingProject project, Long operatorUserId) {

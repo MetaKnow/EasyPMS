@@ -42,6 +42,12 @@ public class ExtraRequirement {
     @Column(name = "developer")
     private Long developer;
 
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    @Column(name = "updateUser")
+    private Long updateUser;
+
     @Column(name = "createTime", updatable = false)
     private LocalDateTime createTime;
 
@@ -53,6 +59,12 @@ public class ExtraRequirement {
 
     @Transient
     private Boolean hasFiles;
+
+    @Transient
+    private Boolean canEdit;
+
+    @Transient
+    private Boolean canDelete;
 
     public Long getRequirementId() { return requirementId; }
 
@@ -98,6 +110,14 @@ public class ExtraRequirement {
 
     public void setDeveloper(Long developer) { this.developer = developer; }
 
+    public Long getCreateUser() { return createUser; }
+
+    public void setCreateUser(Long createUser) { this.createUser = createUser; }
+
+    public Long getUpdateUser() { return updateUser; }
+
+    public void setUpdateUser(Long updateUser) { this.updateUser = updateUser; }
+
     public LocalDateTime getCreateTime() { return createTime; }
 
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
@@ -112,6 +132,12 @@ public class ExtraRequirement {
 
     public Boolean getHasFiles() { return hasFiles; }
     public void setHasFiles(Boolean hasFiles) { this.hasFiles = hasFiles; }
+
+    public Boolean getCanEdit() { return canEdit; }
+    public void setCanEdit(Boolean canEdit) { this.canEdit = canEdit; }
+
+    public Boolean getCanDelete() { return canDelete; }
+    public void setCanDelete(Boolean canDelete) { this.canDelete = canDelete; }
 
     @PrePersist
     protected void onCreate() {

@@ -11,6 +11,7 @@ import com.missoft.pms.entity.ConstructMilestone;
 import com.missoft.pms.entity.AfterServiceProjectParticipant;
 import com.missoft.pms.repository.*;
 import com.missoft.pms.service.AfterServiceEventService;
+import com.missoft.pms.config.UserContextHolder;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,6 +158,12 @@ public class AfterServiceProjectService {
 
         asp.setProjectNum(generateUniqueProjectNum());
         asp.setTotalHours(null);
+        
+        Long currentUserId = UserContextHolder.getCurrentUserId();
+        if (currentUserId != null) {
+            asp.setCreateUser(currentUserId);
+            asp.setUpdateUser(currentUserId);
+        }
 
         afterServiceProjectRepository.save(asp);
 
@@ -174,6 +181,13 @@ public class AfterServiceProjectService {
         AfterServiceProject project = new AfterServiceProject();
         BeanUtils.copyProperties(dto, project);
         project.setProjectId(null); // Ensure new
+        
+        Long currentUserId = UserContextHolder.getCurrentUserId();
+        if (currentUserId != null) {
+            project.setCreateUser(currentUserId);
+            project.setUpdateUser(currentUserId);
+        }
+
         // 保持总工时为系统统计值，创建时不接受前端传入的 totalHours
         project.setTotalHours(null);
         // 项目编号：如果前端已传入编号则优先使用（需校验唯一），否则生成新的唯一编号
@@ -200,8 +214,14 @@ public class AfterServiceProjectService {
         
         // 保持项目编号只读，不允许更新
         // 总工时由系统统计，忽略前端传入的 totalHours
-        BeanUtils.copyProperties(dto, project, "projectId", "createTime", "updateTime", "projectNum", "totalHours");
+        // 忽略createUser字段，防止被覆盖
+        BeanUtils.copyProperties(dto, project, "projectId", "createTime", "updateTime", "projectNum", "totalHours", "createUser");
         project.setProjectId(id);
+        
+        Long currentUserId = UserContextHolder.getCurrentUserId();
+        if (currentUserId != null) {
+            project.setUpdateUser(currentUserId);
+        }
         
         AfterServiceProject saved = afterServiceProjectRepository.save(project);
         replaceProjectParticipants(saved.getProjectId(), dto.getParticipantIds());
@@ -332,11 +352,20 @@ public class AfterServiceProjectService {
 
     private void saveProjectParticipants(Long projectId, List<Long> participantIds) {
         if (projectId == null || participantIds == null || participantIds.isEmpty()) return;
+        
+        Long currentUserId = UserContextHolder.getCurrentUserId();
+        
         for (Long userId : participantIds) {
             if (userId == null) continue;
             AfterServiceProjectParticipant participant = new AfterServiceProjectParticipant();
             participant.setProjectId(projectId);
             participant.setUserId(userId);
+            
+            if (currentUserId != null) {
+                participant.setCreateUser(currentUserId);
+                participant.setUpdateUser(currentUserId);
+            }
+            
             afterServiceProjectParticipantRepository.save(participant);
         }
     }

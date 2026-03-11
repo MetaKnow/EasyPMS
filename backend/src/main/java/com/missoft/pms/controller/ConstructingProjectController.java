@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
@@ -127,8 +128,15 @@ public class ConstructingProjectController {
      * @return 创建结果
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createConstructingProject(@Valid @RequestBody ConstructingProject constructingProject) {
+    public ResponseEntity<Map<String, Object>> createConstructingProject(
+            @RequestParam(required = false) Long operatorUserId,
+            @Valid @RequestBody ConstructingProject constructingProject,
+            HttpServletRequest request) {
         try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            if (resolvedOperatorUserId != null) {
+                constructingProject.setModifyUser(resolvedOperatorUserId);
+            }
             ConstructingProject savedProject = constructingProjectService.createConstructingProject(constructingProject);
             
             Map<String, Object> response = new HashMap<>();
@@ -163,9 +171,14 @@ public class ConstructingProjectController {
     public ResponseEntity<Map<String, Object>> updateConstructingProject(
             @PathVariable Long projectId, 
             @RequestParam(required = false) Long operatorUserId,
-            @Valid @RequestBody ConstructingProject constructingProject) {
+            @Valid @RequestBody ConstructingProject constructingProject,
+            HttpServletRequest request) {
         try {
-            ConstructingProject updatedProject = constructingProjectService.updateConstructingProject(projectId, constructingProject, operatorUserId);
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            if (resolvedOperatorUserId != null) {
+                constructingProject.setModifyUser(resolvedOperatorUserId);
+            }
+            ConstructingProject updatedProject = constructingProjectService.updateConstructingProject(projectId, constructingProject, resolvedOperatorUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -202,9 +215,11 @@ public class ConstructingProjectController {
      */
     @DeleteMapping("/{projectId}")
     public ResponseEntity<Map<String, Object>> deleteConstructingProject(@PathVariable Long projectId,
-                                                                         @RequestParam(required = false) Long operatorUserId) {
+                                                                         @RequestParam(required = false) Long operatorUserId,
+                                                                         HttpServletRequest request) {
         try {
-            constructingProjectService.deleteConstructingProject(projectId, operatorUserId);
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            constructingProjectService.deleteConstructingProject(projectId, resolvedOperatorUserId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -352,6 +367,41 @@ public class ConstructingProjectController {
             errorResponse.put("message", "统计失败");
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    private Long resolveOperatorUserId(Long operatorUserId, HttpServletRequest request) {
+        if (operatorUserId != null) {
+            return operatorUserId;
+        }
+        Long fromHeader = parseLong(request.getHeader("X-User-Id"));
+        if (fromHeader != null) {
+            return fromHeader;
+        }
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && !authorization.isBlank()) {
+            String token = authorization.trim();
+            if (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                token = token.substring(7).trim();
+            }
+            if (token.startsWith("simple_token_")) {
+                String[] parts = token.split("_");
+                if (parts.length >= 3) {
+                    return parseLong(parts[2]);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 }

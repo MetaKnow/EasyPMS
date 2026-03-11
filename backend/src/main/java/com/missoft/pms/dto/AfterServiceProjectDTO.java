@@ -29,6 +29,8 @@ public class AfterServiceProjectDTO {
     private BigDecimal totalHours;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private Long createUser;
+    private Long updateUser;
 
     public Long getProjectId() {
         return projectId;
@@ -188,5 +190,21 @@ public class AfterServiceProjectDTO {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
     }
 }

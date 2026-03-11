@@ -242,14 +242,21 @@ public class DatabaseMigrationManager {
             connection.setAutoCommit(false);
             
             try (Statement statement = connection.createStatement()) {
-                // 智能分割SQL语句
                 List<String> sqlStatements = splitSqlStatements(scriptContent);
                 
                 for (String sql : sqlStatements) {
                     sql = sql.trim();
                     if (!sql.isEmpty() && !sql.startsWith("--") && !sql.toUpperCase().startsWith("USE")) {
                         System.out.println("🔄 执行SQL: " + sql.substring(0, Math.min(sql.length(), 50)) + "...");
-                        statement.execute(sql);
+                        try {
+                            statement.execute(sql);
+                        } catch (SQLException sqlException) {
+                            if (isIgnorableSqlError(sqlException)) {
+                                System.out.println("⚠️  SQL已存在，跳过: " + sqlException.getMessage());
+                                continue;
+                            }
+                            throw sqlException;
+                        }
                     }
                 }
                 
@@ -259,6 +266,11 @@ public class DatabaseMigrationManager {
                 throw e;
             }
         }
+    }
+
+    private boolean isIgnorableSqlError(SQLException exception) {
+        int errorCode = exception.getErrorCode();
+        return errorCode == 1060 || errorCode == 1061 || errorCode == 1826 || errorCode == 1359;
     }
     
     /**

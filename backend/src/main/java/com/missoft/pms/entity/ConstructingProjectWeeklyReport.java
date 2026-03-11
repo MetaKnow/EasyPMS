@@ -41,6 +41,18 @@ public class ConstructingProjectWeeklyReport {
     @Column(name = "updateTime")
     private LocalDateTime updateTime;
 
+    /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
     @Transient
     private Boolean hasFiles;
 
@@ -129,6 +141,22 @@ public class ConstructingProjectWeeklyReport {
      * 函数级注释：设置更新时间
      */
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
+    }
 
     /**
      * 函数级注释：获取是否存在附件

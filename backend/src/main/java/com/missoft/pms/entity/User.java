@@ -44,6 +44,18 @@ public class User {
     private LocalDateTime updateTime;
     
     /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
+    /**
      * 默认构造函数
      */
     public User() {}
@@ -214,6 +226,38 @@ public class User {
      */
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    /**
+     * 获取创建人ID
+     * @return 创建人ID
+     */
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    /**
+     * 设置创建人ID
+     * @param createUser 创建人ID
+     */
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    /**
+     * 获取更新人ID
+     * @return 更新人ID
+     */
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    /**
+     * 设置更新人ID
+     * @param updateUser 更新人ID
+     */
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
     }
 
     @PrePersist

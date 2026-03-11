@@ -10,10 +10,11 @@ import request from './request'
  * @param {Object} data 包含 `projectId`, `requirementName`, 以及其它可选字段
  * @returns {Promise} 响应数据
  */
-export function createExtraRequirement(data) {
+export function createExtraRequirement(data, operatorUserId) {
   return request({
     url: '/api/extra-requirements',
     method: 'post',
+    params: operatorUserId != null ? { operatorUserId } : {},
     data
   })
 }
@@ -23,10 +24,11 @@ export function createExtraRequirement(data) {
  * @param {number} projectId 项目ID
  * @returns {Promise} 响应数据
  */
-export function listExtraRequirementsByProject(projectId) {
+export function listExtraRequirementsByProject(projectId, operatorUserId) {
   return request({
     url: `/api/extra-requirements/by-project/${projectId}`,
-    method: 'get'
+    method: 'get',
+    params: operatorUserId != null ? { operatorUserId } : {}
   })
 }
 
@@ -36,10 +38,11 @@ export function listExtraRequirementsByProject(projectId) {
  * @param {Object} data 更新数据
  * @returns {Promise} 响应数据
  */
-export function updateExtraRequirement(id, data) {
+export function updateExtraRequirement(id, data, operatorUserId) {
   return request({
     url: `/api/extra-requirements/${id}`,
     method: 'put',
+    params: operatorUserId != null ? { operatorUserId } : {},
     data
   })
 }
@@ -49,10 +52,11 @@ export function updateExtraRequirement(id, data) {
  * @param {number} id 需求ID
  * @returns {Promise}
  */
-export function deleteExtraRequirement(id) {
+export function deleteExtraRequirement(id, operatorUserId) {
   return request({
     url: `/api/extra-requirements/${id}`,
-    method: 'delete'
+    method: 'delete',
+    params: operatorUserId != null ? { operatorUserId } : {}
   })
 }
 

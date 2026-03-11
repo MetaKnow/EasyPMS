@@ -38,6 +38,18 @@ public class PersonalDevelope {
     private Long milestoneId;
 
     /**
+     * 创建人ID
+     */
+    @Column(name = "createUser", updatable = false)
+    private Long createUser;
+
+    /**
+     * 更新人ID
+     */
+    @Column(name = "updateUser")
+    private Long updateUser;
+
+    /**
      * 函数级注释：获取主键ID
      * @return 个性化开发ID
      */
@@ -84,4 +96,20 @@ public class PersonalDevelope {
      * @param milestoneId 里程碑ID
      */
     public void setMilestoneId(Long milestoneId) { this.milestoneId = milestoneId; }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long createUser) {
+        this.createUser = createUser;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long updateUser) {
+        this.updateUser = updateUser;
+    }
 }

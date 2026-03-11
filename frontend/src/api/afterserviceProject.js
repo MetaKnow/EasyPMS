@@ -62,7 +62,7 @@ export function updateAfterserviceProject(id, data) {
  */
 export function generateAfterserviceProjectNum() {
   return request({
-    url: '/api/afterservice-projects/generate-num',
+    url: '/api/afterservice-projects/new-project-num',
     method: 'get'
   })
 }
