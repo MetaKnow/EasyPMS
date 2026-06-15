@@ -1580,6 +1580,97 @@ export default {
         return val
       }
     },
+    getCurrentUserId() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const uid = info && info.userId != null ? Number(info.userId) : null
+        return uid != null && Number.isFinite(uid) ? uid : null
+      } catch (_) {
+        return null
+      }
+    },
+    isCurrentUserAdmin() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const userName = info && info.userName ? String(info.userName).trim().toLowerCase() : ''
+        const roleName = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = roleName.toLowerCase()
+        return userName === 'admin' || roleName.includes('管理员') || roleName.includes('超级管理员') || roleLower === 'admin' || roleLower === 'super admin' || roleLower === 'superadmin'
+      } catch (_) {
+        return false
+      }
+    },
+    canModifyEvent(ev) {
+      if (!ev) return false
+      const uid = this.getCurrentUserId()
+      if (uid == null) return false
+      if (this.isCurrentUserAdmin()) return true
+      if (this.project) {
+        if (this.project.saleDirector != null && Number(this.project.saleDirector) === uid) {
+          return true
+        }
+        if (this.project.serviceDirector != null && Number(this.project.serviceDirector) === uid) {
+          return true
+        }
+        const participantIds = Array.isArray(this.project.participantIds) ? this.project.participantIds : []
+        const isParticipant = participantIds.some(id => Number(id) === uid)
+        if (isParticipant) {
+          if (ev.createUser != null) {
+            return Number(ev.createUser) === uid
+          }
+          return ev.director != null && Number(ev.director) === uid
+        }
+      }
+      return true
+    },
+    canModifyVisit(item) {
+      if (!item) return false
+      const uid = this.getCurrentUserId()
+      if (uid == null) return false
+      if (this.isCurrentUserAdmin()) return true
+      if (this.project) {
+        if (this.project.saleDirector != null && Number(this.project.saleDirector) === uid) {
+          return true
+        }
+        if (this.project.serviceDirector != null && Number(this.project.serviceDirector) === uid) {
+          return true
+        }
+        const participantIds = Array.isArray(this.project.participantIds) ? this.project.participantIds : []
+        const isParticipant = participantIds.some(id => Number(id) === uid)
+        if (isParticipant) {
+          if (item.createUser != null) {
+            return Number(item.createUser) === uid
+          }
+          return item.followUpPerson != null && Number(item.followUpPerson) === uid
+        }
+      }
+      return true
+    },
+    canModifyLead(item) {
+      if (!item) return false
+      const uid = this.getCurrentUserId()
+      if (uid == null) return false
+      if (this.isCurrentUserAdmin()) return true
+      if (this.project) {
+        if (this.project.saleDirector != null && Number(this.project.saleDirector) === uid) {
+          return true
+        }
+        if (this.project.serviceDirector != null && Number(this.project.serviceDirector) === uid) {
+          return true
+        }
+        const participantIds = Array.isArray(this.project.participantIds) ? this.project.participantIds : []
+        const isParticipant = participantIds.some(id => Number(id) === uid)
+        if (isParticipant) {
+          if (item.createUser != null) {
+            return Number(item.createUser) === uid
+          }
+          return item.leadsFinder != null && Number(item.leadsFinder) === uid
+        }
+      }
+      return true
+    },
     viewEvent(ev) {
       if (!ev) return
       this.viewEventData = ev
@@ -1680,6 +1771,10 @@ export default {
     },
     editVisit(item) {
       if (!item) return
+      if (!this.canModifyVisit(item)) {
+        alert('您没有编辑该回访记录的权限')
+        return
+      }
       this.visitEditFormError = ''
       this.visitEditSubmitting = false
       this.visitEditId = item.recordId || null
@@ -1748,20 +1843,38 @@ export default {
           this.visitEditFormError = res?.data?.message || '更新失败'
         }
       } catch (e) {
-        this.visitEditFormError = e?.response?.data?.message || e?.message || '更新失败'
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有编辑该回访记录的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          this.visitEditFormError = '您没有编辑该回访记录的权限'
+        } else {
+          this.visitEditFormError = messageText || e?.message || '更新失败'
+        }
       } finally {
         this.visitEditSubmitting = false
       }
     },
     async deleteVisit(item) {
       if (!item?.recordId) return
+      if (!this.canModifyVisit(item)) {
+        alert('您没有删除该回访记录的权限')
+        return
+      }
       const ok = window.confirm('确认删除该回访记录吗？此操作不可恢复。')
       if (!ok) return
       try {
         await deleteCustomerFollowUp(item.recordId)
         await this.loadVisits()
       } catch (e) {
-        alert(e?.response?.data?.message || e?.message || '删除失败')
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有删除该回访记录的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          alert('您没有删除该回访记录的权限')
+        } else {
+          alert(messageText || e?.message || '删除失败')
+        }
       }
     },
     async saveLeadAdd() {
@@ -1804,6 +1917,10 @@ export default {
     },
     editLead(item) {
       if (!item) return
+      if (!this.canModifyLead(item)) {
+        alert('您没有编辑该销售线索的权限')
+        return
+      }
       this.leadEditFormError = ''
       this.leadEditSubmitting = false
       this.leadEditId = item.leadsId || null
@@ -1867,20 +1984,38 @@ export default {
           this.leadEditFormError = res?.data?.message || '更新失败'
         }
       } catch (e) {
-        this.leadEditFormError = e?.response?.data?.message || e?.message || '更新失败'
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有编辑该销售线索的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          this.leadEditFormError = '您没有编辑该销售线索的权限'
+        } else {
+          this.leadEditFormError = messageText || e?.message || '更新失败'
+        }
       } finally {
         this.leadEditSubmitting = false
       }
     },
     async deleteLead(item) {
       if (!item?.leadsId) return
+      if (!this.canModifyLead(item)) {
+        alert('您没有删除该销售线索的权限')
+        return
+      }
       const ok = window.confirm('确认删除该销售线索吗？此操作不可恢复。')
       if (!ok) return
       try {
         await deleteAfterserviceLead(item.leadsId)
         await this.loadLeads()
       } catch (e) {
-        alert(e?.response?.data?.message || e?.message || '删除失败')
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有删除该销售线索的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          alert('您没有删除该销售线索的权限')
+        } else {
+          alert(messageText || e?.message || '删除失败')
+        }
       }
     },
     triggerVisitAttachmentInput() {
@@ -2408,6 +2543,10 @@ export default {
     },
     editEvent(ev) {
       if (!ev) return
+      if (!this.canModifyEvent(ev)) {
+        alert('您没有编辑该运维事件的权限')
+        return
+      }
       this.editFormError = ''
       this.editSubmitting = false
 
@@ -2509,7 +2648,14 @@ export default {
           this.editFormError = res?.data?.message || '更新失败'
         }
       } catch (e) {
-        this.editFormError = e?.response?.data?.message || e?.message || '更新失败'
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有编辑该运维事件的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          this.editFormError = '您没有编辑该运维事件的权限'
+        } else {
+          this.editFormError = messageText || e?.message || '更新失败'
+        }
       } finally {
         this.editSubmitting = false
       }
@@ -2613,13 +2759,24 @@ export default {
     },
     async deleteEvent(ev) {
       if (!ev?.eventId) return
+      if (!this.canModifyEvent(ev)) {
+        alert('您没有删除该运维事件的权限')
+        return
+      }
       const ok = window.confirm('确认删除该事件吗？此操作不可恢复。')
       if (!ok) return
       try {
         await deleteAfterserviceEvent(ev.eventId)
         await this.loadEvents()
       } catch (e) {
-        alert(e?.response?.data?.message || e?.message || '删除失败')
+        const messageText = e?.response?.data?.message || ''
+        const errorText = e?.response?.data?.error || ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有删除该运维事件的权限') || permissionText.includes('仅可编辑或删除本人新增')) {
+          alert('您没有删除该运维事件的权限')
+        } else {
+          alert(messageText || e?.message || '删除失败')
+        }
       }
     },
     // 附件交互

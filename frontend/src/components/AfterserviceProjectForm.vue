@@ -196,6 +196,7 @@ import {
   updateAfterserviceProject,
   generateAfterserviceProjectNum
 } from '../api/afterserviceProject'
+import { getAllUsers } from '../api/user'
 import request from '../api/request'
 
 export default {
@@ -368,21 +369,20 @@ export default {
      */
     async loadUsers() {
       try {
-        const response = await request.get('/api/users?size=1000')
-        if (response.data && response.data.users) {
-          this.users = response.data.users
-        }
+        this.users = await getAllUsers({ excludeAdmin: true })
         // 新建模式默认将运维负责人设置为当前登录用户
         try {
           const raw = sessionStorage.getItem('userInfo')
           const info = raw ? JSON.parse(raw) : null
           const uid = info && (info.userId ?? info.id)
-          if (!this.isEdit && uid != null) {
+          const existsInOptions = uid != null && this.users.some(user => Number(user.userId) === Number(uid))
+          if (!this.isEdit && existsInOptions) {
             this.form.serviceDirector = Number(uid)
           }
         } catch (_) {}
       } catch (error) {
         console.error('加载用户列表失败:', error)
+        this.users = []
       }
     },
 
@@ -447,7 +447,15 @@ export default {
         }
       } catch (error) {
         console.error('保存运维项目失败:', error)
-        alert('保存失败，请稍后重试')
+        const responseData = error && error.response ? error.response.data : null
+        const messageText = responseData && responseData.message ? String(responseData.message) : ''
+        const errorText = responseData && responseData.error ? String(responseData.error) : ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有编辑项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限')) {
+          alert('您没有编辑项目的权限')
+        } else {
+          alert(messageText || errorText || '保存失败，请稍后重试')
+        }
       } finally {
         this.isSubmitting = false
       }

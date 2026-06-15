@@ -1,10 +1,12 @@
 package com.missoft.pms.service;
 
-import com.missoft.pms.entity.ExtraRequirement;
 import com.missoft.pms.entity.ConstructingProject;
+import com.missoft.pms.entity.ExtraRequirement;
+import com.missoft.pms.entity.User;
 import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ExtraRequirementRepository;
+import com.missoft.pms.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,9 @@ public class ExtraRequirementService {
 
     @Autowired
     private ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * 函数级注释：创建合同外需求条目
@@ -211,6 +216,7 @@ public class ExtraRequirementService {
 
     private void assertCanCreate(Long projectId, Long operatorUserId) {
         if (projectId == null || operatorUserId == null) return;
+        if (isSystemAdmin(operatorUserId)) return;
         ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
         if (project == null) return;
         if (isProjectManager(project, operatorUserId)) return;
@@ -221,6 +227,7 @@ public class ExtraRequirementService {
 
     private void assertCanUpdate(ExtraRequirement requirement, Long operatorUserId) {
         if (requirement == null || requirement.getProjectId() == null || operatorUserId == null) return;
+        if (isSystemAdmin(operatorUserId)) return;
         ConstructingProject project = constructingProjectRepository.findById(requirement.getProjectId()).orElse(null);
         if (project != null && isProjectManager(project, operatorUserId)) return;
         boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
@@ -234,6 +241,7 @@ public class ExtraRequirementService {
 
     private void assertCanDelete(ExtraRequirement requirement, Long operatorUserId) {
         if (requirement == null || requirement.getProjectId() == null || operatorUserId == null) return;
+        if (isSystemAdmin(operatorUserId)) return;
         ConstructingProject project = constructingProjectRepository.findById(requirement.getProjectId()).orElse(null);
         if (project != null && isProjectManager(project, operatorUserId)) return;
         boolean isParticipant = constructingProjectParticipantRepository.existsByProjectIdAndUserId(requirement.getProjectId(), operatorUserId);
@@ -246,6 +254,7 @@ public class ExtraRequirementService {
 
     private boolean canEditRequirement(ConstructingProject project, ExtraRequirement requirement, Long operatorUserId) {
         if (operatorUserId == null) return true;
+        if (isSystemAdmin(operatorUserId)) return true;
         if (project != null && isProjectManager(project, operatorUserId)) return true;
         boolean isParticipant = requirement != null
                 && requirement.getProjectId() != null
@@ -256,6 +265,7 @@ public class ExtraRequirementService {
 
     private boolean canDeleteRequirement(ConstructingProject project, ExtraRequirement requirement, Long operatorUserId) {
         if (operatorUserId == null) return true;
+        if (isSystemAdmin(operatorUserId)) return true;
         if (project != null && isProjectManager(project, operatorUserId)) return true;
         boolean isParticipant = requirement != null
                 && requirement.getProjectId() != null
@@ -278,6 +288,25 @@ public class ExtraRequirementService {
     private boolean isDeveloper(ExtraRequirement requirement, Long userId) {
         if (requirement == null || userId == null) return false;
         return java.util.Objects.equals(requirement.getDeveloper(), userId);
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 这里统一通过 userName 判定，确保 admin 在合同外需求页签拥有完整增删改权限。
+     *
+     * @param operatorUserId 当前操作用户ID
+     * @return 若用户名为 admin 则返回 true，否则返回 false
+     */
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 
     private String buildRequirementBeforeText(String oldRequirementName,

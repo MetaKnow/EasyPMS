@@ -318,9 +318,9 @@ public class UserController {
      * GET /api/users/all
      */
     @GetMapping("/all")
-    public ResponseEntity<Map<String, Object>> getAllUsers() {
+    public ResponseEntity<Map<String, Object>> getAllUsers(@RequestParam(defaultValue = "false") boolean excludeAdmin) {
         try {
-            List<UserWithRoleDTO> users = userService.getAllUsersWithRole();
+            List<UserWithRoleDTO> users = userService.getAllUsersWithRole(excludeAdmin);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", users);

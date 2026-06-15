@@ -29,4 +29,6 @@ public interface AfterServiceProjectParticipantRepository extends JpaRepository<
      * @param projectId 项目ID
      */
     void deleteByProjectId(Long projectId);
+
+    boolean existsByProjectIdAndUserId(Long projectId, Long userId);
 }

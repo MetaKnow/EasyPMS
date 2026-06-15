@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,10 +36,11 @@ public class AfterServiceProjectController {
             @RequestParam(required = false) String projectName,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long saleDirector,
-            @RequestParam(required = false) Long serviceDirector) {
+            @RequestParam(required = false) Long serviceDirector,
+            @RequestParam(required = false) Long participantUserId) {
         
         PageRequest pageRequest = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createTime"));
-        Page<AfterServiceProjectDTO> projectPage = afterServiceProjectService.getProjects(projectName, status, saleDirector, serviceDirector, pageRequest);
+        Page<AfterServiceProjectDTO> projectPage = afterServiceProjectService.getProjects(projectName, status, saleDirector, serviceDirector, participantUserId, pageRequest);
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -124,42 +126,123 @@ public class AfterServiceProjectController {
      * 更新项目
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateProject(@PathVariable Long id, @RequestBody AfterServiceProjectDTO dto) {
-        AfterServiceProjectDTO updated = afterServiceProjectService.updateProject(id, dto);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", updated);
-        response.put("message", "更新成功");
-        
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> updateProject(@PathVariable Long id,
+                                                             @RequestBody AfterServiceProjectDTO dto,
+                                                             @RequestParam(required = false) Long operatorUserId,
+                                                             HttpServletRequest request) {
+        try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            AfterServiceProjectDTO updated = afterServiceProjectService.updateProject(id, dto, resolvedOperatorUserId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", updated);
+            response.put("message", "更新成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有编辑项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            errorResponse.put("success", false);
+            errorResponse.put("message", "更新失败");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     /**
      * 删除项目
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteProject(@PathVariable Long id) {
-        afterServiceProjectService.deleteProject(id);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "删除成功");
-        
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> deleteProject(@PathVariable Long id,
+                                                             @RequestParam(required = false) Long operatorUserId,
+                                                             HttpServletRequest request) {
+        try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            afterServiceProjectService.deleteProject(id, resolvedOperatorUserId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "删除成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有删除项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            errorResponse.put("success", false);
+            errorResponse.put("message", "删除失败");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     /**
      * 批量删除项目
      */
     @DeleteMapping("/batch")
-    public ResponseEntity<Map<String, Object>> batchDeleteProjects(@RequestBody List<Long> ids) {
-        afterServiceProjectService.batchDeleteProjects(ids);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "批量删除成功");
-        
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> batchDeleteProjects(@RequestBody List<Long> ids,
+                                                                   @RequestParam(required = false) Long operatorUserId,
+                                                                   HttpServletRequest request) {
+        try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            afterServiceProjectService.batchDeleteProjects(ids, resolvedOperatorUserId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "批量删除成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && (e.getMessage().contains("仅可查看项目") || e.getMessage().contains("无编辑或删除权限"))) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有删除项目的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            errorResponse.put("success", false);
+            errorResponse.put("message", "批量删除失败");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    private Long resolveOperatorUserId(Long operatorUserId, HttpServletRequest request) {
+        if (operatorUserId != null) {
+            return operatorUserId;
+        }
+        Long fromHeader = parseLong(request.getHeader("X-User-Id"));
+        if (fromHeader != null) {
+            return fromHeader;
+        }
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && !authorization.isBlank()) {
+            String token = authorization.trim();
+            if (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                token = token.substring(7).trim();
+            }
+            if (token.startsWith("simple_token_")) {
+                String[] parts = token.split("_");
+                if (parts.length >= 3) {
+                    return parseLong(parts[2]);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

@@ -118,7 +118,7 @@ public class ConstructingProjectCommentReplyService {
         }
         ConstructingProjectCommentReply reply = replyRepository.findById(replyId)
                 .orElseThrow(() -> new IllegalArgumentException("回复不存在"));
-        if (reply.getUserId() == null || !reply.getUserId().equals(userId)) {
+        if (!isSystemAdmin(userId) && (reply.getUserId() == null || !reply.getUserId().equals(userId))) {
             throw new IllegalArgumentException("只能删除自己发表的回复");
         }
         int removed = 0;
@@ -127,6 +127,25 @@ public class ConstructingProjectCommentReplyService {
         } catch (Exception ignore) {}
         replyRepository.delete(reply);
         return removed;
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 若为 admin，则项目评论回复页签中的回复删除不再受“仅本人”限制。
+     *
+     * @param userId 当前操作用户ID
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 
     /**

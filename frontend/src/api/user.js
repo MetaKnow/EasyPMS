@@ -54,11 +54,19 @@ export async function getUserList(params = {}) {
 
 /**
  * 获取所有用户列表（不分页）
+ * @param {Object} options 查询选项
+ * @param {boolean} options.excludeAdmin 是否排除系统管理员 admin
  * @returns {Promise<Array>} 所有用户数据
  */
-export async function getAllUsers() {
+export async function getAllUsers(options = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/all?_t=${new Date().getTime()}`, {
+    const queryParams = new URLSearchParams()
+    queryParams.append('_t', String(new Date().getTime()))
+    if (options.excludeAdmin === true) {
+      queryParams.append('excludeAdmin', 'true')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/all?${queryParams.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'

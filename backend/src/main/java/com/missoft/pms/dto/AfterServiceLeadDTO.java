@@ -11,6 +11,8 @@ public class AfterServiceLeadDTO {
     private String leadsSource;
     private String leadsDescript;
     private LocalDateTime createTime;
+    private Long createUser;
+    private Long updateUser;
     private Boolean hasFiles;
 
     public Long getLeadsId() { return leadsId; }
@@ -36,6 +38,12 @@ public class AfterServiceLeadDTO {
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
+
+    public Long getCreateUser() { return createUser; }
+    public void setCreateUser(Long createUser) { this.createUser = createUser; }
+
+    public Long getUpdateUser() { return updateUser; }
+    public void setUpdateUser(Long updateUser) { this.updateUser = updateUser; }
 
     public Boolean getHasFiles() { return hasFiles; }
     public void setHasFiles(Boolean hasFiles) { this.hasFiles = hasFiles; }

@@ -1,11 +1,13 @@
 package com.missoft.pms.service;
 
 import com.missoft.pms.entity.PersonalDevelope;
+import com.missoft.pms.entity.User;
 import com.missoft.pms.repository.PersonalDevelopeRepository;
 import com.missoft.pms.entity.ConstructingProject;
 import com.missoft.pms.service.ConstructMilestoneService;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
+import com.missoft.pms.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,9 @@ public class PersonalDevelopeService {
     @Autowired
     private ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     /**
      * 函数级注释：创建个性化开发条目，并生成“个性化功能开发”里程碑对应的步骤关系。
      * @param entity 个性化开发实体，需包含 `projectId` 与 `milestoneId`，`personalDevName` 不为空
@@ -51,12 +56,13 @@ public class PersonalDevelopeService {
         if (!StringUtils.hasText(entity.getPersonalDevName())) {
             throw new IllegalArgumentException("个性化开发名称不能为空");
         }
+        Long operatorUserId = entity.getUpdateUser() != null ? entity.getUpdateUser() : entity.getCreateUser();
         // 函数级注释：禁止在“已完成”项目下新增个性化功能需求
         ConstructingProject project = constructingProjectRepository.findById(entity.getProjectId()).orElse(null);
         if (project == null) {
             throw new IllegalArgumentException("项目不存在，无法创建个性化功能需求");
         }
-        if ("已完成".equals(project.getProjectState())) {
+        if ("已完成".equals(project.getProjectState()) && !isSystemAdmin(operatorUserId)) {
             throw new IllegalStateException("已完成项目不可新增个性化功能需求");
         }
         PersonalDevelope saved = personalDevelopeRepository.save(entity);
@@ -135,7 +141,7 @@ public class PersonalDevelopeService {
         // 函数级注释：禁止在“已完成”项目下删除个性化功能需求
         if (projectId != null) {
             ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
-            if (project != null && "已完成".equals(project.getProjectState())) {
+            if (project != null && "已完成".equals(project.getProjectState()) && !isSystemAdmin(operatorUserId)) {
                 throw new IllegalStateException("已完成项目不可删除个性化功能需求");
             }
         }
@@ -171,6 +177,9 @@ public class PersonalDevelopeService {
         if (projectId == null || operatorUserId == null) {
             return;
         }
+        if (isSystemAdmin(operatorUserId)) {
+            return;
+        }
         ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
         if (project == null) {
             return;
@@ -191,5 +200,24 @@ public class PersonalDevelopeService {
         if (!allOwned) {
             throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
         }
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 若为 admin，则个性化开发页签中的新增、删除与参与人限制统一放行。
+     *
+     * @param operatorUserId 当前操作用户ID
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 }

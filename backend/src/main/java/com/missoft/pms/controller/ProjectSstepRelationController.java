@@ -59,15 +59,18 @@ public class ProjectSstepRelationController {
 
             Long projectId = rel.getProjectId();
             var project = projectId != null ? constructingProjectRepository.findById(projectId).orElse(null) : null;
+            Long operatorUserId = parseLong(body.get("modifyUser"));
             if (projectId != null) {
-                if (project != null && "已完成".equals(project.getProjectState())) {
+                if (project != null && "已完成".equals(project.getProjectState()) && !isSystemAdmin(operatorUserId)) {
                     Map<String, Object> error = new HashMap<>();
                     error.put("error", "已完成项目不允许修改步骤字段");
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
                 }
             }
-            Long operatorUserId = parseLong(body.get("modifyUser"));
             if (project != null && operatorUserId != null) {
+                if (isSystemAdmin(operatorUserId)) {
+                    // 函数体详细注释：admin 拥有合同内建设内容全部编辑权限，直接跳过参与人细粒度限制。
+                } else {
                 boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
                 boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
                 if (!isLeader && !isSalesLeader) {
@@ -84,6 +87,7 @@ public class ProjectSstepRelationController {
                             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
                         }
                     }
+                }
                 }
             }
 
@@ -219,5 +223,24 @@ public class ProjectSstepRelationController {
             return false;
         }
         return constructingProjectParticipantRepository.existsByProjectIdAndUserId(projectId, userId);
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 若为 admin，则合同内建设内容中的负责人、日期、工期等字段均允许直接修改。
+     *
+     * @param operatorUserId 当前操作用户ID
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        var user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 }

@@ -7,7 +7,7 @@
           <i class="icon-plus"></i>
           新建项目
         </button>
-        <button class="btn btn-danger" @click="batchDelete" :disabled="selectedProjects.length === 0">
+        <button class="btn btn-danger" @click="batchDelete" :disabled="selectedProjects.length === 0 || !canManageAnyProject">
           <i class="icon-delete"></i>
           删除项目
         </button>
@@ -109,6 +109,7 @@
                   type="checkbox" 
                   :value="project.projectId"
                   v-model="selectedProjects"
+                  :disabled="!canDeleteProject(project)"
                   @click.stop
                 />
               </td>
@@ -216,14 +217,50 @@ export default {
      * 是否全选
      */
     isAllSelected() {
-      return this.projectList.length > 0 && 
-             this.selectedProjects.length === this.projectList.length
+      const deletableIds = this.projectList.filter(project => this.canDeleteProject(project)).map(project => project.projectId)
+      return deletableIds.length > 0 && deletableIds.every(id => this.selectedProjects.includes(id))
+    },
+    currentUserInfo() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        return raw ? JSON.parse(raw) : null
+      } catch (_) {
+        return null
+      }
+    },
+    currentUserId() {
+      const info = this.currentUserInfo
+      if (!info) return null
+      const uid = info.userId ?? info.id
+      if (uid == null) return null
+      const value = Number(uid)
+      return Number.isFinite(value) ? value : null
+    },
+    currentRoleName() {
+      const info = this.currentUserInfo
+      return info && info.roleName ? String(info.roleName).trim() : ''
+    },
+    isAdminUser() {
+      const info = this.currentUserInfo
+      const userName = info && info.userName ? String(info.userName).trim().toLowerCase() : ''
+      return userName === 'admin'
+    },
+    isPrivilegedRole() {
+      const roleName = this.currentRoleName
+      const roleLower = roleName.toLowerCase()
+      return (
+        this.isAdminUser ||
+        ['管理员', '公司领导', '超级管理员', '销售总监', '项目总监'].some(r => roleName.includes(r)) ||
+        ['admin', 'leader', 'super admin', 'superadmin', 'sales director', 'project director'].some(r => roleLower === r)
+      )
+    },
+    canManageAnyProject() {
+      if (this.isPrivilegedRole) return true
+      return this.projectList.some(project => this.canDeleteProject(project))
     },
     canExport() {
       try {
-        const raw = sessionStorage.getItem('userInfo')
-        const info = raw ? JSON.parse(raw) : null
-        const role = info && info.roleName ? String(info.roleName).trim() : ''
+        const role = this.currentRoleName
         const roleLower = role.toLowerCase()
         const isSales = role === '销售' || role === '销售角色' || roleLower === 'sales'
         const isAfterSales = role === '售后' || role.includes('售后') || roleLower === 'afterservice' || roleLower === 'after service'
@@ -249,32 +286,16 @@ export default {
           size: this.pageSize,
           ...this.searchForm
         }
-        try {
-          const raw = sessionStorage.getItem('userInfo')
-          const info = raw ? JSON.parse(raw) : null
-          const name = info && info.roleName ? String(info.roleName).trim() : ''
-          const lower = name.toLowerCase()
-          const uid = info && (info.userId ?? info.id)
-          const isPrivileged = (
-            ['管理员', '公司领导', '超级管理员', '销售总监', '项目总监'].some(r => name.includes(r)) ||
-            ['admin', 'leader', 'super admin', 'superadmin', 'sales director', 'project director'].some(r => lower === r)
-          )
-          if (!isPrivileged && uid != null) {
-            const isPM = (name.includes('项目经理') || lower === 'project manager' || lower === 'pm')
-            const isAfter = (name.includes('售后') || name.includes('运维'))
-            const isSales = (name.includes('销售') || lower === 'sales')
-            if (isPM || isAfter) {
-              params.serviceDirector = Number(uid)
-            } else if (isSales) {
-              params.saleDirector = Number(uid)
-            }
-          }
-        } catch (_) {}
+        if (!this.isPrivilegedRole && this.currentUserId != null) {
+          params.participantUserId = this.currentUserId
+        }
         
         const response = await getAfterserviceProjects(params)
         if (response.data.success) {
           this.projectList = response.data.data.list || []
           this.total = response.data.data.total || 0
+          const deletableIds = this.projectList.filter(project => this.canDeleteProject(project)).map(project => project.projectId)
+          this.selectedProjects = this.selectedProjects.filter(id => deletableIds.includes(id))
         }
       } catch (error) {
         console.error('加载项目列表失败:', error)
@@ -748,6 +769,22 @@ export default {
       this.loadProjects()
     },
 
+    canEditProject(project) {
+      if (!project) return false
+      if (this.isPrivilegedRole) return true
+      if (this.currentUserId == null) return false
+      const uid = this.currentUserId
+      if (project.saleDirector != null && Number(project.saleDirector) === uid) return true
+      if (project.serviceDirector != null && Number(project.serviceDirector) === uid) return true
+      const participantIds = Array.isArray(project.participantIds) ? project.participantIds : []
+      const isParticipant = participantIds.some(id => Number(id) === uid)
+      return !isParticipant
+    },
+
+    canDeleteProject(project) {
+      return this.canEditProject(project)
+    },
+
     /**
      * 显示创建表单
      */
@@ -755,66 +792,61 @@ export default {
       this.$emit('show-afterservice-project-form', {}, false)
     },
 
-    /**
-     * 双击打开运维记录界面
-     */
     openMaintenanceRecord(project) {
       if (!project?.projectId) return
       this.$router.push({ name: 'MaintenanceRecord', params: { projectId: project.projectId } })
     },
 
     /**
-     * 编辑项目
-     */
-    // Removed duplicate editProject implementation to fix conflict
-
-    /**
-     * 删除项目
-     */
-    async deleteProject(project) {
-      if (!confirm(`确定要删除项目"${project.projectName}"吗？`)) {
-        return
-      }
-
-      try {
-        const response = await deleteAfterserviceProject(project.projectId)
-        if (response.data.success) {
-          alert('删除成功')
-          this.loadProjects()
-        } else {
-          alert(response.data.message || '删除失败')
-        }
-      } catch (error) {
-        console.error('删除项目失败:', error)
-        alert('删除失败')
-      }
-    },
-
-    /**
      * 批量删除
      */
     async batchDelete() {
-      if (this.selectedProjects.length === 0) {
+      if (!this.canManageAnyProject) {
+        alert('您没有删除项目的权限')
+        return
+      }
+
+      const ids = this.selectedProjects.filter(id => {
+        const project = this.projectList.find(item => item.projectId === id)
+        return this.canDeleteProject(project)
+      })
+
+      if (ids.length === 0) {
         alert('请选择要删除的项目')
         return
       }
 
-      if (!confirm(`确定要删除选中的 ${this.selectedProjects.length} 个项目吗？`)) {
+      if (!confirm(`确定要删除选中的 ${ids.length} 个项目吗？`)) {
         return
       }
 
       try {
-        const response = await batchDeleteAfterserviceProjects(this.selectedProjects)
+        const response = await batchDeleteAfterserviceProjects(ids)
         if (response.data.success) {
           alert('批量删除成功')
           this.selectedProjects = []
           this.loadProjects()
         } else {
-          alert(response.data.message || '批量删除失败')
+          const messageText = response && response.data && response.data.message ? String(response.data.message) : ''
+          const errorText = response && response.data && response.data.error ? String(response.data.error) : ''
+          const permissionText = `${messageText} ${errorText}`.trim()
+          if (permissionText.includes('没有删除项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限')) {
+            alert('您没有删除项目的权限')
+          } else {
+            alert(response.data.message || '批量删除失败')
+          }
         }
       } catch (error) {
         console.error('批量删除失败:', error)
-        alert('批量删除失败')
+        const responseData = error && error.response ? error.response.data : null
+        const messageText = responseData && responseData.message ? String(responseData.message) : ''
+        const errorText = responseData && responseData.error ? String(responseData.error) : ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有删除项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限')) {
+          alert('您没有删除项目的权限')
+        } else {
+          alert(messageText || errorText || '批量删除失败')
+        }
       }
     },
 
@@ -840,6 +872,10 @@ export default {
      * 编辑项目
      */
     async editProject(project) {
+      if (!this.canEditProject(project)) {
+        alert('您没有编辑项目的权限')
+        return
+      }
       try {
         const response = await getAfterserviceProjectById(project.projectId)
         if (response.data.success) {
@@ -858,6 +894,10 @@ export default {
      * 删除项目
      */
     async deleteProject(project) {
+      if (!this.canDeleteProject(project)) {
+        alert('您没有删除项目的权限')
+        return
+      }
       if (!confirm(`确定要删除项目"${project.projectName}"吗？`)) {
         return
       }
@@ -868,20 +908,27 @@ export default {
           alert('删除成功')
           this.loadProjects()
         } else {
-          alert(response.data.message || '删除失败')
+          const messageText = response && response.data && response.data.message ? String(response.data.message) : ''
+          const errorText = response && response.data && response.data.error ? String(response.data.error) : ''
+          const permissionText = `${messageText} ${errorText}`.trim()
+          if (permissionText.includes('没有删除项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限')) {
+            alert('您没有删除项目的权限')
+          } else {
+            alert(response.data.message || '删除失败')
+          }
         }
       } catch (error) {
         console.error('删除项目失败:', error)
-        alert('删除失败')
+        const responseData = error && error.response ? error.response.data : null
+        const messageText = responseData && responseData.message ? String(responseData.message) : ''
+        const errorText = responseData && responseData.error ? String(responseData.error) : ''
+        const permissionText = `${messageText} ${errorText}`.trim()
+        if (permissionText.includes('没有删除项目的权限') || permissionText.includes('仅可查看项目') || permissionText.includes('无编辑或删除权限')) {
+          alert('您没有删除项目的权限')
+        } else {
+          alert(messageText || errorText || '删除失败')
+        }
       }
-    },
-
-    /**
-     * 双击打开运维记录界面
-     */
-    openMaintenanceRecord(project) {
-      if (!project?.projectId) return
-      this.$router.push({ name: 'MaintenanceRecord', params: { projectId: project.projectId } })
     },
 
     /**
@@ -889,7 +936,7 @@ export default {
      */
     selectAll(event) {
       if (event.target.checked) {
-        this.selectedProjects = this.projectList.map(p => p.projectId)
+        this.selectedProjects = this.projectList.filter(project => this.canDeleteProject(project)).map(project => project.projectId)
       } else {
         this.selectedProjects = []
       }

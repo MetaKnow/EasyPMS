@@ -73,7 +73,7 @@ public class AfterServiceProjectService {
     /**
      * 分页查询项目列表
      */
-    public Page<AfterServiceProjectDTO> getProjects(String projectName, String status, Long saleDirector, Long serviceDirector, Pageable pageable) {
+    public Page<AfterServiceProjectDTO> getProjects(String projectName, String status, Long saleDirector, Long serviceDirector, Long participantUserId, Pageable pageable) {
         Specification<AfterServiceProject> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -91,6 +91,21 @@ public class AfterServiceProjectService {
 
             if (serviceDirector != null) {
                 predicates.add(cb.equal(root.get("serviceDirector"), serviceDirector));
+            }
+
+            if (participantUserId != null) {
+                var participantSubquery = query.subquery(Long.class);
+                var participantRoot = participantSubquery.from(AfterServiceProjectParticipant.class);
+                participantSubquery.select(participantRoot.get("id"));
+                participantSubquery.where(
+                        cb.equal(participantRoot.get("projectId"), root.get("projectId")),
+                        cb.equal(participantRoot.get("userId"), participantUserId)
+                );
+                predicates.add(cb.or(
+                        cb.equal(root.get("saleDirector"), participantUserId),
+                        cb.equal(root.get("serviceDirector"), participantUserId),
+                        cb.exists(participantSubquery)
+                ));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -130,6 +145,12 @@ public class AfterServiceProjectService {
 
         if (request.getServiceDirector() == null) {
             throw new RuntimeException("运维负责人不能为空");
+        }
+        if (isSystemAdmin(cp.getSaleLeader())) {
+            throw new RuntimeException("销售负责人不能选择系统管理员");
+        }
+        if (isSystemAdmin(request.getServiceDirector())) {
+            throw new RuntimeException("运维负责人不能选择系统管理员");
         }
 
         AfterServiceProject asp = new AfterServiceProject();
@@ -178,6 +199,7 @@ public class AfterServiceProjectService {
      * 创建项目
      */
     public AfterServiceProjectDTO createProject(AfterServiceProjectDTO dto) {
+        validateNoAdminAssignments(dto);
         AfterServiceProject project = new AfterServiceProject();
         BeanUtils.copyProperties(dto, project);
         project.setProjectId(null); // Ensure new
@@ -209,8 +231,14 @@ public class AfterServiceProjectService {
      * 更新项目
      */
     public AfterServiceProjectDTO updateProject(Long id, AfterServiceProjectDTO dto) {
+        return updateProject(id, dto, null);
+    }
+
+    public AfterServiceProjectDTO updateProject(Long id, AfterServiceProjectDTO dto, Long operatorUserId) {
         AfterServiceProject project = afterServiceProjectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
+        assertParticipantReadOnly(project, resolveOperatorUserId(operatorUserId));
+        validateNoAdminAssignments(dto);
         
         // 保持项目编号只读，不允许更新
         // 总工时由系统统计，忽略前端传入的 totalHours
@@ -232,8 +260,13 @@ public class AfterServiceProjectService {
      * 删除项目
      */
     public void deleteProject(Long id) {
+        deleteProject(id, null);
+    }
+
+    public void deleteProject(Long id, Long operatorUserId) {
         AfterServiceProject project = afterServiceProjectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
+        assertParticipantReadOnly(project, resolveOperatorUserId(operatorUserId));
 
         // 先删除该项目下的运维事件及其附件与数据库记录
         List<AfterServiceEvent> events = afterServiceEventRepository.findByAfterServiceProjectId(id);
@@ -268,9 +301,14 @@ public class AfterServiceProjectService {
      * 批量删除项目
      */
     public void batchDeleteProjects(List<Long> ids) {
+        batchDeleteProjects(ids, null);
+    }
+
+    public void batchDeleteProjects(List<Long> ids, Long operatorUserId) {
         if (ids == null || ids.isEmpty()) return;
+        Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId);
         for (Long id : ids) {
-            try { deleteProject(id); } catch (Exception ignore) {}
+            try { deleteProject(id, resolvedOperatorUserId); } catch (Exception ignore) {}
         }
     }
 
@@ -374,6 +412,70 @@ public class AfterServiceProjectService {
         if (projectId == null) return;
         afterServiceProjectParticipantRepository.deleteByProjectId(projectId);
         saveProjectParticipants(projectId, participantIds);
+    }
+
+    /**
+     * 函数级注释：
+     * 校验运维项目中的销售负责人、运维负责人、项目参与人不能选择系统管理员 admin。
+     * 该校验用于拦截绕过前端下拉的非法提交，保证人员分配规则统一生效。
+     *
+     * @param dto 运维项目DTO
+     */
+    private void validateNoAdminAssignments(AfterServiceProjectDTO dto) {
+        if (dto == null) {
+            return;
+        }
+        if (isSystemAdmin(dto.getSaleDirector())) {
+            throw new RuntimeException("销售负责人不能选择系统管理员");
+        }
+        if (isSystemAdmin(dto.getServiceDirector())) {
+            throw new RuntimeException("运维负责人不能选择系统管理员");
+        }
+        if (dto.getParticipantIds() == null || dto.getParticipantIds().isEmpty()) {
+            return;
+        }
+        boolean hasAdminParticipant = dto.getParticipantIds().stream()
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(this::isSystemAdmin);
+        if (hasAdminParticipant) {
+            throw new RuntimeException("项目参与人不能选择系统管理员");
+        }
+    }
+
+    private Long resolveOperatorUserId(Long preferUserId) {
+        if (preferUserId != null) {
+            return preferUserId;
+        }
+        return UserContextHolder.getCurrentUserId();
+    }
+
+    private void assertParticipantReadOnly(AfterServiceProject project, Long operatorUserId) {
+        if (project == null || operatorUserId == null) {
+            return;
+        }
+        if (isSystemAdmin(operatorUserId)) {
+            return;
+        }
+        boolean isSaleDirector = java.util.Objects.equals(operatorUserId, project.getSaleDirector());
+        boolean isServiceDirector = java.util.Objects.equals(operatorUserId, project.getServiceDirector());
+        if (isSaleDirector || isServiceDirector) {
+            return;
+        }
+        boolean isParticipant = afterServiceProjectParticipantRepository.existsByProjectIdAndUserId(project.getProjectId(), operatorUserId);
+        if (isParticipant) {
+            throw new RuntimeException("项目参与人仅可查看项目，无编辑或删除权限");
+        }
+    }
+
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 
     private String safe(String s) {

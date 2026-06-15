@@ -301,10 +301,16 @@ export default {
       const info = this.currentUserInfo
       return info && info.roleName ? String(info.roleName).trim() : ''
     },
+    isAdminUser() {
+      const info = this.currentUserInfo
+      const userName = info && info.userName ? String(info.userName).trim().toLowerCase() : ''
+      return userName === 'admin'
+    },
     isPrivilegedRole() {
       const roleName = this.currentRoleName
       const roleLower = roleName.toLowerCase()
       return (
+        this.isAdminUser ||
         ['管理员', '公司领导', '超级管理员', '销售总监', '项目总监'].some(r => roleName.includes(r)) ||
         ['admin', 'leader', 'super admin', 'superadmin', 'sales director', 'project director'].some(r => roleLower === r)
       )

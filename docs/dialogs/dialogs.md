@@ -99,3 +99,5 @@
 2026-02-15 增加constructing_project_riskFiles表，字段包括fileId、filePath、fileSize、uploadUser、projectId（constructing_project表外键）、riskId（constructing_project_risk表外键）。只生成数据库迁移文件，不要做其他操作。
 2026-02-15 在建项目新增项目风险页签，样式与合同外需求一致；支持添加/查看/编辑/删除风险，附件上传下载浏览删除与合同外需求一致，附件保存到deliverableFiles/<项目编号-项目名称>/项目风险/<风险ID>/并写入constructing_project_riskFiles表。
 2026-03-11 除了migration_history表以外，给其他表都增加createUser和updateUser字段，都为user表的外键。创建数据或修改数据时自动生成。
+2026-06-15 10:53 项目详情页面，给步骤上传交付物时，文件的保存路径在哪里写的，帮我找一下
+2026-06-15 10:59 是相对路径吗，要放到项目根目录的deliverableFiles文件夹中，而不是与项目根目录平级的deliverableFiles中

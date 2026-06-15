@@ -10,4 +10,6 @@ import java.util.List;
 public interface AfterServiceLeadRepository extends JpaRepository<AfterServiceLead, Long> {
     Page<AfterServiceLead> findByAfterServiceProjectId(Long afterServiceProjectId, Pageable pageable);
     List<AfterServiceLead> findByAfterServiceProjectId(Long afterServiceProjectId);
+    Page<AfterServiceLead> findByAfterServiceProjectIdAndCreateUser(Long afterServiceProjectId, Long createUser, Pageable pageable);
+    List<AfterServiceLead> findByAfterServiceProjectIdAndCreateUser(Long afterServiceProjectId, Long createUser);
 }

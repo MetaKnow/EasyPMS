@@ -3,11 +3,13 @@ package com.missoft.pms.service;
 import com.missoft.pms.entity.InterfaceEntity;
 import com.missoft.pms.entity.ProjectSstepRelation;
 import com.missoft.pms.entity.ConstructingProject;
+import com.missoft.pms.entity.User;
 import com.missoft.pms.service.ProjectSstepRelationService;
 import com.missoft.pms.repository.InterfaceRepository;
 import com.missoft.pms.repository.ProjectSstepRelationRepository;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
+import com.missoft.pms.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class InterfaceService {
     private final ConstructingProjectRepository constructingProjectRepository;
     private final ConstructingProjectParticipantRepository constructingProjectParticipantRepository;
     private final ConstructMilestoneService constructMilestoneService;
+    private final UserRepository userRepository;
 
     /**
      * 构造函数
@@ -37,7 +40,8 @@ public class InterfaceService {
             ProjectSstepRelationRepository relationRepository,
             ConstructingProjectRepository constructingProjectRepository,
             ConstructingProjectParticipantRepository constructingProjectParticipantRepository,
-            ConstructMilestoneService constructMilestoneService
+            ConstructMilestoneService constructMilestoneService,
+            UserRepository userRepository
     ) {
         this.repository = repository;
         this.relationService = relationService;
@@ -45,6 +49,7 @@ public class InterfaceService {
         this.constructingProjectRepository = constructingProjectRepository;
         this.constructingProjectParticipantRepository = constructingProjectParticipantRepository;
         this.constructMilestoneService = constructMilestoneService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -58,12 +63,13 @@ public class InterfaceService {
         if (entity == null || entity.getProjectId() == null) {
             throw new IllegalArgumentException("缺少项目ID，无法创建接口");
         }
+        Long operatorUserId = entity.getUpdateUser() != null ? entity.getUpdateUser() : entity.getCreateUser();
         ConstructingProject project = constructingProjectRepository.findById(entity.getProjectId()).orElse(null);
         if (project == null) {
             throw new IllegalArgumentException("项目不存在，无法创建接口");
         }
         String state = project.getProjectState();
-        if ("已完成".equals(state)) {
+        if ("已完成".equals(state) && !isSystemAdmin(operatorUserId)) {
             throw new IllegalStateException("已完成项目不可新增接口需求");
         }
         InterfaceEntity saved = repository.save(entity);
@@ -132,7 +138,7 @@ public class InterfaceService {
         // 函数级注释：禁止在“已完成”项目下删除接口需求
         if (projectId != null) {
             ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
-            if (project != null && "已完成".equals(project.getProjectState())) {
+            if (project != null && "已完成".equals(project.getProjectState()) && !isSystemAdmin(operatorUserId)) {
                 throw new IllegalStateException("已完成项目不可删除接口需求");
             }
         }
@@ -166,6 +172,9 @@ public class InterfaceService {
         if (projectId == null || operatorUserId == null) {
             return;
         }
+        if (isSystemAdmin(operatorUserId)) {
+            return;
+        }
         ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
         if (project == null) {
             return;
@@ -186,5 +195,24 @@ public class InterfaceService {
         if (!allOwned) {
             throw new RuntimeException("项目参与人仅可删除本人负责的步骤或里程碑字段");
         }
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 若为 admin，则接口页签中的删除与完成态限制统一放行。
+     *
+     * @param operatorUserId 当前操作用户ID
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 }

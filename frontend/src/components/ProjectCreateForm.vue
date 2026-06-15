@@ -564,15 +564,6 @@ export default {
         unreceiveMoney: '',
         acceptanceDate: ''
       }
-      // 新建模式默认将项目负责人设置为当前登录用户
-      try {
-        const raw = sessionStorage.getItem('userInfo')
-        const info = raw ? JSON.parse(raw) : null
-        const uid = info && (info.userId ?? info.id)
-        if (uid != null) {
-          this.form.projectLeader = Number(uid)
-        }
-      } catch (_) {}
       this.constructionContent = {
         standardProduct: true,
         interfaceDevelopment: false,
@@ -603,7 +594,16 @@ export default {
       */
      async loadUsers() {
        try {
-         this.users = await getAllUsers()
+         this.users = await getAllUsers({ excludeAdmin: true })
+         try {
+           const raw = sessionStorage.getItem('userInfo')
+           const info = raw ? JSON.parse(raw) : null
+           const uid = info && (info.userId ?? info.id)
+           const existsInOptions = uid != null && this.users.some(user => Number(user.userId) === Number(uid))
+           if (!this.form.projectLeader && existsInOptions) {
+             this.form.projectLeader = Number(uid)
+           }
+         } catch (_) {}
        } catch (error) {
          console.error('加载用户列表失败:', error)
          this.users = []

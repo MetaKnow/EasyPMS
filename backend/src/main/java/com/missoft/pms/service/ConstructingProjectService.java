@@ -3,6 +3,7 @@ package com.missoft.pms.service;
 import com.missoft.pms.config.UserContextHolder;
 import com.missoft.pms.dto.ConstructingProjectDTO;
 import com.missoft.pms.entity.ConstructingProject;
+import com.missoft.pms.entity.User;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ConstructDeliverableFileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,8 @@ public class ConstructingProjectService {
     private InterfaceService interfaceService;
     @Autowired
     private PersonalDevelopeService personalDevelopeService;
+    @Autowired
+    private com.missoft.pms.repository.UserRepository userRepository;
 
     /**
      * 分页查询在建项目列表
@@ -181,6 +184,7 @@ public class ConstructingProjectService {
     public ConstructingProject createConstructingProject(ConstructingProject constructingProject) {
         // 验证必填字段
         validateConstructingProject(constructingProject);
+        validateNoAdminAssignments(constructingProject);
 
         // 检查项目编号是否已存在
         if (StringUtils.hasText(constructingProject.getProjectNum()) && 
@@ -300,6 +304,7 @@ public class ConstructingProjectService {
 
         // 验证必填字段
         validateConstructingProject(constructingProject);
+        validateNoAdminAssignments(constructingProject);
 
         // 检查项目编号是否与其他项目冲突
         if (StringUtils.hasText(constructingProject.getProjectNum()) && 
@@ -776,6 +781,34 @@ public class ConstructingProjectService {
     }
 
     /**
+     * 函数级注释：
+     * 校验在建项目中的项目负责人、销售负责人、项目参与人不能选择系统管理员 admin。
+     * 该校验用于兜底拦截绕过前端下拉的非法提交，保证负责人和参与人分配规则一致。
+     *
+     * @param constructingProject 在建项目实体
+     */
+    private void validateNoAdminAssignments(ConstructingProject constructingProject) {
+        if (constructingProject == null) {
+            return;
+        }
+        if (isSystemAdmin(constructingProject.getProjectLeader())) {
+            throw new RuntimeException("项目负责人不能选择系统管理员");
+        }
+        if (isSystemAdmin(constructingProject.getSaleLeader())) {
+            throw new RuntimeException("销售负责人不能选择系统管理员");
+        }
+        if (constructingProject.getParticipantIds() == null || constructingProject.getParticipantIds().isEmpty()) {
+            return;
+        }
+        boolean hasAdminParticipant = constructingProject.getParticipantIds().stream()
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(this::isSystemAdmin);
+        if (hasAdminParticipant) {
+            throw new RuntimeException("项目参与人不能选择系统管理员");
+        }
+    }
+
+    /**
      * 生成项目编号
      * 格式：MS-YYYYMMDDHHMMSS
      *
@@ -929,6 +962,9 @@ public class ConstructingProjectService {
         if (project == null || operatorUserId == null) {
             return;
         }
+        if (isSystemAdmin(operatorUserId)) {
+            return;
+        }
         boolean isLeader = java.util.Objects.equals(operatorUserId, project.getProjectLeader());
         boolean isSalesLeader = java.util.Objects.equals(operatorUserId, project.getSaleLeader());
         if (isLeader || isSalesLeader) {
@@ -938,6 +974,17 @@ public class ConstructingProjectService {
         if (isParticipant) {
             throw new RuntimeException("项目参与人仅可查看项目，无编辑或删除权限");
         }
+    }
+
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 
     private String formatValue(Object value) {

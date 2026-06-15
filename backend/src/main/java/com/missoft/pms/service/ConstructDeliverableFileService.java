@@ -10,6 +10,7 @@ import com.missoft.pms.entity.ConstructMilestone;
 import com.missoft.pms.entity.InterfaceEntity;
 import com.missoft.pms.entity.PersonalDevelope;
 import com.missoft.pms.entity.ProjectSstepRelation;
+import com.missoft.pms.entity.User;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.StandardDeliverableRepository;
 import com.missoft.pms.repository.StandardConstructStepRepository;
@@ -19,6 +20,7 @@ import com.missoft.pms.repository.ProjectSstepRelationRepository;
 import com.missoft.pms.repository.InterfaceRepository;
 import com.missoft.pms.repository.PersonalDevelopeRepository;
 import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
+import com.missoft.pms.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -41,7 +43,6 @@ import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
-import java.util.List;
 
 @Service
 @Transactional
@@ -87,6 +88,9 @@ public class ConstructDeliverableFileService {
 
     @Autowired
     private ConstructingProjectModifyRecordService modifyRecordService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * 函数级注释：上传并保存项目交付物文件。
@@ -203,9 +207,9 @@ public class ConstructDeliverableFileService {
             itemFolderName = pdevName.replaceAll("[\\\\/:*?\"<>|]", "_");
         }
 
-        // 目标目录：deliverableFiles/<项目编号-项目名称>/<里程碑名称>/[接口或个性化名称]/
+        // 目标目录：项目根目录/deliverableFiles/<项目编号-项目名称>/<里程碑名称>/[接口或个性化名称]/
         List<ConstructDeliverableFile> saved = new ArrayList<>();
-        Path projectRoot = Paths.get("").toAbsolutePath().getParent();
+        Path projectRoot = getProjectRoot();
         Path root = projectRoot
                 .resolve("deliverableFiles")
                 .resolve(projectKey)
@@ -341,10 +345,13 @@ public class ConstructDeliverableFileService {
         Long projectId = r.getProjectId();
         if (projectId != null) {
             ConstructingProject project = constructingProjectRepository.findById(projectId).orElse(null);
-            if (project != null && "已完成".equals(project.getProjectState())) {
+            if (project != null && "已完成".equals(project.getProjectState()) && !isSystemAdmin(operatorId)) {
                 throw new RuntimeException("已完成项目不允许删除交付物文件");
             }
             if (operatorId != null && project != null) {
+                if (isSystemAdmin(operatorId)) {
+                    // 函数体详细注释：admin 具有完整交付物删除权限，直接放行后续删除逻辑。
+                } else {
                 boolean isLeader = java.util.Objects.equals(operatorId, project.getProjectLeader());
                 if (!isLeader && !java.util.Objects.equals(operatorId, r.getUploaderId())) {
                     boolean isSalesLeader = java.util.Objects.equals(operatorId, project.getSaleLeader());
@@ -352,6 +359,7 @@ public class ConstructDeliverableFileService {
                     if (isSalesLeader || isParticipant) {
                         throw new RuntimeException("仅可删除自己上传的交付物");
                     }
+                }
                 }
             }
         }
@@ -398,5 +406,24 @@ public class ConstructDeliverableFileService {
         if (value == null) return "无";
         String text = String.valueOf(value).trim();
         return text.isEmpty() ? "无" : text;
+    }
+
+    /**
+     * 函数级注释：
+     * 判断当前操作用户是否为系统管理员 admin。
+     * 若为 admin，则在建项目交付物的完成态与参与人删除限制均不生效。
+     *
+     * @param operatorUserId 当前操作用户ID
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdmin(Long operatorUserId) {
+        if (operatorUserId == null) {
+            return false;
+        }
+        User user = userRepository.findById(operatorUserId).orElse(null);
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 }

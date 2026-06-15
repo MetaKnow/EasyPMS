@@ -92,13 +92,13 @@ REM 等待后端初始化片刻
 timeout /t 5 /nobreak >nul
 REM 同窗并发启动前端（如Node/npm可用）
 if not defined RUN_FRONTEND (
-  start "" /b cmd /c "cd /d "%ROOT%frontend" && npm run dev"
+  start "MissoftPMS-Frontend" cmd /c "cd /d ""%ROOT%frontend"" && npm run dev"
 ) else (
   echo [WARN] npm/node 不可用，前端启动已跳过
 )
 
 REM Wait a short time for backend initialization
-echo Backend & Frontend started in the same window. Press any key to stop.
+echo Backend ^& Frontend started in the same window. Press any key to stop.
 
 REM Start frontend (new window)
 REM Frontend start handled by PowerShell above; skip duplicated start.

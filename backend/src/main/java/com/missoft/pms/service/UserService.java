@@ -258,9 +258,31 @@ public class UserService {
      * @return 包含角色信息的用户列表
      */
     public List<UserWithRoleDTO> getAllUsersWithRole() {
+        return getAllUsersWithRole(false);
+    }
+
+    /**
+     * 获取所有用户列表（包含角色信息）
+     * @param excludeAdmin 是否排除系统管理员 admin
+     * @return 包含角色信息的用户列表
+     */
+    public List<UserWithRoleDTO> getAllUsersWithRole(boolean excludeAdmin) {
         return userRepository.findAll(Sort.by(Sort.Direction.DESC, "userId")).stream()
+                .filter(user -> !excludeAdmin || !isSystemAdminUser(user))
                 .map(this::convertToUserWithRoleDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 判断指定用户是否为系统管理员 admin
+     * @param user 用户实体
+     * @return 是否为系统管理员
+     */
+    private boolean isSystemAdminUser(User user) {
+        if (user == null || user.getUserName() == null) {
+            return false;
+        }
+        return "admin".equalsIgnoreCase(user.getUserName().trim());
     }
 
     /**

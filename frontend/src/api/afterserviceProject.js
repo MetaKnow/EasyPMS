@@ -101,6 +101,6 @@ export function batchDeleteAfterserviceProjects(ids) {
   return request({
     url: '/api/afterservice-projects/batch',
     method: 'delete',
-    data: { ids }
+    data: ids
   })
 }

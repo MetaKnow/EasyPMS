@@ -2,10 +2,12 @@ package com.missoft.pms.controller;
 
 import com.missoft.pms.dto.AfterServiceEventDTO;
 import com.missoft.pms.service.AfterServiceEventService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,25 +79,95 @@ public class AfterServiceEventController {
      * 更新运维事件
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> updateEvent(@PathVariable Long id, @RequestBody AfterServiceEventDTO dto) {
-        AfterServiceEventDTO updated = afterServiceEventService.updateEvent(id, dto);
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", updated);
-        response.put("message", "更新成功");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> updateEvent(@PathVariable Long id,
+                                                           @RequestBody AfterServiceEventDTO dto,
+                                                           @RequestParam(required = false) Long operatorUserId,
+                                                           HttpServletRequest request) {
+        try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            AfterServiceEventDTO updated = afterServiceEventService.updateEvent(id, dto, resolvedOperatorUserId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", updated);
+            response.put("message", "更新成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && e.getMessage().contains("仅可编辑或删除本人新增")) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有编辑该运维事件的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            errorResponse.put("success", false);
+            errorResponse.put("message", "更新失败");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     /**
      * 删除运维事件
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteEvent(@PathVariable Long id) {
-        afterServiceEventService.deleteEvent(id);
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "删除成功");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> deleteEvent(@PathVariable Long id,
+                                                           @RequestParam(required = false) Long operatorUserId,
+                                                           HttpServletRequest request) {
+        try {
+            Long resolvedOperatorUserId = resolveOperatorUserId(operatorUserId, request);
+            afterServiceEventService.deleteEvent(id, resolvedOperatorUserId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "删除成功");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            if (e.getMessage() != null && e.getMessage().contains("仅可编辑或删除本人新增")) {
+                errorResponse.put("success", false);
+                errorResponse.put("message", "您没有删除该运维事件的权限");
+                errorResponse.put("error", e.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            errorResponse.put("success", false);
+            errorResponse.put("message", "删除失败");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    private Long resolveOperatorUserId(Long operatorUserId, HttpServletRequest request) {
+        if (operatorUserId != null) {
+            return operatorUserId;
+        }
+        Long fromHeader = parseLong(request.getHeader("X-User-Id"));
+        if (fromHeader != null) {
+            return fromHeader;
+        }
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && !authorization.isBlank()) {
+            String token = authorization.trim();
+            if (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                token = token.substring(7).trim();
+            }
+            if (token.startsWith("simple_token_")) {
+                String[] parts = token.split("_");
+                if (parts.length >= 3) {
+                    return parseLong(parts[2]);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }
 

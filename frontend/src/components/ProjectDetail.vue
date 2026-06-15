@@ -920,7 +920,7 @@
                           }}</span>
                           <div class="comment-actions">
                             <span class="comment-date">{{ formatDate(item.createTime) }}</span>
-                            <button v-if="Number(item.userId) === Number(currentUserId)" class="comment-delete-btn"
+                            <button v-if="canDeleteProjectComment(item)" class="comment-delete-btn"
                               type="button" @click="deleteProjectComment(item)">删除</button>
                           </div>
                         </div>
@@ -997,7 +997,7 @@
                                 '未知用户' }}</span>
                               <div class="comment-reply-actions">
                                 <span class="comment-reply-date">{{ formatDate(reply.createTime) }}</span>
-                                <button v-if="Number(reply.userId) === Number(currentUserId)"
+                                <button v-if="canDeleteProjectReply(reply)"
                                   class="comment-reply-delete-btn" type="button"
                                   @click="deleteReply(reply, item.commentId)">删除</button>
                               </div>
@@ -3029,8 +3029,21 @@ export default {
     },
     isCurrentUserProjectManager() {
       if (!this.project || this.currentUserId == null) return false
+      if (this.isCurrentUserAdmin()) return true
       return Number(this.project.projectLeader) === Number(this.currentUserId) ||
         Number(this.project.saleLeader) === Number(this.currentUserId)
+    },
+    isCurrentUserAdmin() {
+      try {
+        const raw = sessionStorage.getItem('userInfo')
+        const info = raw ? JSON.parse(raw) : null
+        const userName = info && info.userName ? String(info.userName).trim().toLowerCase() : ''
+        const roleName = info && info.roleName ? String(info.roleName).trim() : ''
+        const roleLower = roleName.toLowerCase()
+        return userName === 'admin' || roleName.includes('管理员') || roleName.includes('超级管理员') || roleLower === 'admin' || roleLower === 'super admin' || roleLower === 'superadmin'
+      } catch (_) {
+        return false
+      }
     },
     canParticipantEditOwnedRow(step, field) {
       if (!step || this.currentUserId == null) return false
@@ -3056,8 +3069,19 @@ export default {
     },
     canDeleteUploadedFile(file) {
       if (!file || this.currentUserId == null) return false
+      if (this.isCurrentUserAdmin()) return true
       if (this.project && Number(this.project.projectLeader) === Number(this.currentUserId)) return true
       return Number(file?.uploaderId) === Number(this.currentUserId)
+    },
+    canDeleteProjectComment(item) {
+      if (!item || this.currentUserId == null) return false
+      if (this.isCurrentUserAdmin()) return true
+      return Number(item?.userId) === Number(this.currentUserId)
+    },
+    canDeleteProjectReply(reply) {
+      if (!reply || this.currentUserId == null) return false
+      if (this.isCurrentUserAdmin()) return true
+      return Number(reply?.userId) === Number(this.currentUserId)
     },
     canEditExtraRequirement(row) {
       if (!row) return false
@@ -4807,7 +4831,7 @@ export default {
     async deleteProjectComment(item) {
       const commentId = item?.commentId
       if (!commentId) return
-      if (!this.currentUserId || Number(item?.userId) !== Number(this.currentUserId)) {
+      if (!this.canDeleteProjectComment(item)) {
         return this.showError('只能删除自己发表的评论')
       }
       const ok = this.$confirm ? await this.$confirm('确认删除该评论及附件？') : window.confirm('确认删除该评论及附件？')
@@ -4905,7 +4929,7 @@ export default {
     async deleteReply(reply, commentId) {
       const replyId = reply?.replyId
       if (!replyId) return
-      if (!this.currentUserId || Number(reply?.userId) !== Number(this.currentUserId)) {
+      if (!this.canDeleteProjectReply(reply)) {
         return this.showError('只能删除自己发表的回复')
       }
       const ok = this.$confirm ? await this.$confirm('确认删除该回复及附件？') : window.confirm('确认删除该回复及附件？')
