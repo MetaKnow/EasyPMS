@@ -13,4 +13,5 @@ import java.util.List;
 public interface ConstructingProjectCommentReplyFileRepository extends JpaRepository<ConstructingProjectCommentReplyFile, Long> {
     List<ConstructingProjectCommentReplyFile> findByCommentIdOrderByCreateTimeAsc(Long commentId);
     List<ConstructingProjectCommentReplyFile> findByReplyIdOrderByCreateTimeAsc(Long replyId);
+    boolean existsByFilePath(String filePath);
 }

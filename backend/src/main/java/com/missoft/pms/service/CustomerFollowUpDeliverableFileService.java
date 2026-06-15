@@ -6,6 +6,7 @@ import com.missoft.pms.entity.CustomerFollowUpDeliverableFile;
 import com.missoft.pms.repository.AfterServiceProjectRepository;
 import com.missoft.pms.repository.CustomerFollowUpDeliverableFileRepository;
 import com.missoft.pms.repository.CustomerFollowUpRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -148,6 +149,11 @@ public class CustomerFollowUpDeliverableFileService {
             if (Files.exists(target)) {
                 Files.delete(target);
             }
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                    target,
+                    rec.getFilePath(),
+                    fileRepository::existsByFilePath
+            );
             fileRepository.deleteById(fileId);
         } catch (Exception e) {
             throw new RuntimeException("删除文件失败: " + e.getMessage());

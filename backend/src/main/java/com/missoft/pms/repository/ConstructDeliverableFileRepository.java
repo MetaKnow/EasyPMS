@@ -48,4 +48,11 @@ public interface ConstructDeliverableFileRepository extends JpaRepository<Constr
      * @return 文件记录列表
      */
     List<ConstructDeliverableFile> findByProjectIdAndMilestoneId(Long projectId, Long milestoneId);
+
+    /**
+     * 根据相对路径判断文件记录是否存在
+     * @param filePath 文件相对路径
+     * @return 是否存在
+     */
+    boolean existsByFilePath(String filePath);
 }

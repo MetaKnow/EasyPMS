@@ -10,4 +10,5 @@ import java.util.List;
 public interface AfterServiceLeadDeliverableFileRepository extends JpaRepository<AfterServiceLeadDeliverableFile, Long> {
     List<AfterServiceLeadDeliverableFile> findByLeadsId(Long leadsId);
     boolean existsByLeadsId(Long leadsId);
+    boolean existsByFilePath(String filePath);
 }

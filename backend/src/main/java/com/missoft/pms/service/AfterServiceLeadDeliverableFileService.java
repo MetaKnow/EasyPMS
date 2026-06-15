@@ -6,6 +6,7 @@ import com.missoft.pms.entity.AfterServiceProject;
 import com.missoft.pms.repository.AfterServiceLeadDeliverableFileRepository;
 import com.missoft.pms.repository.AfterServiceLeadRepository;
 import com.missoft.pms.repository.AfterServiceProjectRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -145,13 +146,18 @@ public class AfterServiceLeadDeliverableFileService {
     }
 
     public void deleteFile(Long fileId) {
-        fileRepository.findById(fileId)
+        AfterServiceLeadDeliverableFile rec = fileRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("文件记录不存在，ID: " + fileId));
         Path target = resolveFilePath(fileId);
         try {
             if (Files.exists(target)) {
                 Files.delete(target);
             }
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                    target,
+                    rec.getFilePath(),
+                    fileRepository::existsByFilePath
+            );
             fileRepository.deleteById(fileId);
         } catch (Exception e) {
             throw new RuntimeException("删除文件失败: " + e.getMessage());

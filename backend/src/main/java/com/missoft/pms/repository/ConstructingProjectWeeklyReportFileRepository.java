@@ -22,4 +22,9 @@ public interface ConstructingProjectWeeklyReportFileRepository extends JpaReposi
      * 函数级注释：按周报ID删除附件记录
      */
     void deleteByWeeklyReportId(Long weeklyReportId);
+
+    /**
+     * 函数级注释：按相对路径判断附件记录是否存在
+     */
+    boolean existsByFilePath(String filePath);
 }

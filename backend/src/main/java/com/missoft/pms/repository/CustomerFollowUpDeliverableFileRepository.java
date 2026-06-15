@@ -10,4 +10,5 @@ import java.util.List;
 public interface CustomerFollowUpDeliverableFileRepository extends JpaRepository<CustomerFollowUpDeliverableFile, Long> {
     List<CustomerFollowUpDeliverableFile> findByFollowUpRecordId(Long followUpRecordId);
     boolean existsByFollowUpRecordId(Long followUpRecordId);
+    boolean existsByFilePath(String filePath);
 }

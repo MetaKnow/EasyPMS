@@ -21,6 +21,7 @@ import com.missoft.pms.repository.InterfaceRepository;
 import com.missoft.pms.repository.PersonalDevelopeRepository;
 import com.missoft.pms.repository.ConstructingProjectParticipantRepository;
 import com.missoft.pms.repository.UserRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -368,6 +369,11 @@ public class ConstructDeliverableFileService {
             if (Files.exists(target)) {
                 Files.delete(target);
             }
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                    target,
+                    r.getFilePath(),
+                    fileRepository::existsByFilePath
+            );
             fileRepository.deleteById(fileId);
             if (operatorId != null && projectId != null) {
                 String context = buildFileContext(fileId, r.getProjectStepId(), r.getMilestoneId());

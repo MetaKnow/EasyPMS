@@ -6,6 +6,7 @@ import com.missoft.pms.entity.ConstructingProjectWeeklyReportFile;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ConstructingProjectWeeklyReportFileRepository;
 import com.missoft.pms.repository.ConstructingProjectWeeklyReportRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -163,6 +164,11 @@ public class ConstructingProjectWeeklyReportFileService {
             if (Files.exists(target)) {
                 Files.delete(target);
             }
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                target,
+                rec.getFilePath(),
+                fileRepository::existsByFilePath
+            );
             fileRepository.deleteById(fileId);
         } catch (Exception e) {
             throw new RuntimeException("删除文件失败: " + e.getMessage());
@@ -183,6 +189,11 @@ public class ConstructingProjectWeeklyReportFileService {
                     if (Files.exists(target)) {
                         Files.delete(target);
                     }
+                    PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                        target,
+                        f.getFilePath(),
+                        fileRepository::existsByFilePath
+                    );
                     removed++;
                 } catch (Exception ignore) {}
             }

@@ -22,4 +22,9 @@ public interface ConstructingProjectRiskFileRepository extends JpaRepository<Con
      * 函数级注释：按风险ID删除附件记录
      */
     void deleteByRiskId(Long riskId);
+
+    /**
+     * 函数级注释：按相对路径判断附件记录是否存在
+     */
+    boolean existsByFilePath(String filePath);
 }

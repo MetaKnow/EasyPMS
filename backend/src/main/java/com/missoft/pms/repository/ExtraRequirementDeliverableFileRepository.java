@@ -26,4 +26,11 @@ public interface ExtraRequirementDeliverableFileRepository extends JpaRepository
      * @param requirementId 需求ID
      */
     void deleteByRequirementId(Long requirementId);
+
+    /**
+     * 函数级注释：按相对路径判断附件记录是否存在
+     * @param filePath 文件相对路径
+     * @return 是否存在
+     */
+    boolean existsByFilePath(String filePath);
 }

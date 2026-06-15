@@ -6,6 +6,7 @@ import com.missoft.pms.entity.ExtraRequirementDeliverableFile;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.ExtraRequirementDeliverableFileRepository;
 import com.missoft.pms.repository.ExtraRequirementRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -173,6 +174,11 @@ public class ExtraRequirementDeliverableFileService {
             if (Files.exists(target)) {
                 Files.delete(target);
             }
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                target,
+                rec.getFilePath(),
+                fileRepository::existsByFilePath
+            );
             fileRepository.deleteById(fileId);
         } catch (Exception e) {
             throw new RuntimeException("删除文件失败: " + e.getMessage());
@@ -195,6 +201,11 @@ public class ExtraRequirementDeliverableFileService {
                     if (Files.exists(target)) {
                         Files.delete(target);
                     }
+                    PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                        target,
+                        f.getFilePath(),
+                        fileRepository::existsByFilePath
+                    );
                     removed++;
                 } catch (Exception ignore) {}
             }

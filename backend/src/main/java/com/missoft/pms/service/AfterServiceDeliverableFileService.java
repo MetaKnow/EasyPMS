@@ -6,6 +6,7 @@ import com.missoft.pms.entity.AfterServiceProject;
 import com.missoft.pms.repository.AfterServiceDeliverableRepository;
 import com.missoft.pms.repository.AfterServiceEventRepository;
 import com.missoft.pms.repository.AfterServiceProjectRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -142,6 +143,11 @@ public class AfterServiceDeliverableFileService {
         Path target = repoRoot.resolve(rec.getFilePath()).normalize();
         try {
             Files.deleteIfExists(target);
+            PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                    target,
+                    rec.getFilePath(),
+                    fileRepository::existsByFilePath
+            );
         } catch (Exception ignore) {}
         fileRepository.deleteById(fileId);
     }
@@ -167,6 +173,11 @@ public class AfterServiceDeliverableFileService {
             if (!target.startsWith(repoRoot)) continue; // 安全保护
             try {
                 Files.deleteIfExists(target);
+                PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                        target,
+                        path,
+                        fileRepository::existsByFilePath
+                );
             } catch (Exception ignore) {}
         }
         // 删除数据库记录

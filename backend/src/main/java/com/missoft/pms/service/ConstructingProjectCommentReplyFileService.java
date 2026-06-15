@@ -10,6 +10,7 @@ import com.missoft.pms.repository.ConstructingProjectCommentReplyRepository;
 import com.missoft.pms.repository.ConstructingProjectCommentRepository;
 import com.missoft.pms.repository.ConstructingProjectRepository;
 import com.missoft.pms.repository.UserRepository;
+import com.missoft.pms.util.PdfPreviewCacheUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -198,6 +199,11 @@ public class ConstructingProjectCommentReplyFileService {
             if (!target.startsWith(root)) continue;
             try {
                 Files.deleteIfExists(target);
+                PdfPreviewCacheUtils.deletePdfPreviewCacheIfExists(
+                        target,
+                        relative,
+                        fileRepository::existsByFilePath
+                );
             } catch (Exception ignore) {}
         }
         try {

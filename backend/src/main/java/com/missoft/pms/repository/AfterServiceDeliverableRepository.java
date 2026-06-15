@@ -10,5 +10,6 @@ import java.util.List;
 public interface AfterServiceDeliverableRepository extends JpaRepository<AfterServiceDeliverable, Long> {
     List<AfterServiceDeliverable> findByProjectIdAndEventId(Long projectId, Long eventId);
     boolean existsByEventId(Long eventId);
+    boolean existsByFilePath(String filePath);
 }
 
